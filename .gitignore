@@ -1,0 +1,13 @@
+/*/node_modules
+node_modules
+.yarn/
+.wrangler/
+dist/
+.DS_Store
+.playwright-cli/
+output/
+.claude/settings.local.json
+.dev.vars
+.env
+.env.*
+!.env.example

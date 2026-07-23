@@ -1,0 +1,12 @@
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+
+# Generic OAuth / OIDC. OAuth is enabled only when all three values are set.
+OAUTH_DISCOVERY_URL=https://identity.example.com/.well-known/openid-configuration
+OAUTH_CLIENT_ID=replace-with-your-oauth-client-id
+OAUTH_CLIENT_SECRET=replace-with-your-oauth-client-secret
+TLDRAW_LICENSE_KEY=replace-with-your-tldraw-license-key
+
+# Optional overrides
+# OAUTH_PROVIDER_ID=passport
+# OAUTH_PROVIDER_NAME=Passport
+# OAUTH_SCOPES=openid,email,profile,offline_access

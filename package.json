@@ -1,0 +1,63 @@
+{
+	"name": "agentboard",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"packageManager": "pnpm@11.10.0",
+	"engines": {
+		"node": ">=22.22.0"
+	},
+	"scripts": {
+		"dev": "vite --host",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to .wrangler/state --config infra/cloudflare/wrangler.jsonc",
+		"db:migrate:remote": "wrangler d1 migrations apply DB --remote --config infra/cloudflare/wrangler.jsonc",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"build": "pnpm typecheck && vite build",
+		"preview": "vite preview",
+		"cf-typegen": "wrangler types --config infra/cloudflare/wrangler.jsonc",
+		"deploy": "pnpm build && wrangler deploy --config infra/cloudflare/wrangler.jsonc"
+	},
+	"dependencies": {
+		"@agentboard/shared": "workspace:*",
+		"@ai-sdk/provider": "^3.0.14",
+		"@ai-sdk/react": "^3.0.232",
+		"@better-auth/drizzle-adapter": "^1.6.23",
+		"@fontsource-variable/rubik": "^5.2.8",
+		"@shadcn/react": "^0.2.1",
+		"@streamdown/math": "^1.0.2",
+		"@tabler/icons-react": "^3.45.0",
+		"@tldraw/sync": "^5.2.5",
+		"@tldraw/sync-core": "^5.2.5",
+		"@tldraw/tlschema": "^5.2.5",
+		"ai": "^6.0.230",
+		"better-auth": "^1.6.23",
+		"cloudflare-workers-unfurl": "^0.0.8",
+		"drizzle-orm": "^0.45.2",
+		"itty-router": "^5.0.18",
+		"katex": "^0.16.47",
+		"motion": "^12.42.2",
+		"pdfjs-dist": "^6.1.200",
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7",
+		"react-router": "^8.2.0",
+		"streamdown": "^2.5.0",
+		"tldraw": "^5.2.5",
+		"workers-ai-provider": "^3.3.1",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.45.1",
+		"@cloudflare/workers-types": "^5.20260719.1",
+		"@types/node": "^26.1.1",
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^6.0.3",
+		"drizzle-kit": "^0.31.10",
+		"typescript": "^5.8.3",
+		"vite": "^8.1.5",
+		"vitest": "^4.1.10",
+		"wrangler": "^4.112.0"
+	}
+}

@@ -1,0 +1,281 @@
+import type { DocumentStatus } from '@agentboard/shared'
+import { createDatabase } from '../db/client'
+import {
+	getDocumentRow,
+	getUserDocumentUsage,
+	listDocumentPageRows,
+	listDocumentVectorIDs,
+	replaceDocumentChunks,
+	setDocumentStatus,
+	updateDocumentPageText,
+} from '../db/documents'
+import { getDocumentAIConfig } from '../config'
+import type { DocumentPipelineMessage } from './types'
+
+const DEFAULT_DAILY_PDF_PAGE_QUOTA = 1_000
+const MIN_USEFUL_TEXT_CHARACTERS = 40
+const CHUNK_TARGET_CHARACTERS = 2_600
+const CHUNK_MAX_CHARACTERS = 3_200
+const EMBEDDING_BATCH_SIZE = 50
+
+interface AIRunner {
+	run(model: string, input: unknown, options?: unknown): Promise<unknown>
+}
+
+interface PipelineChunk {
+	pageNumber: number
+	text: string
+	vectorID: string
+}
+
+export async function processDocumentBatch(
+	batch: MessageBatch<DocumentPipelineMessage>,
+	env: Env
+) {
+	for (const message of batch.messages) {
+		try {
+			await processDocument(message.body, env)
+			message.ack()
+		} catch (error) {
+			const reason = getErrorMessage(error).slice(0, 500)
+			console.error(JSON.stringify({
+				documentID: message.body.documentID,
+				error: reason,
+				pipelineStage: 'failed',
+			}))
+			await setPipelineStatus(env, message.body, 'failed', reason)
+			message.retry()
+		}
+	}
+}
+
+export async function processDocument(message: DocumentPipelineMessage, env: Env) {
+	const startedAt = performance.now()
+	const database = createDatabase(env)
+	const documentRow = await getDocumentRow(database, message.boardID, message.documentID)
+	if (!documentRow) return
+
+	const dailyQuota = readPositiveNumber(env.PDF_DAILY_PAGE_QUOTA, DEFAULT_DAILY_PDF_PAGE_QUOTA)
+	const usage = await getUserDocumentUsage(database, message.ownerID, startOfUTCDay())
+	if (usage.dailyPages > dailyQuota) {
+		throw new Error('Daily PDF page processing quota exceeded')
+	}
+
+	await setDocumentStatus(database, documentRow.id, 'processing')
+	const pages = await listDocumentPageRows(database, documentRow.id)
+	if (pages.length !== documentRow.pageCount) throw new Error('Document import is incomplete')
+
+	const aiConfig = getDocumentAIConfig(env)
+	const gatewayOptions = {
+		gateway: {
+			id: aiConfig.gatewayID,
+			metadata: {
+				boardID: message.boardID,
+				documentID: message.documentID,
+				pipeline: 'pdf-import',
+			},
+		},
+	}
+	const ai = env.AI as AIRunner
+	const ocrStartedAt = performance.now()
+	const pageTexts: Array<{ pageNumber: number; text: string }> = []
+	let ocrPageCount = 0
+	for (const page of pages) {
+		let text = page.extractedText.trim()
+		if (needsOCR(text)) {
+			const image = await env.TLDRAW_BUCKET.get(page.imageR2Key)
+			if (!image) throw new Error(`Rendered page ${page.pageNumber} is missing`)
+			text = await extractPageTextWithOCR(
+				ai,
+				aiConfig.ocrModel,
+				await image.arrayBuffer(),
+				image.httpMetadata?.contentType ?? 'image/jpeg',
+				gatewayOptions
+			)
+			ocrPageCount += 1
+			await updateDocumentPageText(database, documentRow.id, page.pageNumber, text, true)
+		}
+		pageTexts.push({ pageNumber: page.pageNumber, text })
+	}
+	logStage(message, 'ocr', ocrStartedAt, { ocrPageCount })
+
+	const chunks = pageTexts.flatMap(({ pageNumber, text }) =>
+		chunkPageText(text).map((chunkText, index): PipelineChunk => ({
+			pageNumber,
+			text: chunkText,
+			vectorID: `${documentRow.id}:${pageNumber}:${index}`,
+		}))
+	)
+	const embeddingStartedAt = performance.now()
+	const existingVectorIDs = await listDocumentVectorIDs(database, documentRow.id)
+	if (existingVectorIDs.length) await env.DOCUMENT_VECTORS.deleteByIds(existingVectorIDs)
+	await replaceDocumentChunks(
+		database,
+		documentRow.id,
+		chunks.map(({ pageNumber, vectorID }) => ({ pageNumber, vectorID }))
+	)
+
+	for (let offset = 0; offset < chunks.length; offset += EMBEDDING_BATCH_SIZE) {
+		const batch = chunks.slice(offset, offset + EMBEDDING_BATCH_SIZE)
+		const response = await ai.run(
+			aiConfig.embeddingModel,
+			{ text: batch.map(({ text }) => text) },
+			gatewayOptions
+		)
+		const embeddings = readEmbeddings(response)
+		if (embeddings.length !== batch.length) throw new Error('Embedding response size did not match the request')
+		await env.DOCUMENT_VECTORS.upsert(batch.map((chunk, index) => ({
+			id: chunk.vectorID,
+			metadata: {
+				boardId: documentRow.boardID,
+				chunkText: chunk.text,
+				documentId: documentRow.id,
+				documentTitle: documentRow.title,
+				pageNumber: chunk.pageNumber,
+			},
+			values: embeddings[index],
+		})))
+	}
+	logStage(message, 'embedding', embeddingStartedAt, { chunkCount: chunks.length })
+	await setDocumentStatus(database, documentRow.id, 'ready')
+	logStage(message, 'complete', startedAt, { pageCount: documentRow.pageCount })
+}
+
+async function setPipelineStatus(
+	env: Env,
+	message: DocumentPipelineMessage,
+	status: DocumentStatus,
+	reason: string
+) {
+	const database = createDatabase(env)
+	const documentRow = await getDocumentRow(database, message.boardID, message.documentID)
+	if (documentRow) await setDocumentStatus(database, documentRow.id, status, reason)
+}
+
+async function extractPageTextWithOCR(
+	ai: AIRunner,
+	model: string,
+	bytes: ArrayBuffer,
+	mediaType: string,
+	gatewayOptions: unknown
+) {
+	const response = await ai.run(model, {
+		image: `data:${mediaType};base64,${arrayBufferToBase64(bytes)}`,
+		max_tokens: 4_096,
+		messages: [
+			{
+				content: 'Transcribe all visible text on this document page in reading order. Preserve headings, lists, equations, labels, and table structure using plain text or Markdown. Return only the transcription.',
+				role: 'user',
+			},
+		],
+		temperature: 0,
+	}, gatewayOptions)
+	const text = readGeneratedText(response).trim()
+	if (!text) throw new Error('OCR returned no text')
+	return text.slice(0, 200_000)
+}
+
+export function chunkPageText(text: string) {
+	const normalized = text.trim().replace(/\r\n?/g, '\n')
+	if (!normalized) return []
+	const paragraphs = normalized.split(/\n{2,}/).flatMap((paragraph) =>
+		paragraph.length <= CHUNK_MAX_CHARACTERS
+			? [paragraph]
+			: splitLongText(paragraph, CHUNK_MAX_CHARACTERS)
+	)
+	const chunks: string[] = []
+	let current = ''
+	for (const paragraph of paragraphs) {
+		const candidate = current ? `${current}\n\n${paragraph}` : paragraph
+		if (candidate.length > CHUNK_MAX_CHARACTERS && current) {
+			chunks.push(current)
+			current = paragraph
+		} else {
+			current = candidate
+		}
+		if (current.length >= CHUNK_TARGET_CHARACTERS) {
+			chunks.push(current)
+			current = ''
+		}
+	}
+	if (current) chunks.push(current)
+	return chunks
+}
+
+function splitLongText(text: string, maximumLength: number) {
+	const parts: string[] = []
+	let remaining = text.trim()
+	while (remaining.length > maximumLength) {
+		const candidate = remaining.slice(0, maximumLength)
+		const boundary = Math.max(candidate.lastIndexOf('\n'), candidate.lastIndexOf('. '), candidate.lastIndexOf(' '))
+		const splitAt = boundary > maximumLength * 0.6 ? boundary + 1 : maximumLength
+		parts.push(remaining.slice(0, splitAt).trim())
+		remaining = remaining.slice(splitAt).trim()
+	}
+	if (remaining) parts.push(remaining)
+	return parts
+}
+
+function needsOCR(text: string) {
+	return text.replace(/[^\p{L}\p{N}]/gu, '').length < MIN_USEFUL_TEXT_CHARACTERS
+}
+
+function readEmbeddings(value: unknown): number[][] {
+	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
+	const data = Reflect.get(value, 'data')
+	if (!Array.isArray(data)) throw new Error('Embedding response did not contain vectors')
+	const embeddings = data.map((embedding) => {
+		if (!Array.isArray(embedding) || !embedding.every((entry) => typeof entry === 'number')) {
+			throw new Error('Embedding response contained an invalid vector')
+		}
+		return embedding
+	})
+	return embeddings
+}
+
+function readGeneratedText(value: unknown) {
+	if (!value || typeof value !== 'object') return ''
+	for (const key of ['response', 'result', 'text']) {
+		const candidate = Reflect.get(value, key)
+		if (typeof candidate === 'string') return candidate
+	}
+	return ''
+}
+
+function arrayBufferToBase64(value: ArrayBuffer) {
+	const bytes = new Uint8Array(value)
+	let binary = ''
+	for (let offset = 0; offset < bytes.length; offset += 32_768) {
+		binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768))
+	}
+	return btoa(binary)
+}
+
+function logStage(
+	message: DocumentPipelineMessage,
+	pipelineStage: string,
+	startedAt: number,
+	details: Record<string, number>
+) {
+	console.info(JSON.stringify({
+		boardID: message.boardID,
+		documentID: message.documentID,
+		durationMS: Math.round(performance.now() - startedAt),
+		pipelineStage,
+		...details,
+	}))
+}
+
+function startOfUTCDay() {
+	const now = new Date()
+	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+}
+
+function readPositiveNumber(value: string | undefined, fallback: number) {
+	const parsed = Number(value)
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function getErrorMessage(error: unknown) {
+	return error instanceof Error ? error.message : 'Unknown document pipeline failure'
+}

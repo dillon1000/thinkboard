@@ -1,0 +1,1 @@
+ALTER TABLE `document_pages` ADD `textLayout` text DEFAULT '[]' NOT NULL;

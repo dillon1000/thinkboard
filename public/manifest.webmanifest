@@ -1,0 +1,16 @@
+{
+	"name": "Agentboard",
+	"short_name": "Agentboard",
+	"description": "A realtime study canvas with an AI tutor that understands your work.",
+	"start_url": "/boards",
+	"display": "standalone",
+	"background_color": "#f3f0e7",
+	"theme_color": "#153f31",
+	"icons": [
+		{
+			"src": "/favicon.ico",
+			"sizes": "48x48",
+			"type": "image/x-icon"
+		}
+	]
+}

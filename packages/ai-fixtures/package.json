@@ -1,0 +1,10 @@
+{
+	"name": "@agentboard/ai-fixtures",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"@agentboard/shared": "workspace:*",
+		"@shadcn/helpers": "^0.1.0",
+		"ai": "^7.0.31"
+	}
+}

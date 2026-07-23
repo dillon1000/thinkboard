@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784442042858,
+      "tag": "0000_past_glorian",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784446658020,
+      "tag": "0001_yummy_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784471716239,
+      "tag": "0002_youthful_bromley",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784517502887,
+      "tag": "0003_overjoyed_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784518193976,
+      "tag": "0004_flippant_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784518735017,
+      "tag": "0005_bored_zarda",
+      "breakpoints": true
+    }
+  ]
+}
