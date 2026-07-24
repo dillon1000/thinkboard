@@ -1,15 +1,15 @@
 # Radial Menu Design QA
 
-- Source visual truth: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v2/reference.png`
-- Implementation screenshot: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v2/implementation-tools.jpg`
-- Side-by-side comparison: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v2/comparison-side-by-side.png`
+- Source visual truth: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v3/reference.png`
+- Implementation screenshot: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v3/implementation-tools.jpg`
+- Side-by-side comparison: `/Users/dillon/.codex/visualizations/2026/07/24/019f9348-41f4-7c71-a0dd-54c092fab579/radial-menu-qa-v3/comparison-side-by-side.png`
 - Browser viewport: 1280 × 720 CSS px.
 - State: Tools fan open, Select active, outside shortcuts suppressed behind the active fan.
 
 ## Fidelity evidence
 
 - The implementation keeps the reference's white paper surfaces, cool gray canvas, soft drop shadow, black outline icons, blue active state, and circular center controls.
-- Eight independent petals replace the clipped sectors. Every petal uses the same size, radius, and 45-degree interval, so the gaps stay symmetrical around the full menu.
+- Eight independent petals replace the clipped sectors. Every petal uses the same size, 114px radius, and 45-degree interval, so the gaps stay compact and symmetrical around the full menu.
 - The expanded Tools control is a local semicircle that grows from its petal. It keeps the reference's branching construction without forcing every submenu into a complete outer ring.
 - The root stays compact. Undo, Redo, Duplicate, and three Bind shortcuts use smaller circular satellites, then fade while a dense fan is open.
 - All production icons come from the existing Tabler set. No placeholder assets, hand-drawn SVG, or rasterized UI substitute was added.
@@ -35,6 +35,8 @@
    - Fix: petal clicks now confirm the same fan state, while Back closes or moves up one level.
 4. P2: outside shortcuts competed with open tool and style fans.
    - Fix: satellite controls dim and stop receiving pointer input while a fan is open.
+5. P3: the root petals had more open space than the denser reference composition.
+   - Fix: reduced only the root petal radius from 122px to 114px. The 226px submenu fan radius and its button spacing remain unchanged.
 
 ## Findings
 

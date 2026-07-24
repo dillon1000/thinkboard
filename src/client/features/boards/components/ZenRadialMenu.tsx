@@ -76,7 +76,8 @@ const MOVE_TOLERANCE = 10
 /** The complete menu footprint, including the outer shortcut buttons. */
 const MENU_DIAMETER = 520
 const BOX_PAD = 12
-const PETAL_RADIUS = 122
+/** Keeps a 13px visual gap between the 94px hub and each 108px root petal. */
+const PETAL_RADIUS = 114
 const FAN_RADIUS = 226
 
 interface Point {
