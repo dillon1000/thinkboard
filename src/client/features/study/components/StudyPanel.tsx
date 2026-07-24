@@ -32,6 +32,7 @@ import {
 	IconBrain,
 	IconCards,
 	IconCheck,
+	IconChevronDown,
 	IconChevronRight,
 	IconCircleCheck,
 	IconCopy,
@@ -729,23 +730,20 @@ function StudyConversationChat({
 				<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
 				<div className="StudyComposer-footer">
 					<div className="StudyComposer-options">
+						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
 						<ModelSelector onChange={chooseModel} value={modelMode} />
 						{STUDY_MODELS[modelMode].supportsReasoning ? (
 							<ReasoningSelector onChange={chooseReasoningEffort} value={reasoningEffort} />
 						) : null}
-						<button aria-pressed={studyMode === 'socratic'} className={`SocraticToggle${studyMode === 'socratic' ? ' is-selected' : ''}`} onClick={toggleStudyMode} title="Ask guiding questions instead of giving answers" type="button">Socratic</button>
+						<button aria-pressed={studyMode === 'socratic'} className={`SocraticToggle${studyMode === 'socratic' ? ' is-selected' : ''}`} onClick={toggleStudyMode} title="Ask guiding questions instead of giving answers" type="button"><IconSparkles aria-hidden="true" size={13} stroke={1.8} /> Socratic</button>
 					</div>
-					<div className="StudyComposer-toolbar">
-						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
-						<span className="StudyComposer-shortcut">Enter to send · Shift + Enter for a new line</span>
-						<div className="StudyComposer-controls">
-							<ContextMeter messages={chat.messages} modelMode={modelMode} />
-							{chat.status === 'submitted' || chat.status === 'streaming' ? (
-								<button aria-label="Stop response" className="StudyComposer-send" onClick={() => void chat.stop()} title="Stop response" type="button"><IconPlayerStop aria-hidden="true" size={15} stroke={2} /></button>
-							) : (
-								<button aria-label="Send message" className="StudyComposer-send" disabled={!input.trim() && attachments.length === 0} type="submit"><IconArrowUp aria-hidden="true" size={17} stroke={2} /></button>
-							)}
-						</div>
+					<div className="StudyComposer-controls">
+						<ContextMeter messages={chat.messages} modelMode={modelMode} />
+						{chat.status === 'submitted' || chat.status === 'streaming' ? (
+							<button aria-label="Stop response" className="StudyComposer-send" onClick={() => void chat.stop()} title="Stop response" type="button"><IconPlayerStop aria-hidden="true" size={15} stroke={2} /></button>
+						) : (
+							<button aria-label="Send message" className="StudyComposer-send" disabled={!input.trim() && attachments.length === 0} type="submit"><IconArrowUp aria-hidden="true" size={16} stroke={2} /></button>
+						)}
 					</div>
 				</div>
 			</form>
@@ -851,18 +849,20 @@ function ReasoningTrail({ isStreaming, text }: { isStreaming: boolean; text: str
 }
 
 function ModelSelector({ onChange, value }: { onChange: (mode: StudyModelMode) => void; value: StudyModelMode }) {
+	const model = STUDY_MODELS[value]
 	return (
-		<div aria-label="Response mode" className="ModelSelector" role="group">
-			{(['quicker', 'smarter'] as const).map((mode) => {
-				const model = STUDY_MODELS[mode]
-				return (
-					<button aria-pressed={value === mode} className={value === mode ? 'is-selected' : undefined} key={mode} onClick={() => onChange(mode)} title={model.description} type="button">
-						{mode === 'quicker' ? <IconBolt aria-hidden="true" size={13} /> : <IconBrain aria-hidden="true" size={13} />}
-						{model.label}
-					</button>
-				)
-			})}
-		</div>
+		<label className="ModelSelector" title={model.description}>
+			{value === 'quicker' ? <IconBolt aria-hidden="true" size={13} /> : <IconBrain aria-hidden="true" size={13} />}
+			<select aria-label="Response mode" onChange={(event) => {
+				const mode = event.target.value
+				if (mode === 'quicker' || mode === 'smarter') onChange(mode)
+			}} value={value}>
+				{(['quicker', 'smarter'] as const).map((mode) => (
+					<option key={mode} value={mode}>{STUDY_MODELS[mode].label}</option>
+				))}
+			</select>
+			<IconChevronDown aria-hidden="true" className="ModelSelector-chevron" size={12} stroke={2} />
+		</label>
 	)
 }
 
