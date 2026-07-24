@@ -78,6 +78,7 @@ import {
 } from '../lib/pdfTextSelection'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { getMessageCopyText } from '../lib/studyMessageActions'
+import { subscribeToZenChatPrompt } from '../lib/zenChatPrompt'
 import {
 	hasProviderToolCallEnvelope,
 	parseLeakedProposal,
@@ -434,6 +435,8 @@ function StudyConversationChat({
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 		transport,
 	})
+
+	useEffect(() => subscribeToZenChatPrompt(setInput), [])
 
 	useEffect(() => () => {
 		if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current)

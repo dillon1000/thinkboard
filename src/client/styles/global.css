@@ -403,10 +403,8 @@ img { max-width: 100%; }
 /* tldraw's zoom menu trigger becomes the readout between the two steppers. */
 .CanvasZoom .tlui-zoom-menu__button { min-width: 46px; width: auto; padding: 0 6px; font-size: 11.5px; font-weight: 550; font-variant-numeric: tabular-nums; }
 
-/* The press-and-hold menu uses a small action ring and adds a second ring for tools or colours.
-   The gray plates are slightly larger than their white segments, which creates the narrow gutters
-   and layered paper construction of the reference menu without adding decorative assets. */
-/* The in-front canvas layer is pointer-events: none and that inherits, so re-enable it here. */
+/* Each radial action is a separate petal, so every gap stays equal. A hovered petal adds only its
+   local control fan; undo, redo, duplicate, and user bindings remain lighter satellite actions. */
 .ZenMenuLayer { position: fixed; inset: 0; z-index: 60; pointer-events: auto; --zen-scrim: rgba(15, 15, 15, .09); }
 :root[data-theme='dark'] .ZenMenuLayer { --zen-scrim: rgba(0, 0, 0, .34); }
 .ZenMenuLayer-scrim { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--zen-scrim); backdrop-filter: blur(1.5px); animation: zen-fade 160ms var(--ease-swift); }
@@ -414,56 +412,118 @@ img { max-width: 100%; }
 
 .ZenMenu {
 	position: absolute;
-	width: 460px;
-	height: 460px;
+	width: 520px;
+	height: 520px;
 	pointer-events: none;
 	transform: scale(var(--zen-menu-scale));
 	transform-origin: top left;
 }
 .ZenMenu-stage { position: relative; width: 100%; height: 100%; animation: zen-menu-in 200ms var(--ease-enter) backwards; }
-.ZenMenu-outerPlate, .ZenMenu-rootPlate, .ZenMenu-hub { position: absolute; top: 50%; left: 50%; border-radius: 50%; translate: -50% -50%; }
-.ZenMenu-outerPlate { z-index: 0; width: 460px; height: 460px; background: color-mix(in srgb, var(--muted) 48%, var(--panel)); box-shadow: 0 18px 48px rgba(15, 15, 15, .2); opacity: 0; scale: .72; transition: opacity 160ms var(--ease-swift), scale 220ms var(--ease-enter); }
-.ZenMenu-stage[data-view='tools'] .ZenMenu-outerPlate, .ZenMenu-stage[data-view='colors'] .ZenMenu-outerPlate { opacity: 1; scale: 1; }
-.ZenMenu-rootPlate { z-index: 2; width: 332px; height: 332px; background: color-mix(in srgb, var(--muted) 48%, var(--panel)); box-shadow: 0 16px 42px rgba(15, 15, 15, .19); }
-.ZenMenu-rootRing { position: absolute; z-index: 3; top: 50%; left: 50%; width: 324px; height: 324px; translate: -50% -50%; }
-.ZenMenu-outerRing { position: absolute; z-index: 1; inset: 0; animation: zen-ring-in 210ms var(--ease-enter) backwards; }
+.ZenMenu-petal, .ZenMenu-fanButton, .ZenMenu-satellite, .ZenMenu-hub { position: absolute; pointer-events: auto; }
+.ZenMenu-petal {
+	z-index: 3;
+	display: grid;
+	width: 82px;
+	height: 108px;
+	place-items: center;
+	translate: -50% -50%;
+	rotate: var(--petal-rotation);
+	border: 0;
+	border-radius: 42px 42px 28px 28px;
+	background: color-mix(in srgb, var(--panel) 97%, var(--surface));
+	padding: 0;
+	color: var(--ink);
+	box-shadow: inset 0 0 0 1px var(--line-strong), 0 8px 22px rgba(15, 15, 15, .12);
+	transition: background-color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift), color 140ms var(--ease-swift), scale 140ms var(--ease-swift);
+}
+.ZenMenu-petal:hover, .ZenMenu-petal[data-active='true'] {
+	background: #7898f5;
+	color: #111827;
+	box-shadow: inset 0 0 0 1px rgba(39, 64, 132, .18), 0 11px 28px rgba(50, 73, 137, .2);
+	scale: 1.04;
+}
+:root[data-theme='dark'] .ZenMenu-petal:hover, :root[data-theme='dark'] .ZenMenu-petal[data-active='true'] { background: #5679d8; color: #f7f8fc; }
+.ZenMenu-petal[data-danger='true'] { color: var(--danger); }
+.ZenMenu-petal[data-danger='true']:hover { background: var(--danger-soft); color: var(--danger); }
+.ZenMenu-petal:disabled { opacity: .42; }
+.ZenMenu-petal:focus-visible, .ZenMenu-fanButton:focus-visible, .ZenMenu-satellite:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ZenMenu-petalContent {
+	display: grid;
+	width: 72px;
+	place-items: center;
+	gap: 7px;
+	rotate: calc(var(--petal-rotation) * -1);
+	font-size: 10px;
+	font-weight: 580;
+	line-height: 1.05;
+	text-align: center;
+}
+.ZenMenu-petalContent > span:first-child { display: grid; place-items: center; }
 
-.ZenMenu-segment { position: absolute; inset: 0; border: 0; background: color-mix(in srgb, var(--panel) 97%, var(--surface)); padding: 0; color: var(--ink); pointer-events: auto; transition: background-color 130ms var(--ease-swift), color 130ms var(--ease-swift), filter 130ms var(--ease-swift); }
-.ZenMenu-segment--root { width: 324px; height: 324px; }
-.ZenMenu-segment--outer { width: 460px; height: 460px; }
-.ZenMenu-segment:hover { background: color-mix(in srgb, var(--accent-soft) 68%, var(--panel)); color: var(--accent-text); }
-.ZenMenu-segment[data-active='true'] { background: #7898f5; color: #111827; }
-:root[data-theme='dark'] .ZenMenu-segment[data-active='true'] { background: #5679d8; color: #f7f8fc; }
-.ZenMenu-segment[data-danger='true'] { color: var(--danger); }
-.ZenMenu-segment[data-danger='true']:hover { background: var(--danger-soft); color: var(--danger); }
-.ZenMenu-segment:active { transform: none; }
-.ZenMenu-segment:focus-visible { outline: 0; filter: drop-shadow(0 0 3px var(--accent)); }
-.ZenMenu-segmentContent { position: absolute; top: var(--segment-y); left: var(--segment-x); display: grid; min-width: 48px; max-width: 68px; justify-items: center; gap: 6px; translate: -50% -50%; text-align: center; }
-.ZenMenu-segmentIcon { display: grid; place-items: center; }
-.ZenMenu-segmentLabel { max-width: 68px; overflow: hidden; font-size: 10.5px; font-weight: 540; line-height: 1.12; text-overflow: ellipsis; white-space: nowrap; }
-.ZenMenu-segment--outer .ZenMenu-segmentContent { min-width: 36px; max-width: 54px; gap: 4px; }
-.ZenMenu-segment--outer .ZenMenu-segmentLabel { max-width: 54px; font-size: 8.5px; font-weight: 520; }
-.ZenMenu-colorDot { width: 22px; height: 22px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 1px 2px rgba(0, 0, 0, .12); }
-.ZenMenu-swatch[data-active='true'] .ZenMenu-colorDot { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px currentColor; }
+.ZenMenu-fan { position: absolute; z-index: 7; inset: 0; pointer-events: none; }
+.ZenMenu-fanButton {
+	display: grid;
+	width: 56px;
+	height: 56px;
+	place-content: center;
+	justify-items: center;
+	gap: 3px;
+	translate: -50% -50%;
+	border: 0;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--panel) 97%, var(--surface));
+	padding: 0 4px;
+	color: var(--ink);
+	box-shadow: inset 0 0 0 1px var(--line-strong), 0 7px 20px rgba(15, 15, 15, .16);
+	animation: zen-fan-in 180ms var(--ease-enter) var(--fan-delay) backwards;
+	transition: background-color 130ms var(--ease-swift), color 130ms var(--ease-swift), scale 130ms var(--ease-swift);
+}
+.ZenMenu-fanButton > span:first-child { display: grid; place-items: center; }
+.ZenMenu-fanButton > span:last-child { max-width: 48px; overflow: hidden; font-size: 7.5px; font-weight: 590; line-height: 1.05; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.ZenMenu-fanButton:hover, .ZenMenu-fanButton[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); scale: 1.08; }
+.ZenMenu-fanButton[data-danger='true'] { color: var(--danger); }
+.ZenMenu-fanButton:disabled { opacity: .42; }
+.ZenMenu-fanButton--swatch { gap: 4px; }
+.ZenMenu-colorDot { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 1px 2px rgba(0, 0, 0, .12); }
+.ZenMenu-fanButton[data-active='true'] .ZenMenu-colorDot { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px currentColor; }
 
-.ZenMenu-hub { z-index: 4; display: grid; width: 108px; height: 108px; place-content: center; justify-items: center; gap: 6px; background: color-mix(in srgb, var(--surface) 88%, var(--panel)); box-shadow: inset 0 0 0 1px var(--line-strong), 0 4px 16px rgba(15, 15, 15, .13); pointer-events: auto; }
+.ZenMenu-satellite {
+	z-index: 2;
+	display: grid;
+	width: 46px;
+	height: 46px;
+	place-content: center;
+	justify-items: center;
+	gap: 1px;
+	translate: -50% -50%;
+	border: 0;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--panel) 92%, var(--surface));
+	padding: 0;
+	color: var(--muted);
+	box-shadow: inset 0 0 0 1px var(--line-strong), 0 5px 14px rgba(15, 15, 15, .11);
+	transition: background-color 130ms var(--ease-swift), color 130ms var(--ease-swift), scale 130ms var(--ease-swift);
+}
+.ZenMenu-satellite > span:first-child { display: grid; place-items: center; }
+.ZenMenu-satellite > span:last-child { max-width: 36px; overflow: hidden; font-size: 6.5px; font-weight: 620; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+.ZenMenu-satellite:hover, .ZenMenu-satellite[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); scale: 1.08; }
+.ZenMenu-satellite:disabled { opacity: .36; }
+.ZenMenu-stage:not([data-fan='none']) .ZenMenu-satellite { opacity: .1; pointer-events: none; scale: .84; }
+
+.ZenMenu-hub { z-index: 8; top: 50%; left: 50%; display: grid; width: 94px; height: 94px; translate: -50% -50%; place-content: center; justify-items: center; gap: 5px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 88%, var(--panel)); box-shadow: inset 0 0 0 1px var(--line-strong), 0 5px 18px rgba(15, 15, 15, .14); }
 .ZenMenu-title { color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
 .ZenMenu-hubControls { display: flex; align-items: center; justify-content: center; gap: 5px; }
 .ZenMenu-back, .ZenMenu-close, .ZenMenu-origin { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 50%; background: var(--panel); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-strong), 0 1px 2px rgba(15, 15, 15, .08); }
 .ZenMenu-back, .ZenMenu-close { transition: background-color 130ms var(--ease-swift), color 130ms var(--ease-swift); }
 .ZenMenu-back:hover, .ZenMenu-close:hover { background: var(--accent-soft); color: var(--accent-text); }
 .ZenMenu-origin { color: var(--faint); }
-.ZenMenu-hint { color: var(--faint); font-size: 7.5px; font-weight: 500; line-height: 1; }
-
-/* Music summoned in Zen floats where the tool rail used to be, and stays through menu open/close. */
-.ZenSpotify { position: fixed; left: 50%; bottom: max(var(--chrome-inset), env(safe-area-inset-bottom)); z-index: 55; translate: -50% 0; pointer-events: auto; animation: pop-in 200ms var(--ease-swift) backwards; }
+.ZenMenu-hint { width: 78px; overflow: hidden; color: var(--faint); font-size: 7.25px; font-weight: 500; line-height: 1; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
 @keyframes zen-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes zen-menu-in { from { scale: .9; opacity: 0; } to { scale: 1; opacity: 1; } }
-@keyframes zen-ring-in { from { scale: .72; opacity: 0; } to { scale: 1; opacity: 1; } }
+@keyframes zen-fan-in { from { opacity: 0; scale: .72; } to { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) {
-	.ZenMenuLayer-scrim, .ZenMenu-stage, .ZenMenu-outerRing, .ZenSpotify { animation: none; }
-	.ZenMenu-outerPlate { transition: none; }
+	.ZenMenuLayer-scrim, .ZenMenu-stage, .ZenMenu-fanButton { animation: none; }
 }
 
 /* ---------- Canvas style panel ---------- */
