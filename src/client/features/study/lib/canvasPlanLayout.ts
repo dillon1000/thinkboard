@@ -86,11 +86,17 @@ export function resolveCanvasPlanLayout(
 				placedBounds.x - layoutBounds.x,
 				placedBounds.y - layoutBounds.y
 			)
-			if (plan.collisionPolicy !== 'allow' && !allowsOverlap(placement)) {
+			if (
+				plan.collisionPolicy !== 'allow' &&
+				(!layout.placement || !allowsOverlap(placement))
+			) {
 				resolveLayoutCollision(
 					layout.items,
 					boxes,
-					environment.existing,
+					[
+						...environment.existing,
+						...resolvedPlanObstacles(boxes, resolvedIDs),
+					],
 					new Set(target.ids),
 					plan.collisionPolicy
 				)
@@ -113,12 +119,19 @@ export function resolveCanvasPlanLayout(
 			const placement = element.placement ?? defaultElementPlacement(element.id, plan.elements)
 			const target = resolveReference(placement.of, boxes, environment, resolvedIDs)
 			if (!target) continue
-			boxes.set(element.id, placeBox(box, placement, target))
-			if (plan.collisionPolicy !== 'allow' && !allowsOverlap(placement)) {
+			const filledBox = fillElementBox(box, element, placement, target)
+			boxes.set(element.id, placeBox(filledBox, placement, target))
+			if (
+				plan.collisionPolicy !== 'allow' &&
+				(!element.placement || !allowsOverlap(placement))
+			) {
 				resolveElementCollision(
 					element.id,
 					boxes,
-					environment.existing,
+					[
+						...environment.existing,
+						...resolvedPlanObstacles(boxes, resolvedIDs),
+					],
 					new Set(target.ids),
 					plan.collisionPolicy
 				)
@@ -184,6 +197,14 @@ export function measureCanvasPlanElement(
 
 export function spacingValue(spacing: CanvasSpacing) {
 	return typeof spacing === 'number' ? spacing : CANVAS_SPACING[spacing]
+}
+
+export function resolveCanvasPlacement(
+	box: CanvasLayoutBox,
+	placement: CanvasPlacement,
+	target: CanvasLayoutReference
+) {
+	return placeBox(box, placement, target)
 }
 
 function arrangeLayout(
@@ -447,6 +468,20 @@ function defaultElementPlacement(id: string, elements: CanvasPlanElement[]): Can
 	}
 }
 
+function fillElementBox(
+	box: CanvasLayoutBox,
+	element: CanvasPlanElement,
+	placement: CanvasPlacement,
+	target: CanvasLayoutReference
+) {
+	const inset = placement.relation === 'inside' ? spacingValue(placement.gap) * 2 : 0
+	const size = constrainSize({
+		w: element.size?.width === 'fill' ? Math.max(1, target.w - inset) : box.w,
+		h: element.size?.height === 'fill' ? Math.max(1, target.h - inset) : box.h,
+	}, element.size)
+	return { ...box, ...size }
+}
+
 function resolveElementCollision(
 	id: string,
 	boxes: Map<string, CanvasLayoutBox>,
@@ -508,6 +543,16 @@ function translateItems(
 		const box = boxes.get(id)
 		if (box) boxes.set(id, { ...box, x: box.x + deltaX, y: box.y + deltaY })
 	}
+}
+
+function resolvedPlanObstacles(
+	boxes: ReadonlyMap<string, CanvasLayoutBox>,
+	resolvedIDs: ReadonlySet<string>
+) {
+	return [...resolvedIDs].flatMap((id) => {
+		const box = boxes.get(id)
+		return box ? [{ ...box, id }] : []
+	})
 }
 
 function constrainSize(

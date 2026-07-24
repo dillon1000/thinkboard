@@ -150,6 +150,28 @@ describe('resolveCanvasPlanLayout', () => {
 		expect(result.boxes.get('left')?.y).toBeGreaterThan(result.boxes.get('root')?.y ?? 0)
 		expect(result.boxes.get('left')?.x).toBeLessThan(result.boxes.get('right')?.x ?? 0)
 	})
+
+	it('keeps unplaced plan elements from landing on each other', () => {
+		const plan = createPlan({
+			collisionPolicy: 'shift',
+			elements: [
+				{ id: 'one', kind: 'geo', text: '', size: { width: 200, height: 120 } },
+				{ id: 'two', kind: 'geo', text: '', size: { width: 200, height: 120 } },
+			],
+		})
+
+		const result = resolveCanvasPlanLayout(plan, environment)
+
+		expect(result.boxes.get('one')).not.toEqual(result.boxes.get('two'))
+		const one = result.boxes.get('one')
+		const two = result.boxes.get('two')
+		expect(one && two && (
+			one.x + one.w <= two.x ||
+			two.x + two.w <= one.x ||
+			one.y + one.h <= two.y ||
+			two.y + two.h <= one.y
+		)).toBe(true)
+	})
 })
 
 function createPlan(overrides: Record<string, unknown>) {

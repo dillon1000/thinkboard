@@ -300,9 +300,22 @@ export const canvasPlanSchema = z.object({
 		elementIDs.add(element.id)
 	}
 
+	const groupIDs = new Set(
+		plan.containers.flatMap((container) => container.type === 'group' ? [container.id] : [])
+	)
+	for (const [index, container] of plan.containers.entries()) {
+		if (container.type === 'group' && elementIDs.has(container.id)) {
+			context.addIssue({
+				code: 'custom',
+				message: 'Group IDs must be unique across the plan',
+				path: ['containers', index, 'id'],
+			})
+		}
+	}
+
 	const connectorIDs = new Set<string>()
 	for (const [index, connector] of plan.connectors.entries()) {
-		if (elementIDs.has(connector.id) || connectorIDs.has(connector.id)) {
+		if (elementIDs.has(connector.id) || groupIDs.has(connector.id) || connectorIDs.has(connector.id)) {
 			context.addIssue({
 				code: 'custom',
 				message: 'Connector IDs must be unique across the plan',
@@ -312,7 +325,7 @@ export const canvasPlanSchema = z.object({
 		connectorIDs.add(connector.id)
 	}
 
-	const planReferences = new Set([...elementIDs, ...connectorIDs])
+	const planReferences = new Set([...elementIDs, ...groupIDs, ...connectorIDs])
 	const checkPlanReference = (
 		reference: z.infer<typeof canvasObjectReferenceSchema>,
 		path: Array<string | number>
