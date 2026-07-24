@@ -9,7 +9,7 @@ describe('Study model providers on AI SDK 6', () => {
 		let capturedRequest: unknown
 		const openRouter = createOpenRouter({
 			apiKey: 'test-key',
-			baseURL: 'https://gateway.example/openrouter/v1',
+			baseURL: 'https://gateway.example/openrouter',
 			compatibility: 'strict',
 			fetch: async (input, init) => {
 				capturedRequest = {
@@ -36,7 +36,7 @@ describe('Study model providers on AI SDK 6', () => {
 		expect(await result.text).toBe('Hello from OpenRouter')
 		expect(capturedRequest).toMatchObject({
 			body: { model: 'thinkingmachines/inkling' },
-			url: 'https://gateway.example/openrouter/v1/chat/completions',
+			url: 'https://gateway.example/openrouter/chat/completions',
 		})
 	})
 
@@ -45,7 +45,7 @@ describe('Study model providers on AI SDK 6', () => {
 		let capturedRequest: unknown
 		const openRouter = createOpenRouter({
 			apiKey: 'test-key',
-			baseURL: 'https://gateway.example/openrouter/v1',
+			baseURL: 'https://gateway.example/openrouter',
 			compatibility: 'strict',
 			fetch: async (input, init) => {
 				capturedRequest = {
@@ -83,7 +83,7 @@ describe('Study model providers on AI SDK 6', () => {
 					effort: 'medium',
 				},
 			},
-			url: 'https://gateway.example/openrouter/v1/chat/completions',
+			url: 'https://gateway.example/openrouter/chat/completions',
 		})
 	})
 
@@ -92,7 +92,7 @@ describe('Study model providers on AI SDK 6', () => {
 		let capturedRequest: unknown
 		const openRouter = createOpenRouter({
 			apiKey: 'test-key',
-			baseURL: 'https://gateway.example/openrouter/v1',
+			baseURL: 'https://gateway.example/openrouter',
 			compatibility: 'strict',
 			fetch: async (_input, init) => {
 				capturedRequest = JSON.parse(String(init?.body))
