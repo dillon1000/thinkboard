@@ -16,10 +16,10 @@ export const STUDY_MODELS = {
 		supportsReasoning: false,
 	},
 	smarter: {
-		id: '@cf/moonshotai/kimi-k2.6',
+		id: 'meta/muse-spark-1.1',
 		label: 'Smarter',
 		description: 'Deep reasoning for difficult, multi-step problems.',
-		contextWindowTokens: 262_144,
+		contextWindowTokens: 1_000_000,
 		supportsReasoning: true,
 	},
 } as const satisfies Record<StudyModelMode, {

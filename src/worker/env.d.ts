@@ -8,6 +8,7 @@ interface Env {
 	SPOTIFY_CLIENT_ID?: string
 	SPOTIFY_CLIENT_SECRET?: string
 	EXA_API_KEY?: string
+	OPENROUTER_API_KEY?: string
 	TLDRAW_LICENSE_KEY?: string
 	AI_GATEWAY_ID?: string
 	LOCK_IN_MODEL?: string

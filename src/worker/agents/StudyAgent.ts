@@ -40,6 +40,7 @@ import {
 	validateUIMessages,
 	type UIMessage,
 } from 'ai'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createWorkersAI } from 'workers-ai-provider'
 import { z } from 'zod'
 import { createDatabase } from '../db/client'
@@ -240,16 +241,33 @@ export class StudyAgent extends DurableObject<Env> {
 		)
 		const requestedTool = getRequestedStudyTool(messages)
 		const toolContinuation = getStudyToolContinuation(messages)
-		const workersAI = createWorkersAI({ binding: this.env.AI })
 		const modelMode = parsed.data.modelMode
 		const reasoningEffort = parsed.data.reasoningEffort
 		const model = getStudyModel(modelMode)
 		const modelID = modelMode === 'quicker'
 			? this.env.AI_MODEL ?? model.id
 			: model.id
-		const languageModel = model.supportsReasoning
-			? workersAI(modelID, { reasoning_effort: reasoningEffort })
-			: workersAI(modelID)
+		let languageModel
+		if (modelMode === 'smarter') {
+			const apiKey = this.env.OPENROUTER_API_KEY?.trim()
+			if (!apiKey) {
+				return Response.json({ error: 'The Smarter model is not configured' }, { status: 503 })
+			}
+			const gatewayID = this.env.AI_GATEWAY_ID?.trim() || 'default'
+			const gatewayURL = await this.env.AI.gateway(gatewayID).getUrl('openrouter')
+			const openRouter = createOpenRouter({
+				apiKey,
+				baseURL: `${gatewayURL.replace(/\/$/, '')}/v1`,
+				compatibility: 'strict',
+			})
+			languageModel = openRouter(modelID)
+		} else {
+			const workersAI = createWorkersAI({
+				binding: this.env.AI,
+				gateway: { id: this.env.AI_GATEWAY_ID?.trim() || 'default' },
+			})
+			languageModel = workersAI(modelID)
+		}
 		const userID = request.headers.get('x-agentboard-user-id')
 		const [mistakePatterns, spotifyPlayback] = await Promise.all([
 			userID
@@ -348,6 +366,9 @@ ${spotifyContext}
 					? 'none'
 					: 'auto',
 			temperature: 0,
+			providerOptions: model.supportsReasoning
+				? { openrouter: { reasoning: { effort: reasoningEffort } } }
+				: undefined,
 			stopWhen: stepCountIs(15),
 			abortSignal: generation.signal,
 		})
