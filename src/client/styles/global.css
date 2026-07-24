@@ -660,6 +660,7 @@ img { max-width: 100%; }
 .ChatMessage-actions button:active:not(:disabled) { scale: .96; }
 .ChatMessage-actions button:disabled { opacity: .35; }
 .ChatMessage-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ToolCallFormatError { margin: 0; border-radius: 6px; background: var(--danger-soft); padding: 8px 10px; color: var(--danger); font-size: 12px; line-height: 1.45; }
 .ChatMarkdown { margin-top: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; line-height: 1.58; }
 .ChatMarkdown + .ChatMarkdown { margin-top: 7px; }
 .ChatMarkdown > :first-child { margin-top: 0; }

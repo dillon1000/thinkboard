@@ -6,7 +6,7 @@ import {
 	getStudyModel,
 	studyReasoningEffortSchema,
 	type ConceptMapProposal,
-	type CanvasPlan,
+	type CanvasPlanInput,
 	type CanvasContext,
 	type EquationProposal,
 	type FlashcardProposal,
@@ -79,6 +79,7 @@ import {
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { getMessageCopyText } from '../lib/studyMessageActions'
 import {
+	hasProviderToolCallEnvelope,
 	parseLeakedProposal,
 	type LeakedProposal,
 } from '../lib/studyProposal'
@@ -369,7 +370,7 @@ type StudyTools = {
 	createWalkthrough: { input: WalkthroughProposal; output: { applied: boolean } }
 	createConceptMap: { input: ConceptMapProposal; output: { applied: boolean } }
 	createPracticeSet: { input: PracticeSetProposal; output: { applied: boolean } }
-	composeCanvas: { input: CanvasPlan; output: { applied: boolean } }
+	composeCanvas: { input: CanvasPlanInput; output: { applied: boolean } }
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
 	playSpotify: { input: SpotifyAgentPlayInput; output: SpotifyAgentPlayOutput }
@@ -598,15 +599,21 @@ function StudyConversationChat({
 												const leakedProposal = isAnimating
 													? null
 													: parseLeakedProposal(part.text)
+												const hasToolEnvelope = hasProviderToolCallEnvelope(part.text)
+												if (hasToolEnvelope && isAnimating) return null
 												if (leakedProposal) {
 													return (
 														<LeakedProposalCall
 															boardID={boardID}
+															documentClock={canvasContextRef.current?.documentClock}
 															editor={editor}
 															key={index}
 															proposal={leakedProposal}
 														/>
 													)
+												}
+												if (hasToolEnvelope) {
+													return <p className="ToolCallFormatError" key={index}>The canvas proposal used an invalid format. Retry this response.</p>
 												}
 												return <AssistantMarkdown boardID={boardID} editor={editor} isAnimating={isAnimating} key={index}>{part.text}</AssistantMarkdown>
 											}
@@ -1099,7 +1106,17 @@ function addProposalError(
 	return addToolOutput({ tool: 'recordMistake', toolCallId: toolCallID, state: 'output-error', errorText })
 }
 
-function LeakedProposalCall({ boardID, editor, proposal }: { boardID: string; editor: Editor | null; proposal: LeakedProposal }) {
+function LeakedProposalCall({
+	boardID,
+	documentClock,
+	editor,
+	proposal,
+}: {
+	boardID: string
+	documentClock?: number
+	editor: Editor | null
+	proposal: LeakedProposal
+}) {
 	const [status, setStatus] = useState<ProposalCallStatus>('ready')
 
 	async function applyLeakedProposal() {
@@ -1108,7 +1125,10 @@ function LeakedProposalCall({ boardID, editor, proposal }: { boardID: string; ed
 				await recordProposedMistake(boardID, proposal.input)
 			} else {
 				if (!editor) return
-				await persistProposalEffect(boardID, applyProposal(editor, proposal.toolName, proposal.input))
+				await persistProposalEffect(
+					boardID,
+					applyProposal(editor, proposal.toolName, proposal.input, { documentClock })
+				)
 			}
 			setStatus('accepted')
 		} catch {

@@ -1,6 +1,8 @@
 import {
 	conceptMapProposalSchema,
+	canvasPlanInputSchema,
 	canvasPlanSchema,
+	normalizeCanvasPlanInput,
 	equationProposalSchema,
 	flashcardProposalSchema,
 	mistakeProposalSchema,
@@ -26,6 +28,11 @@ export interface LeakedProposal {
 	toolName: SupportedProposalName
 }
 
+export function hasProviderToolCallEnvelope(text: string) {
+	return text.includes('<|tool_calls_section_begin|>') ||
+		text.includes('<|tool_call_begin|>')
+}
+
 const proposalNames: readonly SupportedProposalName[] = [
 	'addReviewNote',
 	'createFlashcards',
@@ -39,7 +46,7 @@ const proposalNames: readonly SupportedProposalName[] = [
 ]
 
 export function parseLeakedProposal(text: string): LeakedProposal | null {
-	for (const value of parseJSONValues(text)) {
+	for (const value of [...parseProviderToolCalls(text), ...parseJSONValues(text)]) {
 		const proposal = parseProposalValue(value)
 		if (proposal) return proposal
 	}
@@ -86,10 +93,27 @@ function parseProposalValue(value: unknown): LeakedProposal | null {
 	if (toolName === 'recordMistake' && mistakeProposalSchema.safeParse(input).success) {
 		return { input, toolName }
 	}
-	if (toolName === 'composeCanvas' && canvasPlanSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'composeCanvas') {
+		if (canvasPlanSchema.safeParse(input).success) return { input, toolName }
+		const result = canvasPlanInputSchema.safeParse(input)
+		if (result.success) return { input: normalizeCanvasPlanInput(result.data), toolName }
 	}
 	return null
+}
+
+function parseProviderToolCalls(text: string) {
+	const values: unknown[] = []
+	const pattern = /<\|tool_call_begin\|>(?:functions\.)?([A-Za-z][A-Za-z0-9_]*)(?::\d+)?<\|tool_call_argument_begin\|>([\s\S]*?)<\|tool_call_end\|>/g
+	for (const match of text.matchAll(pattern)) {
+		const [, name, encodedInput] = match
+		if (!name || !encodedInput) continue
+		try {
+			values.push({ name, input: JSON.parse(encodedInput) as unknown })
+		} catch {
+			// Another provider envelope in the same response may still contain valid JSON.
+		}
+	}
+	return values
 }
 
 function parseJSONValues(text: string) {

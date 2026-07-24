@@ -1,5 +1,5 @@
 import {
-	canvasPlanSchema,
+	normalizeCanvasPlanInput,
 	type CanvasConnector,
 	type CanvasObjectReference,
 	type CanvasPlan,
@@ -67,7 +67,7 @@ export function applyCanvasPlan(
 	input: unknown,
 	{ anchor, documentClock, select }: ApplyCanvasPlanOptions = {}
 ): CanvasPlanEffect {
-	const plan = canvasPlanSchema.parse(input)
+	const plan = normalizeCanvasPlanInput(input)
 	const planShapeIDs = createPlanShapeIDs(plan)
 	const existingPlanShapes = findPlanShapes(editor, planShapeIDs)
 	if (existingPlanShapes.length) {

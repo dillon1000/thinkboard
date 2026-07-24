@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { canvasPlanSchema } from './canvasPlan'
+import {
+	canvasPlanInputSchema,
+	canvasPlanSchema,
+	normalizeCanvasPlanInput,
+} from './canvasPlan'
 
 describe('canvasPlanSchema', () => {
 	it('accepts native shapes, layouts, connectors, containers, edits, and layers', () => {
@@ -112,5 +116,82 @@ describe('canvasPlanSchema', () => {
 
 		expect(layerResult.success).toBe(false)
 		expect(emptyResult.success).toBe(false)
+	})
+
+	it('converts validated native-shape calls into a layout plan', () => {
+		const input = {
+			baseDocumentClock: 4,
+			delete: ['old-shape'],
+			create: [
+				{
+					id: 'first',
+					type: 'geo',
+					x: 100,
+					y: 200,
+					props: {
+						geo: 'rectangle',
+						w: 240,
+						h: 80,
+						color: 'agent-blue',
+						fill: 'solid',
+						text: '<p><strong>First step</strong></p>',
+					},
+				},
+				{
+					id: 'second',
+					type: 'geo',
+					x: 100,
+					y: 340,
+					props: {
+						geo: 'diamond',
+						w: 240,
+						h: 100,
+						color: 'agent-amber',
+						fill: 'solid',
+						text: '<p>Continue?</p>',
+					},
+				},
+				{
+					id: 'edge',
+					type: 'arrow',
+					props: {
+						color: 'black',
+						start: { type: 'binding', boundShapeId: 'first' },
+						end: { type: 'binding', boundShapeId: 'second' },
+					},
+				},
+			],
+		}
+		expect(canvasPlanInputSchema.safeParse(input).success).toBe(true)
+		const result = normalizeCanvasPlanInput(input)
+
+		expect(result).toMatchObject({
+			version: 1,
+			baseDocumentClock: 4,
+			collisionPolicy: 'allow',
+			elements: [
+				{ id: 'first', kind: 'geo', text: 'First step' },
+				{ id: 'second', kind: 'geo', text: 'Continue?' },
+			],
+			connectors: [{
+				id: 'edge',
+				from: { type: 'element', id: 'first' },
+				to: { type: 'element', id: 'second' },
+			}],
+			deletes: [{ type: 'shape', id: 'shape:old-shape' }],
+		})
+		expect(result.planID).toMatch(/^legacy-[a-z0-9]+$/)
+	})
+
+	it('rejects unsupported raw canvas records', () => {
+		expect(canvasPlanInputSchema.safeParse({
+			create: [{
+				id: 'freehand',
+				type: 'draw',
+				x: 0,
+				y: 0,
+				props: { segments: [] },
+			}],
+		}).success).toBe(false)
 	})
 })

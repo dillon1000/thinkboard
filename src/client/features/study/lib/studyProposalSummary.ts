@@ -1,6 +1,6 @@
 import {
 	conceptMapProposalSchema,
-	canvasPlanSchema,
+	normalizeCanvasPlanInput,
 	equationProposalSchema,
 	flashcardProposalSchema,
 	quizProposalSchema,
@@ -137,15 +137,15 @@ export function getProposalPreview(toolName: string, input: unknown): ProposalPr
 		}
 	}
 	if (toolName === 'composeCanvas') {
-		const proposal = canvasPlanSchema.safeParse(input)
-		if (proposal.success) {
+		const proposal = parseCanvasPlan(input)
+		if (proposal) {
 			return {
 				description,
 				details: [
-					{ label: 'Shapes', value: String(proposal.data.elements.length) },
-					{ label: 'Connectors', value: String(proposal.data.connectors.length) },
-					{ label: 'Layouts', value: proposal.data.layouts.map(({ type }) => type).join(' · ') || 'Relative placement' },
-					{ label: 'Edits', value: String(proposal.data.edits.length + proposal.data.deletes.length) },
+					{ label: 'Shapes', value: String(proposal.elements.length) },
+					{ label: 'Connectors', value: String(proposal.connectors.length) },
+					{ label: 'Layouts', value: proposal.layouts.map(({ type }) => type).join(' · ') || 'Relative placement' },
+					{ label: 'Edits', value: String(proposal.edits.length + proposal.deletes.length) },
 				],
 			}
 		}
@@ -196,11 +196,19 @@ export function summarizeProposal(toolName: string, input: unknown) {
 		return proposal.success ? `${proposal.data.title} will be saved to your private learning history.` : 'Preparing a mistake record…'
 	}
 	if (toolName === 'composeCanvas') {
-		const proposal = canvasPlanSchema.safeParse(input)
-		if (!proposal.success) return 'Preparing a canvas composition…'
-		const objectCount = proposal.data.elements.length + proposal.data.connectors.length
-		const editCount = proposal.data.edits.length + proposal.data.deletes.length
+		const proposal = parseCanvasPlan(input)
+		if (!proposal) return 'Preparing a canvas composition…'
+		const objectCount = proposal.elements.length + proposal.connectors.length
+		const editCount = proposal.edits.length + proposal.deletes.length
 		return `${objectCount} board objects${editCount ? ` and ${editCount} edits` : ''}, arranged with native canvas tools.`
 	}
 	return 'A board item is ready for review.'
+}
+
+function parseCanvasPlan(input: unknown) {
+	try {
+		return normalizeCanvasPlanInput(input)
+	} catch {
+		return undefined
+	}
 }

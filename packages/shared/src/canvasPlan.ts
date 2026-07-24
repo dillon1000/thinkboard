@@ -99,6 +99,30 @@ export const canvasShapeStyleSchema = z.object({
 	opacity: z.number().finite().min(0.05).max(1).optional(),
 })
 
+const CANVAS_GEOS = [
+	'cloud',
+	'rectangle',
+	'ellipse',
+	'triangle',
+	'diamond',
+	'pentagon',
+	'hexagon',
+	'octagon',
+	'star',
+	'rhombus',
+	'rhombus-2',
+	'oval',
+	'trapezoid',
+	'arrow-right',
+	'arrow-left',
+	'arrow-up',
+	'arrow-down',
+	'x-box',
+	'check-box',
+	'heart',
+] as const
+const canvasGeoSchema = z.enum(CANVAS_GEOS)
+
 const canvasElementBaseSchema = {
 	id: canvasPlanIDSchema,
 	placement: canvasPlacementSchema.optional(),
@@ -111,28 +135,7 @@ const canvasElementBaseSchema = {
 export const canvasGeoElementSchema = z.object({
 	...canvasElementBaseSchema,
 	kind: z.literal('geo'),
-	geo: z.enum([
-		'cloud',
-		'rectangle',
-		'ellipse',
-		'triangle',
-		'diamond',
-		'pentagon',
-		'hexagon',
-		'octagon',
-		'star',
-		'rhombus',
-		'rhombus-2',
-		'oval',
-		'trapezoid',
-		'arrow-right',
-		'arrow-left',
-		'arrow-up',
-		'arrow-down',
-		'x-box',
-		'check-box',
-		'heart',
-	]).default('rectangle'),
+	geo: canvasGeoSchema.default('rectangle'),
 	text: z.string().trim().max(2_000).default(''),
 })
 
@@ -410,6 +413,219 @@ export const canvasPlanSchema = z.object({
 	}
 })
 
+const legacyCanvasStyleFields = {
+	color: canvasColorSchema.optional(),
+	dash: z.enum(['draw', 'solid', 'dashed', 'dotted']).optional(),
+	fill: z.enum(['none', 'semi', 'solid', 'pattern', 'fill', 'lined-fill']).optional(),
+	font: z.enum(['draw', 'sans', 'serif', 'mono']).optional(),
+	size: z.enum(['s', 'm', 'l', 'xl']).optional(),
+}
+
+const legacyCanvasGeoSchema = z.object({
+	id: canvasPlanIDSchema,
+	type: z.literal('geo'),
+	x: z.number().finite().min(-10_000).max(10_000),
+	y: z.number().finite().min(-10_000).max(10_000),
+	props: z.object({
+		...legacyCanvasStyleFields,
+		align: z.enum(['start', 'middle', 'end']).optional(),
+		geo: canvasGeoSchema.default('rectangle'),
+		h: z.number().finite().positive().max(10_000),
+		text: z.string().max(4_000).default(''),
+		w: z.number().finite().positive().max(10_000),
+	}),
+})
+
+const legacyCanvasTextSchema = z.object({
+	id: canvasPlanIDSchema,
+	type: z.literal('text'),
+	x: z.number().finite().min(-10_000).max(10_000),
+	y: z.number().finite().min(-10_000).max(10_000),
+	props: z.object({
+		...legacyCanvasStyleFields,
+		align: z.enum(['start', 'middle', 'end']).optional(),
+		text: z.string().trim().min(1).max(4_000),
+	}),
+})
+
+const legacyCanvasBindingSchema = z.object({
+	type: z.literal('binding'),
+	boundShapeId: z.string().trim().min(1).max(120),
+})
+
+const legacyCanvasArrowSchema = z.object({
+	id: canvasPlanIDSchema,
+	type: z.literal('arrow'),
+	x: z.number().finite().min(-10_000).max(10_000).optional(),
+	y: z.number().finite().min(-10_000).max(10_000).optional(),
+	props: z.object({
+		...legacyCanvasStyleFields,
+		end: legacyCanvasBindingSchema,
+		start: legacyCanvasBindingSchema,
+		text: z.string().max(240).default(''),
+	}),
+})
+
+const legacyCanvasPlanSchema = z.object({
+	baseDocumentClock: z.number().int().nonnegative().optional(),
+	create: z.array(z.discriminatedUnion('type', [
+		legacyCanvasGeoSchema,
+		legacyCanvasTextSchema,
+		legacyCanvasArrowSchema,
+	])).min(1).max(MAX_CANVAS_PLAN_ELEMENTS + MAX_CANVAS_PLAN_CONNECTORS),
+	delete: z.array(z.string().trim().min(1).max(120)).max(30).default([]),
+})
+
+/**
+ * Accepts the compact native-shape call format that some Workers AI models emit, then converts
+ * it into the validated layout plan used by the browser executor.
+ */
+export const canvasPlanInputSchema = z.union([canvasPlanSchema, legacyCanvasPlanSchema])
+
+export function normalizeCanvasPlanInput(input: unknown): CanvasPlan {
+	const current = canvasPlanSchema.safeParse(input)
+	if (current.success) return current.data
+	const legacy = legacyCanvasPlanSchema.parse(input)
+	return canvasPlanSchema.parse(convertLegacyCanvasPlan(legacy))
+}
+
+function convertLegacyCanvasPlan(legacy: z.infer<typeof legacyCanvasPlanSchema>) {
+	const nodes = legacy.create.filter(
+		(shape): shape is Exclude<typeof shape, z.infer<typeof legacyCanvasArrowSchema>> =>
+			shape.type !== 'arrow'
+	)
+	const arrows = legacy.create.filter(
+		(shape): shape is z.infer<typeof legacyCanvasArrowSchema> => shape.type === 'arrow'
+	)
+	const boxes = nodes.map((shape) => ({ ...legacyShapeSize(shape), x: shape.x, y: shape.y }))
+	const minX = Math.min(...boxes.map(({ x }) => x))
+	const minY = Math.min(...boxes.map(({ y }) => y))
+	const maxX = Math.max(...boxes.map(({ x, w }) => x + w))
+	const maxY = Math.max(...boxes.map(({ y, h }) => y + h))
+	const bounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
+	const nodeIDs = new Set(nodes.map(({ id }) => id))
+
+	const elements = nodes.map((shape, index) => {
+		const box = boxes[index]
+		const placement = {
+			align: 'center' as const,
+			gap: 0,
+			of: { type: 'viewport' as const },
+			offset: {
+				x: box.x - bounds.x - bounds.w / 2 + box.w / 2,
+				y: box.y - bounds.y - bounds.h / 2 + box.h / 2,
+			},
+			relation: 'center' as const,
+		}
+		const style = legacyCanvasStyle(shape.props)
+		const text = legacyHTMLToText(shape.props.text)
+		return shape.type === 'geo'
+			? {
+					id: shape.id,
+					kind: 'geo' as const,
+					geo: shape.props.geo,
+					placement,
+					size: { width: box.w, height: box.h },
+					...(style ? { style } : {}),
+					text,
+				}
+			: {
+					id: shape.id,
+					kind: 'text' as const,
+					autoSize: false,
+					placement,
+					size: { width: box.w, height: box.h },
+					...(style ? { style } : {}),
+					text,
+				}
+	})
+	const connectors = arrows.map((arrow) => {
+		const style = legacyCanvasStyle(arrow.props)
+		return {
+			id: arrow.id,
+			from: legacyCanvasReference(arrow.props.start.boundShapeId, nodeIDs),
+			to: legacyCanvasReference(arrow.props.end.boundShapeId, nodeIDs),
+			label: legacyHTMLToText(arrow.props.text),
+			...(style ? { style } : {}),
+		}
+	})
+
+	return {
+		version: CANVAS_PLAN_VERSION,
+		planID: `legacy-${stableCanvasHash(JSON.stringify(legacy))}`,
+		baseDocumentClock: legacy.baseDocumentClock,
+		elements,
+		connectors,
+		deletes: legacy.delete.map((id) => ({
+			type: 'shape' as const,
+			id: id.startsWith('shape:') ? id : `shape:${id}`,
+		})),
+		collisionPolicy: 'allow',
+		selectCreated: true,
+		zoomToFit: true,
+	}
+}
+
+function legacyShapeSize(
+	shape: z.infer<typeof legacyCanvasGeoSchema> | z.infer<typeof legacyCanvasTextSchema>
+) {
+	if (shape.type === 'geo') return { w: shape.props.w, h: shape.props.h }
+	const text = legacyHTMLToText(shape.props.text)
+	const characterWidth = shape.props.size === 'xl' ? 14 : shape.props.size === 'l' ? 12 : 10
+	return {
+		w: Math.min(640, Math.max(120, text.length * characterWidth)),
+		h: shape.props.size === 'xl' ? 56 : shape.props.size === 'l' ? 44 : 36,
+	}
+}
+
+function legacyCanvasStyle(props: {
+	align?: 'start' | 'middle' | 'end'
+	color?: z.infer<typeof canvasColorSchema>
+	dash?: 'draw' | 'solid' | 'dashed' | 'dotted'
+	fill?: 'none' | 'semi' | 'solid' | 'pattern' | 'fill' | 'lined-fill'
+	font?: 'draw' | 'sans' | 'serif' | 'mono'
+	size?: 's' | 'm' | 'l' | 'xl'
+}) {
+	const style = {
+		color: props.color,
+		dash: props.dash,
+		fill: props.fill,
+		font: props.font,
+		size: props.size,
+		textAlign: props.align,
+	}
+	return Object.values(style).some((value) => value !== undefined) ? style : undefined
+}
+
+function legacyCanvasReference(id: string, nodeIDs: ReadonlySet<string>) {
+	return nodeIDs.has(id)
+		? { type: 'element' as const, id }
+		: { type: 'shape' as const, id: id.startsWith('shape:') ? id : `shape:${id}` }
+}
+
+function legacyHTMLToText(html: string) {
+	return html
+		.replace(/<br\s*\/?>/gi, '\n')
+		.replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+		.replace(/<[^>]+>/g, '')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.trim()
+}
+
+function stableCanvasHash(value: string) {
+	let hash = 2_166_136_261
+	for (let index = 0; index < value.length; index += 1) {
+		hash ^= value.charCodeAt(index)
+		hash = Math.imul(hash, 16_777_619)
+	}
+	return (hash >>> 0).toString(36)
+}
+
 export type CanvasColor = z.infer<typeof canvasColorSchema>
 export type CanvasConnector = z.infer<typeof canvasConnectorSchema>
 export type CanvasContainer = z.infer<typeof canvasContainerSchema>
@@ -419,6 +635,7 @@ export type CanvasLayout = z.infer<typeof canvasLayoutSchema>
 export type CanvasObjectReference = z.infer<typeof canvasObjectReferenceSchema>
 export type CanvasPlacement = z.infer<typeof canvasPlacementSchema>
 export type CanvasPlan = z.infer<typeof canvasPlanSchema>
+export type CanvasPlanInput = z.infer<typeof canvasPlanInputSchema>
 export type CanvasPlanElement = z.infer<typeof canvasPlanElementSchema>
 export type CanvasShapeStyle = z.infer<typeof canvasShapeStyleSchema>
 export type CanvasSize = z.infer<typeof canvasSizeSchema>

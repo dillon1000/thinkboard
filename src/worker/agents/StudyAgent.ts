@@ -2,7 +2,7 @@ import {
 	DEFAULT_STUDY_MODEL_MODE,
 	DEFAULT_STUDY_REASONING_EFFORT,
 	canvasContextSchema,
-	canvasPlanSchema,
+	canvasPlanInputSchema,
 	conceptMapProposalSchema,
 	equationProposalSchema,
 	flashcardProposalSchema,
@@ -18,7 +18,7 @@ import {
 	studyModeSchema,
 	walkthroughProposalSchema,
 	type ConceptMapProposal,
-	type CanvasPlan,
+	type CanvasPlanInput,
 	type EquationProposal,
 	type FlashcardProposal,
 	type MistakeProposal,
@@ -113,7 +113,7 @@ const proposalTools = {
 	}),
 	composeCanvas: tool({
 		description: 'Create or edit a native tldraw composition with relative layout, rich text in shapes, bound arrows, frames, groups, named colors, equations, and layer order. The browser resolves geometry and asks the student before applying it.',
-		inputSchema: canvasPlanSchema,
+		inputSchema: canvasPlanInputSchema,
 		outputSchema: proposalOutputSchema,
 	}),
 	writeEquation: tool({
@@ -145,7 +145,7 @@ type StudyTools = {
 	createWalkthrough: { input: WalkthroughProposal; output: { applied: boolean } }
 	createConceptMap: { input: ConceptMapProposal; output: { applied: boolean } }
 	createPracticeSet: { input: PracticeSetProposal; output: { applied: boolean } }
-	composeCanvas: { input: CanvasPlan; output: { applied: boolean } }
+	composeCanvas: { input: CanvasPlanInput; output: { applied: boolean } }
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
 	playSpotify: { input: SpotifyAgentPlayInput; output: SpotifyAgentPlayOutput }
@@ -323,6 +323,7 @@ ${spotifyContext}
 - Use LaTeX delimiters inside tool text fields when needed.
 - Put artifacts immediately right of the selection, or near the viewport center when nothing is selected.
 - Use composeCanvas for native shapes, text, notes, lines, bound arrows, frames, groups, diagrams, custom layouts, restyling, movement, resizing, relabeling, or deletion. Keep interactive flashcards, quizzes, walkthroughs, review notes, and mistake records in their dedicated tools.
+- Prefer the version 1 composeCanvas contract: planID, elements, layouts, connectors, containers, layers, edits, and deletes. Never put raw tldraw records in elements.
 - In composeCanvas, use plan-local kebab-case IDs and references. Prefer relative placement or stack, grid, radial, and tree layouts over absolute placement. Use frame containers for visible sections and groups for shared selection.
 - Treat north, east, south, and west as page directions. Use layers for behind or in-front-of requests; layer order must not change geometry.
 - Use rich text inside geo, text, note, and arrow records. Use equation elements for editable LaTeX. Do not simulate a label with a separate text shape unless it must move independently.

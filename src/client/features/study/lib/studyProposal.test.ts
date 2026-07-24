@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseLeakedProposal } from './studyProposal'
+import { hasProviderToolCallEnvelope, parseLeakedProposal } from './studyProposal'
 
 const reviewCall = {
 	name: 'addReviewNote',
@@ -120,5 +120,44 @@ describe('parseLeakedProposal', () => {
 			input,
 			toolName: 'composeCanvas',
 		})
+	})
+
+	it('recovers a Workers AI canvas tool envelope using native-shape arguments', () => {
+		const input = {
+			baseDocumentClock: 7,
+			delete: [],
+			create: [{
+				id: 'step',
+				type: 'geo',
+				x: 200,
+				y: 300,
+				props: {
+					geo: 'rectangle',
+					w: 260,
+					h: 80,
+					color: 'agent-blue',
+					fill: 'solid',
+					text: '<p>Start here</p>',
+				},
+			}],
+		}
+		const text = [
+			'<|tool_calls_section_begin|>',
+			'<|tool_call_begin|>functions.composeCanvas:3',
+			'<|tool_call_argument_begin|>',
+			JSON.stringify(input),
+			'<|tool_call_end|>',
+			'<|tool_calls_section_end|>',
+		].join('')
+
+		expect(parseLeakedProposal(text)).toMatchObject({
+			input: {
+				version: 1,
+				baseDocumentClock: 7,
+				elements: [{ id: 'step', kind: 'geo', text: 'Start here' }],
+			},
+			toolName: 'composeCanvas',
+		})
+		expect(hasProviderToolCallEnvelope(text)).toBe(true)
 	})
 })
