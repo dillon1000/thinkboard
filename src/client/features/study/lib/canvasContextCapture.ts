@@ -1,5 +1,6 @@
 import {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,
+	MAX_PDF_PAGES,
 	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
 	type CanvasContext,
@@ -16,6 +17,7 @@ import {
 	type TLShapeId,
 } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
+import { capturePDFTextSelection } from './pdfTextSelection'
 
 const MAX_SELECTION_SHAPES = 30
 const MAX_VIEWPORT_SHAPES = 40
@@ -26,6 +28,7 @@ export async function captureCanvasContext(
 	boardID: string,
 	editor: Editor | null
 ): Promise<CanvasContext> {
+	const pdfTextSelection = capturePDFTextSelection()
 	if (!editor) {
 		return {
 			boardID,
@@ -33,6 +36,7 @@ export async function captureCanvasContext(
 			relatedShapes: [],
 			relationships: [],
 			selection: [],
+			...(pdfTextSelection ? { pdfTextSelection } : {}),
 		}
 	}
 
@@ -47,11 +51,13 @@ export async function captureCanvasContext(
 	const contextShapeIDs = new Set(contextShapes.map(({ id }) => id))
 	const relatedShapes = getRelatedShapes(editor, relationships, contextShapeIDs)
 	const documentClockPromise = getDocumentClock(boardID)
+	const pdfPageRegions = getOverlappingPDFPageRegions(editor, selectedShapes)
 	const [documentClock, selectionImage] = await Promise.all([
 		documentClockPromise,
-		renderSelectionImage(editor, selectedShapes.map(({ id }) => id)),
+		isSinglePDFFrameSelection(editor, selectedShapes)
+			? Promise.resolve(undefined)
+			: renderSelectionImage(editor, selectedShapes.map(({ id }) => id)),
 	])
-	const pdfPageRegions = getOverlappingPDFPageRegions(editor, selectedShapes)
 
 	return {
 		boardID,
@@ -70,10 +76,25 @@ export async function captureCanvasContext(
 		relationships,
 		selectionImage,
 		...(pdfPageRegions.length ? { pdfPageRegions } : {}),
+		...(pdfTextSelection ? { pdfTextSelection } : {}),
 	}
 }
 
-function getOverlappingPDFPageRegions(editor: Editor, selectedShapes: readonly TLShape[]) {
+export function isSinglePDFFrameSelection(
+	editor: Editor,
+	selectedShapes: readonly TLShape[]
+) {
+	const frame = selectedShapes.length === 1 ? selectedShapes[0] : undefined
+	if (frame?.type !== 'frame') return false
+	return editor
+		.getSortedChildIdsForParent(frame.id)
+		.some((shapeID) => editor.getShape(shapeID)?.type === PDF_PAGE_SHAPE_TYPE)
+}
+
+export function getOverlappingPDFPageRegions(
+	editor: Editor,
+	selectedShapes: readonly TLShape[]
+) {
 	if (!selectedShapes.length) return []
 	const selectionBounds = editor.getSelectionPageBounds()
 	if (!selectionBounds) return []
@@ -96,7 +117,7 @@ function getOverlappingPDFPageRegions(editor: Editor, selectedShapes: readonly T
 			},
 			shapeID: shape.id,
 		}]
-	}).slice(0, 10)
+	}).slice(0, MAX_PDF_PAGES)
 }
 
 function intersectRectangles(
@@ -121,16 +142,22 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 	const html = richText
 		? renderHtmlFromRichText(editor, richText).trim().slice(0, 4_000)
 		: undefined
+	const style = extractShapeStyle(shape)
 
 	return {
 		id: shape.id,
 		type: shape.type,
 		...(isShapeId(shape.parentId) ? { parentShapeID: shape.parentId } : {}),
+		childShapeIDs: editor.getSortedChildIdsForParent(shape.id).slice(0, MAX_RELATED_SHAPES),
+		index: shape.index,
+		isLocked: shape.isLocked,
+		opacity: shape.opacity,
 		x: bounds?.x ?? shape.x,
 		y: bounds?.y ?? shape.y,
 		w: bounds?.w ?? 0,
 		h: bounds?.h ?? 0,
 		rotation: editor.getShapePageTransform(shape)?.rotation() ?? shape.rotation,
+		...(style ? { style } : {}),
 		...(plainText || html ? {
 			text: {
 				plainText,
@@ -138,6 +165,28 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 			},
 		} : {}),
 	}
+}
+
+function extractShapeStyle(shape: TLShape) {
+	const keys = [
+		'color',
+		'labelColor',
+		'fill',
+		'dash',
+		'size',
+		'font',
+		'textAlign',
+		'verticalAlign',
+		'geo',
+		'spline',
+		'arrowheadStart',
+		'arrowheadEnd',
+	] as const
+	const entries = keys.flatMap((key) => {
+		const value = Reflect.get(shape.props, key)
+		return typeof value === 'string' ? [[key, value] as const] : []
+	})
+	return entries.length ? Object.fromEntries(entries) : undefined
 }
 
 function getRichText(shape: TLShape): TLRichText | undefined {

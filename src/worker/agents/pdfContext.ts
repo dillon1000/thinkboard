@@ -1,6 +1,10 @@
 import type { CanvasContext } from '@agentboard/shared'
 import type { Database } from '../db/client'
-import { getSelectedDocumentText } from '../db/documents'
+import {
+	getDocumentPageRow,
+	getDocumentRow,
+	getSelectedDocumentText,
+} from '../db/documents'
 
 export async function hydratePDFSelectionContext(
 	database: Database,
@@ -11,11 +15,38 @@ export async function hydratePDFSelectionContext(
 	if (canvasContext.boardID !== authorizedBoardID) {
 		throw new Error('Canvas context board does not match the authorized board')
 	}
-	const documentText = canvasContext.pdfPageRegions?.length
-		? await getSelectedDocumentText(database, authorizedBoardID, canvasContext.pdfPageRegions)
-		: []
+	const documentText = canvasContext.pdfTextSelection
+		? await hydrateExactPDFTextSelection(
+			database,
+			authorizedBoardID,
+			canvasContext.pdfTextSelection
+		)
+		: canvasContext.pdfPageRegions?.length
+			? await getSelectedDocumentText(database, authorizedBoardID, canvasContext.pdfPageRegions)
+			: []
 	return {
 		...canvasContext,
 		documentText,
 	}
+}
+
+async function hydrateExactPDFTextSelection(
+	database: Database,
+	boardID: string,
+	selection: NonNullable<CanvasContext['pdfTextSelection']>
+) {
+	const documentRow = await getDocumentRow(database, boardID, selection.documentID)
+	if (!documentRow) return []
+	const pageRow = await getDocumentPageRow(
+		database,
+		selection.documentID,
+		selection.pageNumber
+	)
+	if (!pageRow) return []
+	return [{
+		documentID: documentRow.id,
+		documentTitle: documentRow.title,
+		pageNumber: selection.pageNumber,
+		text: selection.text,
+	}]
 }

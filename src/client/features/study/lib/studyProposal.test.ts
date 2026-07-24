@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { looksLikeLeakedProposal, parseLeakedProposal } from './studyProposal'
+import { parseLeakedProposal } from './studyProposal'
 
 const reviewCall = {
 	name: 'addReviewNote',
@@ -84,11 +84,41 @@ describe('parseLeakedProposal', () => {
 			toolName: 'recordMistake',
 		})
 	})
-})
 
-describe('looksLikeLeakedProposal', () => {
-	it('recognizes a supported call while it is still streaming', () => {
-		expect(looksLikeLeakedProposal('{"name":"addReviewNote"')).toBe(true)
-		expect(looksLikeLeakedProposal('An ordinary response about review notes.')).toBe(false)
+	it('recovers a narrated equation call', () => {
+		const call = {
+			toolName: 'writeEquation',
+			input: {
+				x: 120,
+				y: 240,
+				lines: ['ax^2 + bx + c = 0', 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}'],
+			},
+		}
+
+		expect(parseLeakedProposal(`Here is the derivation.\n${JSON.stringify(call)}`)).toEqual({
+			input: call.input,
+			toolName: 'writeEquation',
+		})
+	})
+
+	it('recovers a native canvas composition', () => {
+		const input = {
+			version: 1,
+			planID: 'two-boxes',
+			elements: [
+				{ id: 'one', kind: 'geo', text: 'One' },
+				{
+					id: 'two',
+					kind: 'geo',
+					text: 'Two',
+					placement: { relation: 'east', of: { type: 'element', id: 'one' } },
+				},
+			],
+		}
+
+		expect(parseLeakedProposal(JSON.stringify({ name: 'composeCanvas', input }))).toEqual({
+			input,
+			toolName: 'composeCanvas',
+		})
 	})
 })

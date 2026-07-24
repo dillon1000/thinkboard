@@ -1,27 +1,19 @@
 import {
 	FLASHCARD_SHAPE_TYPE,
-	CONCEPT_MAP_SHAPE_TYPE,
-	QUIZ_SHAPE_TYPE,
-	REVIEW_SHAPE_TYPE,
-	WALKTHROUGH_SHAPE_TYPE,
-	DEFAULT_STUDY_MODEL_MODE,
 	STUDY_MODELS,
 	apiRoutes,
-	conceptMapProposalSchema,
-	flashcardProposalSchema,
 	getStudyModel,
-	quizProposalSchema,
-	mistakeProposalSchema,
-	practiceSetProposalSchema,
-	reviewProposalSchema,
-	walkthroughProposalSchema,
 	type ConceptMapProposal,
+	type CanvasPlan,
 	type CanvasContext,
+	type EquationProposal,
 	type FlashcardProposal,
 	type MistakeProposal,
 	type PracticeSetProposal,
 	type QuizProposal,
 	type ReviewProposal,
+	type SpotifyAgentPlayInput,
+	type SpotifyAgentPlayOutput,
 	type StudyConversation,
 	type StudyMessageMetadata,
 	type StudyModelMode,
@@ -36,10 +28,13 @@ import {
 	IconBolt,
 	IconBrain,
 	IconCards,
+	IconCheck,
+	IconChevronRight,
 	IconCircleCheck,
 	IconFileText,
 	IconFocus2,
 	IconHistory,
+	IconLock,
 	IconPaperclip,
 	IconPlayerStop,
 	IconPlus,
@@ -56,37 +51,50 @@ import {
 	type FileUIPart,
 	type UIMessage,
 } from 'ai'
-import type { ChangeEvent, ComponentPropsWithoutRef, CSSProperties, FormEvent } from 'react'
+import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, CSSProperties, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Streamdown, type Components } from 'streamdown'
-import { Editor, createShapeId, type TLShapePartial } from 'tldraw'
-import { TextShimmer } from '../../../components/TextShimmer'
+import { Editor } from 'tldraw'
+import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
-import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
+import {
+	readStudyMode,
+	readStudyModelMode,
+	writeStudyMode,
+	writeStudyModelMode,
+} from '../lib/studyPreferences'
 import { captureCanvasContext } from '../lib/canvasContextCapture'
 import { resolveCanvasContextForRequest } from '../lib/canvasContextRequest'
 import { focusPDFCitation, parsePDFCitationHref } from '../lib/pdfCitation'
+import {
+	capturePDFTextSelection,
+	clearPDFTextSelection,
+} from '../lib/pdfTextSelection'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import {
-	looksLikeLeakedProposal,
 	parseLeakedProposal,
 	type LeakedProposal,
 } from '../lib/studyProposal'
-import type {
-	ConceptMapShape,
-	FlashcardShape,
-	QuizShape,
-	ReviewShape,
-	WalkthroughShape,
-} from '../shapes/studyShapeUtils'
+import {
+	applyProposal,
+	isStudyToolName,
+	persistProposalEffect,
+	recordProposedMistake,
+	type StudyToolName,
+} from '../lib/studyProposalApply'
+import {
+	getProposalPreview,
+	proposalShortLabel,
+} from '../lib/studyProposalSummary'
+import type { FlashcardShape } from '../shapes/studyShapeUtils'
+import { LockInPanel } from '../../lock-in/LockInPanel'
+import { useLockIn } from '../../lock-in/LockInProvider'
 
 interface StudyPanelProps {
 	boardID: string
 	editor: Editor | null
 }
 
-const STUDY_MODEL_STORAGE_KEY = 'agentboard.study-model'
-const STUDY_MODE_STORAGE_KEY = 'agentboard.study-mode'
 const MAX_ATTACHMENT_BYTES = 4 * 1_024 * 1_024
 const ALLOWED_IMAGE_TYPES = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp'])
 
@@ -97,7 +105,14 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [conversationError, setConversationError] = useState<string | null>(null)
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false)
 	const [selectionCount, setSelectionCount] = useState(0)
+	const [hasPDFTextSelection, setHasPDFTextSelection] = useState(false)
+	const [showLockInPanel, setShowLockInPanel] = useState(true)
+	const { session: lockInSession } = useLockIn()
 	const currentConversation = conversations?.find(({ id }) => id === currentConversationID) ?? null
+
+	useEffect(() => {
+		if (lockInSession) setShowLockInPanel(true)
+	}, [lockInSession?.id])
 
 	useEffect(() => {
 		let cancelled = false
@@ -128,6 +143,30 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 			editor.off('change', updateSelectionCount)
 		}
 	}, [editor])
+
+	useEffect(() => {
+		const updatePDFTextSelection = () => {
+			setHasPDFTextSelection(Boolean(capturePDFTextSelection()))
+		}
+		const clearPDFContextFromCanvas = (event: PointerEvent) => {
+			const target = event.target
+			if (!(target instanceof Element)) return
+			if (
+				target.closest('.StudyPanel') ||
+				target.closest('[data-pdf-text-layer="true"]')
+			) return
+			clearPDFTextSelection()
+			setHasPDFTextSelection(false)
+		}
+		updatePDFTextSelection()
+		document.addEventListener('selectionchange', updatePDFTextSelection)
+		document.addEventListener('pointerdown', clearPDFContextFromCanvas, true)
+		return () => {
+			document.removeEventListener('selectionchange', updatePDFTextSelection)
+			document.removeEventListener('pointerdown', clearPDFContextFromCanvas, true)
+			clearPDFTextSelection()
+		}
+	}, [boardID])
 
 	useEffect(() => {
 		if (!editor) return
@@ -205,17 +244,32 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	return (
 		<div className="StudyPanel">
 			<header className="StudyPanel-header">
-				<IconSparkles className="StudyPanel-mark" aria-hidden="true" size={16} stroke={1.8} />
-				<h2>Study</h2>
-				{currentConversation ? (
+				{lockInSession && showLockInPanel
+					? <IconLock className="StudyPanel-mark" aria-hidden="true" size={16} stroke={1.8} />
+					: <IconSparkles className="StudyPanel-mark" aria-hidden="true" size={16} stroke={1.8} />}
+				<h2>{lockInSession && showLockInPanel ? 'Lock In' : 'Study'}</h2>
+				{lockInSession && showLockInPanel ? (
+					<span className="StudyPanel-conversation" title={lockInSession.goal}>{lockInSession.goal}</span>
+				) : currentConversation ? (
 					<span className="StudyPanel-conversation" title={currentConversation.title}>{currentConversation.title}</span>
 				) : null}
 				<div className="StudyPanel-actions">
-					<button aria-label="New conversation" disabled={isCreatingConversation} onClick={() => void createConversation()} title="New conversation" type="button"><IconPlus aria-hidden="true" size={16} /></button>
-					<button aria-controls="study-history" aria-expanded={historyOpen} aria-label="Conversation history" onClick={() => setHistoryOpen((open) => !open)} title="Conversation history" type="button"><IconHistory aria-hidden="true" size={16} /></button>
+					{lockInSession && !showLockInPanel ? (
+						<button aria-label="Return to Lock In coach" onClick={() => setShowLockInPanel(true)} title="Return to Lock In coach" type="button"><IconLock aria-hidden="true" size={16} /></button>
+					) : null}
+					{!lockInSession || !showLockInPanel ? (
+						<>
+							<button aria-label="New conversation" disabled={isCreatingConversation} onClick={() => void createConversation()} title="New conversation" type="button"><IconPlus aria-hidden="true" size={16} /></button>
+							<button aria-controls="study-history" aria-expanded={historyOpen} aria-label="Conversation history" onClick={() => setHistoryOpen((open) => !open)} title="Conversation history" type="button"><IconHistory aria-hidden="true" size={16} /></button>
+						</>
+					) : null}
 				</div>
 			</header>
 			<div className="StudyPanel-main">
+				{lockInSession && showLockInPanel ? (
+					<LockInPanel onOpenStudyChat={() => setShowLockInPanel(false)} />
+				) : (
+					<>
 				{historyOpen ? (
 					<nav aria-label="Conversation history" className="StudyHistory" id="study-history">
 						<div><strong>Recent conversations</strong><button onClick={() => void createConversation()} type="button"><IconPlus aria-hidden="true" size={14} /> New</button></div>
@@ -234,12 +288,15 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 						editor={editor}
 						key={currentConversation.agentName}
 						onActivity={updateConversation}
+						hasPDFTextSelection={hasPDFTextSelection}
 						selectionCount={selectionCount}
 					/>
 				) : conversations ? (
 					<div className="StudyPanel-loading"><p>No conversations yet.</p><button onClick={() => void createConversation()} type="button">Start one</button></div>
 				) : (
-					<div className="StudyPanel-loading"><TextShimmer>Loading conversations…</TextShimmer></div>
+					<div className="StudyPanel-loading"><ThinkingStatus>Loading conversations…</ThinkingStatus></div>
+				)}
+					</>
 				)}
 			</div>
 		</div>
@@ -250,11 +307,19 @@ interface StudyConversationSessionProps {
 	boardID: string
 	conversation: StudyConversation
 	editor: Editor | null
+	hasPDFTextSelection: boolean
 	onActivity: (message: string) => void
 	selectionCount: number
 }
 
-function StudyConversationSession({ boardID, conversation, editor, onActivity, selectionCount }: StudyConversationSessionProps) {
+function StudyConversationSession({
+	boardID,
+	conversation,
+	editor,
+	hasPDFTextSelection,
+	onActivity,
+	selectionCount,
+}: StudyConversationSessionProps) {
 	const [initialMessages, setInitialMessages] = useState<StudyUIMessage[] | null>(null)
 	const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -274,7 +339,7 @@ function StudyConversationSession({ boardID, conversation, editor, onActivity, s
 
 	if (loadError) return <p className="StudyPanel-error" role="alert">{loadError}</p>
 	if (!initialMessages) {
-		return <div className="StudyPanel-loading"><TextShimmer>Opening conversation…</TextShimmer></div>
+		return <div className="StudyPanel-loading"><ThinkingStatus state="searching">Opening conversation…</ThinkingStatus></div>
 	}
 
 	return (
@@ -282,6 +347,7 @@ function StudyConversationSession({ boardID, conversation, editor, onActivity, s
 			boardID={boardID}
 			conversation={conversation}
 			editor={editor}
+			hasPDFTextSelection={hasPDFTextSelection}
 			initialMessages={initialMessages}
 			onActivity={onActivity}
 			selectionCount={selectionCount}
@@ -296,11 +362,16 @@ type StudyTools = {
 	createWalkthrough: { input: WalkthroughProposal; output: { applied: boolean } }
 	createConceptMap: { input: ConceptMapProposal; output: { applied: boolean } }
 	createPracticeSet: { input: PracticeSetProposal; output: { applied: boolean } }
+	composeCanvas: { input: CanvasPlan; output: { applied: boolean } }
+	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
+	playSpotify: { input: SpotifyAgentPlayInput; output: SpotifyAgentPlayOutput }
+	search: { input: unknown; output: unknown }
+	answer: { input: unknown; output: unknown }
+	crawl: { input: unknown; output: unknown }
 }
 
 type StudyUIMessage = UIMessage<StudyMessageMetadata, Record<string, never>, StudyTools>
-type StudyToolName = keyof StudyTools
 type AddStudyToolOutput = UseChatHelpers<StudyUIMessage>['addToolOutput']
 
 interface StudyConversationChatProps extends StudyConversationSessionProps {
@@ -311,6 +382,7 @@ function StudyConversationChat({
 	boardID,
 	conversation,
 	editor,
+	hasPDFTextSelection,
 	initialMessages,
 	onActivity,
 	selectionCount,
@@ -363,25 +435,20 @@ function StudyConversationChat({
 		void chat.sendMessage({ files: attachments, text })
 	}
 
-	async function handleFiles(event: ChangeEvent<HTMLInputElement>) {
-		const files = event.target.files
-		if (!files?.length) return
+	async function attachImages(files: FileList) {
 		setAttachmentError(null)
 		const candidates = Array.from(files)
 		if (attachments.length + candidates.length > 3) {
 			setAttachmentError('Attach up to three images at a time.')
-			event.target.value = ''
 			return
 		}
 		if (candidates.some((file) => !ALLOWED_IMAGE_TYPES.has(file.type))) {
 			setAttachmentError('Use PNG, JPEG, WebP, or GIF images.')
-			event.target.value = ''
 			return
 		}
 		const totalBytes = candidates.reduce((total, file) => total + file.size, 0) + estimateAttachmentBytes(attachments)
 		if (totalBytes > MAX_ATTACHMENT_BYTES) {
 			setAttachmentError('Keep image attachments under 4 MB total.')
-			event.target.value = ''
 			return
 		}
 		try {
@@ -389,20 +456,37 @@ function StudyConversationChat({
 			setAttachments((current) => [...current, ...parts])
 		} catch {
 			setAttachmentError('Those images could not be attached.')
+		}
+	}
+
+	async function handleFiles(event: ChangeEvent<HTMLInputElement>) {
+		const files = event.target.files
+		if (!files?.length) return
+		try {
+			await attachImages(files)
 		} finally {
 			event.target.value = ''
 		}
 	}
 
+	function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+		const files = event.clipboardData.files
+		if (files.length === 0) return
+		if (chat.status !== 'ready') return
+		/** The clipboard also carries a screenshot's placeholder text; only the image is useful. */
+		event.preventDefault()
+		void attachImages(files)
+	}
+
 	function chooseModel(mode: StudyModelMode) {
 		setModelMode(mode)
-		setLocalStorageItem(STUDY_MODEL_STORAGE_KEY, mode)
+		writeStudyModelMode(mode)
 	}
 
 	function toggleStudyMode() {
 		const nextMode = studyMode === 'socratic' ? 'direct' : 'socratic'
 		setStudyMode(nextMode)
-		setLocalStorageItem(STUDY_MODE_STORAGE_KEY, nextMode)
+		writeStudyMode(nextMode)
 	}
 
 	async function resolveProposal(
@@ -414,14 +498,12 @@ function StudyConversationChat({
 		try {
 			if (applied) {
 				if (toolName === 'recordMistake') {
-					const mistake = mistakeProposalSchema.parse(proposal)
-					await apiRequest(apiRoutes.boardMistakes(boardID), {
-						body: JSON.stringify(mistake),
-						method: 'POST',
-					})
+					await recordProposedMistake(boardID, proposal)
 				} else {
 					if (!editor) throw new Error('The canvas is not ready')
-					const effect = applyProposal(editor, toolName, proposal)
+					const effect = applyProposal(editor, toolName, proposal, {
+						documentClock: canvasContextRef.current?.documentClock,
+					})
 					await persistProposalEffect(boardID, effect)
 				}
 			}
@@ -466,43 +548,61 @@ function StudyConversationChat({
 								>
 									<span className="sr-only">{message.role === 'user' ? 'You' : 'Study partner'}</span>
 									{message.parts.map((part, index) => {
+									if (part.type === 'reasoning') {
+										if (message.role !== 'assistant') return null
+										const isStreamingPart = part.state === 'streaming'
+											&& chat.status === 'streaming'
+											&& message.id === chat.messages.at(-1)?.id
+										return <ReasoningTrail isStreaming={isStreamingPart} key={index} text={part.text} />
+									}
 									if (part.type === 'text') {
-								const leakedProposal = message.role === 'assistant' ? parseLeakedProposal(part.text) : null
-								if (leakedProposal) return <LeakedProposalCard boardID={boardID} editor={editor} key={index} proposal={leakedProposal} />
-								if (message.role === 'assistant' && looksLikeLeakedProposal(part.text)) {
-									const isPending = chat.status === 'streaming' && message.id === chat.messages.at(-1)?.id
-									return <PendingLeakedProposalCard isPending={isPending} key={index} />
-								}
-								if (message.role === 'user') return <p key={index}>{part.text}</p>
-								const isAnimating = chat.status === 'streaming' && message.id === chat.messages.at(-1)?.id
+										if (message.role === 'user') return <p key={index}>{part.text}</p>
+										const isAnimating = chat.status === 'streaming'
+											&& message.id === chat.messages.at(-1)?.id
+										const leakedProposal = isAnimating
+											? null
+											: parseLeakedProposal(part.text)
+										if (leakedProposal) {
+											return (
+												<LeakedProposalCall
+													boardID={boardID}
+													editor={editor}
+													key={index}
+													proposal={leakedProposal}
+												/>
+											)
+										}
 										return <AssistantMarkdown boardID={boardID} editor={editor} isAnimating={isAnimating} key={index}>{part.text}</AssistantMarkdown>
 									}
 									if (part.type === 'file' && part.mediaType.startsWith('image/')) {
 										return <img alt={part.filename ?? 'Image attachment'} className="ChatAttachment" key={index} src={part.url} />
 									}
-								if (!isToolUIPart(part)) return null
-								const toolName = getToolName(part)
-								if (!isStudyToolName(toolName)) return null
-								const isReady = part.state === 'input-available'
-								const isApplied = part.state === 'output-available' && isAppliedOutput(part.output)
-								return (
-									<div className="ProposalCard" key={index}>
-										<strong>{proposalTitle(toolName)}</strong>
-										<p>{summarizeProposal(toolName, part.input)}</p>
-										{isReady ? (
-											<div>
-						<button className="Button Button--primary" onClick={() => void resolveProposal(toolName, part.toolCallId, part.input, true)} type="button">{toolName === 'recordMistake' ? 'Save mistake' : 'Add to board'}</button>
-												<button className="TextButton" onClick={() => void resolveProposal(toolName, part.toolCallId, part.input, false)} type="button">Dismiss</button>
-											</div>
-										) : <small>{proposalStateLabel(part.state, isApplied, toolName)}</small>}
-									</div>
-								)
+									if (!isToolUIPart(part)) return null
+									const toolName = getToolName(part)
+									if (!isStudyToolName(toolName)) return null
+									const isApplied = part.state === 'output-available' && isAppliedOutput(part.output)
+									return (
+										<ProposalToolCall
+											acceptDisabled={!editor && toolName !== 'recordMistake'}
+											input={part.input}
+											key={part.toolCallId}
+											onAccept={() => resolveProposal(toolName, part.toolCallId, part.input, true)}
+											onReject={() => resolveProposal(toolName, part.toolCallId, part.input, false)}
+											status={proposalCallStatus(part.state, isApplied)}
+											toolName={toolName}
+										/>
+									)
 									})}
 								</MessageScroller.Item>
 							))}
 							{chat.status === 'submitted' || chat.status === 'streaming' ? (
 								<MessageScroller.Item messageId="study-response-status">
-									<TextShimmer className="StudyThinking">Reading your selection…</TextShimmer>
+									<ThinkingStatus
+										className="StudyThinking"
+										state={chat.status === 'submitted' ? 'searching' : 'composing'}
+									>
+										{chat.status === 'submitted' ? 'Reading your selection…' : 'Composing response…'}
+									</ThinkingStatus>
 								</MessageScroller.Item>
 							) : null}
 							{chat.error ? (
@@ -521,10 +621,20 @@ function StudyConversationChat({
 			</MessageScroller.Provider>
 
 			<form className="StudyComposer" onSubmit={handleSubmit}>
-				{selectionCount > 0 ? (
-					<div className="StudyContextChip" role="status">
-						<IconFocus2 aria-hidden="true" size={13} stroke={1.8} />
-						{selectionCount === 1 ? '1 shape selected as context' : `${selectionCount} shapes selected as context`}
+				{selectionCount > 0 || hasPDFTextSelection ? (
+					<div className="StudyContextChips" role="status">
+						{selectionCount > 0 ? (
+							<div className="StudyContextChip">
+								<IconFocus2 aria-hidden="true" size={13} stroke={1.8} />
+								{selectionCount === 1 ? '1 shape selected as context' : `${selectionCount} shapes selected as context`}
+							</div>
+						) : null}
+						{hasPDFTextSelection ? (
+							<div className="StudyContextChip">
+								<IconFileText aria-hidden="true" size={13} stroke={1.8} />
+								PDF text selected as context
+							</div>
+						) : null}
 					</div>
 				) : null}
 				{attachments.length ? (
@@ -544,11 +654,11 @@ function StudyConversationChat({
 						event.preventDefault()
 						event.currentTarget.form?.requestSubmit()
 					}
-				}} placeholder="Ask about your board…" rows={2} value={input} />
+				}} onPaste={handlePaste} placeholder="Ask about your board…" rows={2} value={input} />
 				<div className="StudyComposer-footer">
 					<div className="StudyComposer-actions">
 						<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
-						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
+						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
 						<ModelSelector onChange={chooseModel} value={modelMode} />
 						<button aria-pressed={studyMode === 'socratic'} className={`SocraticToggle${studyMode === 'socratic' ? ' is-selected' : ''}`} onClick={toggleStudyMode} title="Ask guiding questions instead of giving answers" type="button">Socratic</button>
 					</div>
@@ -638,6 +748,31 @@ function AssistantMarkdownLink({
 	)
 }
 
+function ReasoningTrail({ isStreaming, text }: { isStreaming: boolean; text: string }) {
+	/** Null until the student decides, so the trail follows the stream on its own. */
+	const [expansion, setExpansion] = useState<boolean | null>(null)
+	const trail = text.trim()
+	if (!trail) return null
+	const isExpanded = expansion ?? isStreaming
+
+	return (
+		<div className="ReasoningTrail">
+			<button
+				aria-expanded={isExpanded}
+				className={`ReasoningTrail-toggle${isExpanded ? ' is-expanded' : ''}`}
+				onClick={() => setExpansion(!isExpanded)}
+				type="button"
+			>
+				<IconChevronRight aria-hidden="true" size={13} stroke={2} />
+				{isStreaming
+					? <ThinkingStatus state="solving">Thinking through it…</ThinkingStatus>
+					: <span>Thought process</span>}
+			</button>
+			{isExpanded ? <div className="ReasoningTrail-body">{trail}</div> : null}
+		</div>
+	)
+}
+
 function ModelSelector({ onChange, value }: { onChange: (mode: StudyModelMode) => void; value: StudyModelMode }) {
 	return (
 		<div aria-label="Response mode" className="ModelSelector" role="group">
@@ -689,177 +824,6 @@ function formatTokenCount(tokens: number) {
 	return `${Math.round(tokens / 1_000)}K`
 }
 
-type ProposalEffect =
-	| { kind: 'flashcards'; cards: Array<{ back: string; front: string; shapeID: string }> }
-	| { kind: 'none' }
-
-function applyProposal(editor: Editor, toolName: string, input: unknown): ProposalEffect {
-	if (toolName === 'addReviewNote') {
-		const proposal = reviewProposalSchema.parse(input)
-		const id = createShapeId()
-		const shape: TLShapePartial<ReviewShape> = {
-			id,
-			type: REVIEW_SHAPE_TYPE,
-			x: proposal.x,
-			y: proposal.y,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'review' } },
-			props: {
-				w: 310,
-				h: 210,
-				title: proposal.title,
-				body: proposal.body,
-				severity: proposal.severity,
-				resolved: false,
-				schemaVersion: 1,
-			},
-		}
-		editor.createShape(shape).setSelectedShapes([id])
-		return { kind: 'none' }
-	}
-
-	if (toolName === 'createFlashcards') {
-		const proposal = flashcardProposalSchema.parse(input)
-		const shapeIDs = proposal.cards.map(() => createShapeId())
-		const shapes: TLShapePartial<FlashcardShape>[] = proposal.cards.map((card, index) => ({
-			id: shapeIDs[index],
-			type: FLASHCARD_SHAPE_TYPE,
-			x: proposal.x + (index % 3) * 325,
-			y: proposal.y + Math.floor(index / 3) * 215,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'flashcard' } },
-			props: {
-				w: 300,
-				h: 190,
-				front: card.front,
-				back: card.back,
-				revealed: false,
-				schemaVersion: 1,
-			},
-		}))
-		editor.createShapes(shapes).setSelectedShapes(shapeIDs)
-		return {
-			kind: 'flashcards',
-			cards: proposal.cards.map((card, index) => ({ ...card, shapeID: shapeIDs[index] })),
-		}
-	}
-
-	if (toolName === 'createQuiz') {
-		const proposal = quizProposalSchema.parse(input)
-		const id = createShapeId()
-		const shape: TLShapePartial<QuizShape> = {
-			id,
-			type: QUIZ_SHAPE_TYPE,
-			x: proposal.x,
-			y: proposal.y,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'quiz' } },
-			props: {
-				w: 370,
-				h: 350,
-				question: proposal.question,
-				options: proposal.options,
-				correctIndex: proposal.correctIndex,
-				explanation: proposal.explanation,
-				selectedIndex: -1,
-				showResult: false,
-				schemaVersion: 1,
-			},
-		}
-		editor.createShape(shape).setSelectedShapes([id])
-		return { kind: 'none' }
-	}
-
-	if (toolName === 'createWalkthrough') {
-		const proposal = walkthroughProposalSchema.parse(input)
-		const id = createShapeId()
-		const shape: TLShapePartial<WalkthroughShape> = {
-			id,
-			type: WALKTHROUGH_SHAPE_TYPE,
-			x: proposal.x,
-			y: proposal.y,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'walkthrough' } },
-			props: {
-				w: 430,
-				h: 340,
-				title: proposal.title,
-				steps: proposal.steps,
-				currentStep: 0,
-				revealed: false,
-				schemaVersion: 1,
-			},
-		}
-		editor.createShape(shape).setSelectedShapes([id])
-		return { kind: 'none' }
-	}
-
-	if (toolName === 'createConceptMap') {
-		const proposal = conceptMapProposalSchema.parse(input)
-		const id = createShapeId()
-		const shape: TLShapePartial<ConceptMapShape> = {
-			id,
-			type: CONCEPT_MAP_SHAPE_TYPE,
-			x: proposal.x,
-			y: proposal.y,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'concept-map' } },
-			props: {
-				w: 580,
-				h: 410,
-				title: proposal.title,
-				nodes: proposal.nodes,
-				edges: proposal.edges,
-				schemaVersion: 1,
-			},
-		}
-		editor.createShape(shape).setSelectedShapes([id])
-		return { kind: 'none' }
-	}
-
-	if (toolName === 'createPracticeSet') {
-		const proposal = practiceSetProposalSchema.parse(input)
-		const shapeIDs = proposal.quizzes.map(() => createShapeId())
-		const shapes: TLShapePartial<QuizShape>[] = proposal.quizzes.map((quiz, index) => ({
-			id: shapeIDs[index],
-			type: QUIZ_SHAPE_TYPE,
-			x: proposal.x + (index % 2) * 390,
-			y: proposal.y + Math.floor(index / 2) * 370,
-			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'practice-set' } },
-			props: {
-				w: 370,
-				h: 350,
-				question: quiz.question,
-				options: quiz.options,
-				correctIndex: quiz.correctIndex,
-				explanation: quiz.explanation,
-				selectedIndex: -1,
-				showResult: false,
-				schemaVersion: 1,
-			},
-		}))
-		editor.createShapes(shapes).setSelectedShapes(shapeIDs)
-		return { kind: 'none' }
-	}
-
-	throw new Error(`Unknown proposal type: ${toolName}`)
-}
-
-async function persistProposalEffect(boardID: string, effect: ProposalEffect) {
-	if (effect.kind !== 'flashcards') return
-	await apiRequest(apiRoutes.boardFlashcards(boardID), {
-		body: JSON.stringify({ cards: effect.cards }),
-		method: 'POST',
-	}).catch(() => undefined)
-}
-
-function isStudyToolName(value: string): value is StudyToolName {
-	return [
-		'addReviewNote',
-		'createConceptMap',
-		'createFlashcards',
-		'createPracticeSet',
-		'createQuiz',
-		'createWalkthrough',
-		'recordMistake',
-	].includes(value)
-}
-
 function isAppliedOutput(output: unknown) {
 	return Boolean(
 		output &&
@@ -868,14 +832,119 @@ function isAppliedOutput(output: unknown) {
 	)
 }
 
-function proposalStateLabel(state: string, applied: boolean, toolName: StudyToolName) {
-	if (state === 'input-streaming') return 'Preparing proposal…'
-	if (state === 'output-error') return 'Unable to add this proposal'
-	if (state === 'output-denied') return 'Dismissed'
-	if (state === 'output-available') return applied
-		? toolName === 'recordMistake' ? 'Saved to learning history' : 'Added to board'
-		: 'Dismissed'
-	return 'Preparing proposal…'
+type ProposalCallStatus = 'preparing' | 'ready' | 'accepted' | 'rejected' | 'error'
+
+function proposalCallStatus(state: string, applied: boolean): ProposalCallStatus {
+	if (state === 'input-available') return 'ready'
+	if (state === 'output-error') return 'error'
+	if (state === 'output-denied') return 'rejected'
+	if (state === 'output-available') return applied ? 'accepted' : 'rejected'
+	return 'preparing'
+}
+
+function ProposalToolCall({
+	acceptDisabled = false,
+	input,
+	onAccept,
+	onReject,
+	status,
+	toolName,
+}: {
+	acceptDisabled?: boolean
+	input: unknown
+	onAccept?: () => Promise<void> | void
+	onReject?: () => Promise<void> | void
+	status: ProposalCallStatus
+	toolName: StudyToolName
+}) {
+	const [isExpanded, setIsExpanded] = useState(false)
+	const [pendingDecision, setPendingDecision] = useState<'accept' | 'reject' | null>(null)
+	const preview = getProposalPreview(toolName, input)
+	const label = proposalShortLabel(toolName)
+	const isReady = status === 'ready'
+	const canPreview = status !== 'preparing'
+
+	async function decide(decision: 'accept' | 'reject') {
+		const callback = decision === 'accept' ? onAccept : onReject
+		if (!callback || pendingDecision) return
+		setPendingDecision(decision)
+		try {
+			await callback()
+		} finally {
+			setPendingDecision(null)
+		}
+	}
+
+	return (
+		<div
+			aria-busy={pendingDecision !== null}
+			className={`ProposalCall ProposalCall--${status}`}
+		>
+			<div className="ProposalCall-row">
+				<button
+					aria-expanded={isExpanded}
+					className="ProposalCall-toggle"
+					disabled={!canPreview}
+					onClick={() => setIsExpanded((expanded) => !expanded)}
+					title={canPreview ? `${isExpanded ? 'Hide' : 'Preview'} ${label.toLowerCase()}` : undefined}
+					type="button"
+				>
+					<IconChevronRight aria-hidden="true" className={isExpanded ? 'is-expanded' : undefined} size={14} stroke={2} />
+					<IconSparkles aria-hidden="true" className="ProposalCall-icon" size={14} stroke={1.8} />
+					<span className="ProposalCall-label">{label}</span>
+				</button>
+				{isReady ? (
+					<div aria-label={`${label} approval`} className="ProposalCall-actions" role="group">
+						<button
+							aria-label={`Accept ${label.toLowerCase()}`}
+							className="ProposalCall-action ProposalCall-action--accept"
+							disabled={acceptDisabled || pendingDecision !== null}
+							onClick={() => void decide('accept')}
+							title={toolName === 'recordMistake' ? 'Accept and save' : 'Accept and add to board'}
+							type="button"
+						>
+							<IconCheck aria-hidden="true" size={15} stroke={2.2} />
+						</button>
+						<button
+							aria-label={`Reject ${label.toLowerCase()}`}
+							className="ProposalCall-action ProposalCall-action--reject"
+							disabled={pendingDecision !== null}
+							onClick={() => void decide('reject')}
+							title="Reject"
+							type="button"
+						>
+							<IconX aria-hidden="true" size={15} stroke={2.2} />
+						</button>
+					</div>
+				) : (
+					<small className="ProposalCall-state">{proposalCallStateLabel(status, toolName)}</small>
+				)}
+			</div>
+			{isExpanded ? (
+				<div className="ProposalCall-preview">
+					<p>{preview.description}</p>
+					{preview.details.length ? (
+						<dl>
+							{preview.details.map((detail, index) => (
+								<div key={`${detail.label}-${index}`}>
+									<dt>{detail.label}</dt>
+									<dd>{detail.value}</dd>
+								</div>
+							))}
+						</dl>
+					) : null}
+				</div>
+			) : null}
+		</div>
+	)
+}
+
+function proposalCallStateLabel(status: ProposalCallStatus, toolName: StudyToolName) {
+	if (status === 'preparing') return 'Generating…'
+	if (status === 'accepted') return toolName === 'recordMistake' ? 'Saved' : 'Added'
+	if (status === 'rejected') return 'Rejected'
+	if (status === 'error') return 'Failed'
+	return 'Ready'
 }
 
 function addProposalOutput(
@@ -901,6 +970,12 @@ function addProposalOutput(
 	}
 	if (toolName === 'createPracticeSet') {
 		return addToolOutput({ tool: 'createPracticeSet', toolCallId: toolCallID, output })
+	}
+	if (toolName === 'writeEquation') {
+		return addToolOutput({ tool: 'writeEquation', toolCallId: toolCallID, output })
+	}
+	if (toolName === 'composeCanvas') {
+		return addToolOutput({ tool: 'composeCanvas', toolCallId: toolCallID, output })
 	}
 	return addToolOutput({ tool: 'recordMistake', toolCallId: toolCallID, output })
 }
@@ -931,99 +1006,37 @@ function addProposalError(
 	if (toolName === 'createWalkthrough') return addToolOutput({ tool: 'createWalkthrough', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'createConceptMap') return addToolOutput({ tool: 'createConceptMap', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'createPracticeSet') return addToolOutput({ tool: 'createPracticeSet', toolCallId: toolCallID, state: 'output-error', errorText })
+	if (toolName === 'writeEquation') return addToolOutput({ tool: 'writeEquation', toolCallId: toolCallID, state: 'output-error', errorText })
+	if (toolName === 'composeCanvas') return addToolOutput({ tool: 'composeCanvas', toolCallId: toolCallID, state: 'output-error', errorText })
 	return addToolOutput({ tool: 'recordMistake', toolCallId: toolCallID, state: 'output-error', errorText })
 }
 
-function proposalTitle(toolName: string) {
-	if (toolName === 'addReviewNote') return 'Review note proposal'
-	if (toolName === 'createFlashcards') return 'Flashcard proposal'
-	if (toolName === 'createQuiz') return 'Quiz proposal'
-	if (toolName === 'createWalkthrough') return 'Worked-example proposal'
-	if (toolName === 'createConceptMap') return 'Concept-map proposal'
-	if (toolName === 'createPracticeSet') return 'Practice-set proposal'
-	if (toolName === 'recordMistake') return 'Mistake record proposal'
-	return 'Board proposal'
-}
-
-function summarizeProposal(toolName: string, input: unknown) {
-	if (toolName === 'createFlashcards') {
-		const proposal = flashcardProposalSchema.safeParse(input)
-		return proposal.success
-			? `${proposal.data.cards.length} flashcards ready. Answers stay hidden until each card is flipped.`
-			: 'Preparing flashcards…'
-	}
-	if (toolName === 'createQuiz') {
-		const proposal = quizProposalSchema.safeParse(input)
-		return proposal.success
-			? `One ${proposal.data.options.length}-option quiz ready. The answer stays hidden until you choose.`
-			: 'Preparing a quiz…'
-	}
-	if (toolName === 'addReviewNote') {
-		return reviewProposalSchema.safeParse(input).success
-			? 'A private review note is ready to place beside the selected work.'
-			: 'Preparing a review note…'
-	}
-	if (toolName === 'createWalkthrough') {
-		const proposal = walkthroughProposalSchema.safeParse(input)
-		return proposal.success ? `${proposal.data.steps.length} guided steps, revealed one at a time.` : 'Preparing a worked example…'
-	}
-	if (toolName === 'createConceptMap') {
-		const proposal = conceptMapProposalSchema.safeParse(input)
-		return proposal.success ? `${proposal.data.nodes.length} concepts with ${proposal.data.edges.length} explicit relationships.` : 'Preparing a concept map…'
-	}
-	if (toolName === 'createPracticeSet') {
-		const proposal = practiceSetProposalSchema.safeParse(input)
-		return proposal.success ? `${proposal.data.quizzes.length} new interactive practice problems.` : 'Preparing practice problems…'
-	}
-	if (toolName === 'recordMistake') {
-		const proposal = mistakeProposalSchema.safeParse(input)
-		return proposal.success ? `${proposal.data.title} will be saved to your private learning history.` : 'Preparing a mistake record…'
-	}
-	return 'A board item is ready for review.'
-}
-
-function LeakedProposalCard({ boardID, editor, proposal }: { boardID: string; editor: Editor | null; proposal: LeakedProposal }) {
-	const [state, setState] = useState<'ready' | 'added' | 'dismissed' | 'error'>('ready')
+function LeakedProposalCall({ boardID, editor, proposal }: { boardID: string; editor: Editor | null; proposal: LeakedProposal }) {
+	const [status, setStatus] = useState<ProposalCallStatus>('ready')
 
 	async function applyLeakedProposal() {
 		try {
 			if (proposal.toolName === 'recordMistake') {
-				await apiRequest(apiRoutes.boardMistakes(boardID), {
-					body: JSON.stringify(mistakeProposalSchema.parse(proposal.input)),
-					method: 'POST',
-				})
+				await recordProposedMistake(boardID, proposal.input)
 			} else {
 				if (!editor) return
 				await persistProposalEffect(boardID, applyProposal(editor, proposal.toolName, proposal.input))
 			}
-			setState('added')
+			setStatus('accepted')
 		} catch {
-			setState('error')
+			setStatus('error')
 		}
 	}
 
 	return (
-		<div className="ProposalCard">
-			<strong>{proposalTitle(proposal.toolName)}</strong>
-			<p>{summarizeProposal(proposal.toolName, proposal.input)}</p>
-			{state === 'ready' ? (
-				<div>
-					<button className="Button Button--primary" disabled={!editor && proposal.toolName !== 'recordMistake'} onClick={() => void applyLeakedProposal()} type="button">{proposal.toolName === 'recordMistake' ? 'Save mistake' : 'Add to board'}</button>
-					<button className="TextButton" onClick={() => setState('dismissed')} type="button">Dismiss</button>
-				</div>
-			) : <small>{state === 'added' ? 'Added to board' : state === 'dismissed' ? 'Dismissed' : 'Unable to add this proposal'}</small>}
-		</div>
-	)
-}
-
-function PendingLeakedProposalCard({ isPending }: { isPending: boolean }) {
-	return (
-		<div className="ProposalCard" aria-live="polite" role={isPending ? undefined : 'alert'}>
-			<strong>{isPending ? 'Preparing board proposal…' : 'Board proposal unavailable'}</strong>
-			<p>{isPending
-				? 'The study partner is validating the item before showing the approval controls.'
-				: 'The proposal was incomplete or invalid. Ask the study partner to try it again.'}</p>
-		</div>
+		<ProposalToolCall
+			acceptDisabled={!editor && proposal.toolName !== 'recordMistake'}
+			input={proposal.input}
+			onAccept={applyLeakedProposal}
+			onReject={() => setStatus('rejected')}
+			status={status}
+			toolName={proposal.toolName}
+		/>
 	)
 }
 
@@ -1038,17 +1051,6 @@ function formatConversationDate(value: string) {
 
 function getErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : 'Something went wrong'
-}
-
-function readStudyModelMode(): StudyModelMode {
-	const stored = getLocalStorageItem(STUDY_MODEL_STORAGE_KEY)
-	return stored === 'quicker' || stored === 'smarter'
-		? stored
-		: DEFAULT_STUDY_MODEL_MODE
-}
-
-function readStudyMode(): StudyMode {
-	return getLocalStorageItem(STUDY_MODE_STORAGE_KEY) === 'socratic' ? 'socratic' : 'direct'
 }
 
 function estimateAttachmentBytes(attachments: FileUIPart[]) {

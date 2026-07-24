@@ -24,6 +24,7 @@
 	},
 	"vars": {
 		"AI_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+		"LOCK_IN_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
 		"AI_GATEWAY_ID": "default",
 		"EMBEDDING_MODEL": "@cf/baai/bge-base-en-v1.5",
 		"OCR_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
@@ -31,7 +32,8 @@
 		"PDF_STORED_BYTES_QUOTA": "2147483648",
 		"BETTER_AUTH_URL": "https://board.dillon.network",
 		"OAUTH_PROVIDER_ID": "campus-sso",
-		"OAUTH_PROVIDER_NAME": "Campus SSO"
+		"OAUTH_PROVIDER_NAME": "Passport",
+		"SPOTIFY_CLIENT_ID": "5e6ae65e68db477da5bcb53474fd9ee3"
 	},
 	"assets": {
 		"binding": "ASSETS",

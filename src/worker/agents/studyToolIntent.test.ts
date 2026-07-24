@@ -46,5 +46,20 @@ describe('getRequestedStudyTool', () => {
 		expect(getRequestedStudyTool([
 			{ role: 'user', parts: [{ type: 'text', text: 'Create a step-by-step worked example.' }] },
 		])).toBe('createWalkthrough')
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Write the quadratic formula on the board.' }] },
+		])).toBe('writeEquation')
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Show the derivation on the canvas.' }] },
+		])).toBe('writeEquation')
+	})
+
+	it('routes native board composition and editing requests', () => {
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Draw three boxes and connect them with arrows.' }] },
+		])).toBe('composeCanvas')
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Move this shape south and color it teal.' }] },
+		])).toBe('composeCanvas')
 	})
 })

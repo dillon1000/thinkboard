@@ -14,6 +14,18 @@ const DOCUMENT_CHUNK_PARAMETERS_PER_ROW = 3
 const DOCUMENT_CHUNK_INSERT_BATCH_SIZE = Math.floor(
 	D1_MAX_BOUND_PARAMETERS / DOCUMENT_CHUNK_PARAMETERS_PER_ROW
 )
+const DOCUMENT_PAGE_REFERENCE_PARAMETERS_PER_ROW = 2
+const DOCUMENT_PAGE_REFERENCE_BATCH_SIZE = Math.floor(
+	(D1_MAX_BOUND_PARAMETERS - 1) / DOCUMENT_PAGE_REFERENCE_PARAMETERS_PER_ROW
+)
+
+interface DocumentPageTextRow {
+	documentID: string
+	documentTitle: string
+	pageNumber: number
+	text: string
+	textLayout: string
+}
 
 export async function createDocument(
 	database: Database,
@@ -125,10 +137,35 @@ export async function setDocumentStatus(
 	status: DocumentStatus,
 	failureReason: string | null = null
 ) {
-	await database
-		.update(document)
-		.set({ failureReason, status, updatedAt: new Date() })
-		.where(eq(document.id, documentID))
+	let lastError: unknown = new Error('Document status update failed')
+	for (let attempt = 0; attempt < 2; attempt += 1) {
+		try {
+			await database
+				.update(document)
+				.set({ failureReason, status, updatedAt: new Date() })
+				.where(eq(document.id, documentID))
+			return
+		} catch (error) {
+			lastError = error
+			try {
+				const [stored] = await database
+					.select({
+						failureReason: document.failureReason,
+						status: document.status,
+					})
+					.from(document)
+					.where(eq(document.id, documentID))
+					.limit(1)
+				if (
+					stored?.status === status &&
+					stored.failureReason === failureReason
+				) return
+			} catch {
+				// A second idempotent update is safe when verification is unavailable.
+			}
+		}
+	}
+	throw lastError
 }
 
 export async function updateDocumentPageText(
@@ -308,18 +345,28 @@ export async function getPageTextForDocuments(
 	references: Array<{ documentID: string; pageNumber: number }>
 ) {
 	if (!references.length) return []
-	const conditions = references.map(({ documentID, pageNumber }) =>
-		and(eq(documentPage.documentID, documentID), eq(documentPage.pageNumber, pageNumber))
-	)
-	return database
-		.select({
-			documentID: document.id,
-			documentTitle: document.title,
-			pageNumber: documentPage.pageNumber,
-			text: documentPage.extractedText,
-			textLayout: documentPage.textLayout,
-		})
-		.from(documentPage)
-		.innerJoin(document, eq(document.id, documentPage.documentID))
-		.where(and(eq(document.boardID, boardID), sql`(${sql.join(conditions, sql` OR `)})`))
+	const rows: DocumentPageTextRow[] = []
+	for (
+		let offset = 0;
+		offset < references.length;
+		offset += DOCUMENT_PAGE_REFERENCE_BATCH_SIZE
+	) {
+		const batch = references.slice(offset, offset + DOCUMENT_PAGE_REFERENCE_BATCH_SIZE)
+		const conditions = batch.map(({ documentID, pageNumber }) =>
+			and(eq(documentPage.documentID, documentID), eq(documentPage.pageNumber, pageNumber))
+		)
+		const batchRows = await database
+			.select({
+				documentID: document.id,
+				documentTitle: document.title,
+				pageNumber: documentPage.pageNumber,
+				text: documentPage.extractedText,
+				textLayout: documentPage.textLayout,
+			})
+			.from(documentPage)
+			.innerJoin(document, eq(document.id, documentPage.documentID))
+			.where(and(eq(document.boardID, boardID), sql`(${sql.join(conditions, sql` OR `)})`))
+		rows.push(...batchRows)
+	}
+	return rows
 }

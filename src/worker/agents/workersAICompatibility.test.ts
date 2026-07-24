@@ -24,6 +24,34 @@ describe('Workers AI on AI SDK 6', () => {
 		expect(await result.text).toBe('Hello from Workers AI')
 	})
 
+	it('streams reasoning from the smarter model as reasoning text', async () => {
+		const encoder = new TextEncoder()
+		let capturedInputs: unknown
+		const binding = {
+			run: (_modelID: string, inputs: unknown) => {
+				capturedInputs = inputs
+				return new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"reasoning_content":"The student flipped the "}}]}\n\n'))
+						controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"reasoning_content":"chain rule order."}}]}\n\n'))
+						controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Differentiate the outer function first."}}]}\n\n'))
+						controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+						controller.close()
+					},
+				})
+			},
+		} as unknown as Ai
+		const workersAI = createWorkersAI({ binding })
+		const result = streamText({
+			model: workersAI(STUDY_MODELS.smarter.id, { reasoning_effort: 'medium' }),
+			prompt: 'Why is my derivative wrong?',
+		})
+
+		expect(await result.text).toBe('Differentiate the outer function first.')
+		expect(await result.reasoningText).toBe('The student flipped the chain rule order.')
+		expect(capturedInputs).toMatchObject({ reasoning_effort: 'medium' })
+	})
+
 	it('sends a base64 selection image as a current image URL content part', async () => {
 		const encoder = new TextEncoder()
 		let capturedInputs: unknown

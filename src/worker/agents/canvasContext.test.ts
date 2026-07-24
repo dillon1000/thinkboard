@@ -114,6 +114,32 @@ describe('attachCanvasContext', () => {
 		})
 	})
 
+	it('treats selected PDF text as the primary referent', () => {
+		const result = attachCanvasContext(
+			[{ role: 'user', content: 'Explain this.' }],
+			{
+				boardID: 'board-1',
+				documentText: [{
+					documentID: 'document-1',
+					documentTitle: 'Biology reader',
+					pageNumber: 12,
+					text: 'Mitosis produces two genetically identical daughter cells.',
+				}],
+				relatedShapes: [],
+				relationships: [],
+				selection: [],
+			}
+		)
+
+		expect(result[0]).toMatchObject({
+			role: 'user',
+			content: expect.arrayContaining([
+				{ type: 'text', text: expect.stringContaining('as the referent') },
+				{ type: 'text', text: expect.stringContaining('genetically identical') },
+			]),
+		})
+	})
+
 	it('formats rich text and arrow bindings as semantic structure', () => {
 		const formatted = formatCanvasContextForModel({
 			boardID: 'board-1',
@@ -163,6 +189,33 @@ describe('attachCanvasContext', () => {
 		expect(formatted).not.toContain('Selection 1')
 	})
 
+	it('formats layer, lock, containment, and style metadata', () => {
+		const formatted = formatCanvasContextForModel({
+			boardID: 'board-1',
+			selection: [{
+				id: 'shape:frame',
+				type: 'frame',
+				childShapeIDs: ['shape:child'],
+				index: 'a4',
+				isLocked: true,
+				opacity: 0.75,
+				x: 0,
+				y: 0,
+				w: 400,
+				h: 300,
+				rotation: 0,
+				style: { color: 'agent-blue' },
+			}],
+			relatedShapes: [],
+			relationships: [],
+		})
+
+		expect(formatted).toContain('children=shape:child')
+		expect(formatted).toContain('layer=a4')
+		expect(formatted).toContain('locked=true')
+		expect(formatted).toContain('style=color:agent-blue')
+	})
+
 	it('includes authorized PDF text beside the current selection', () => {
 		const formatted = formatCanvasContextForModel({
 			boardID: 'board-1',
@@ -177,8 +230,50 @@ describe('attachCanvasContext', () => {
 			selection: [],
 		})
 
-		expect(formatted).toContain('Authorized PDF text')
+		expect(formatted).toContain('Selected PDF text')
 		expect(formatted).toContain('Biology reader, page 12')
 		expect(formatted).toContain('genetically identical')
+	})
+
+	it('represents every page from a selected PDF frame within the context budget', () => {
+		const formatted = formatCanvasContextForModel({
+			boardID: 'board-1',
+			documentText: Array.from({ length: 200 }, (_, index) => ({
+				documentID: 'document-1',
+				documentTitle: 'Biology reader',
+				pageNumber: index + 1,
+				text: `Page ${index + 1} content. ${'Detailed course material. '.repeat(300)}`,
+			})),
+			relatedShapes: [],
+			relationships: [],
+			selection: [],
+		})
+
+		expect(formatted).toContain('Biology reader, page 1')
+		expect(formatted).toContain('Biology reader, page 200')
+		expect(formatted).toContain('Page 200 content.')
+	})
+
+	it('reports the anchor point of an inline request', () => {
+		const formatted = formatCanvasContextForModel({
+			anchor: { x: 128.456, y: -64.5 },
+			boardID: 'board-1',
+			relatedShapes: [],
+			relationships: [],
+			selection: [],
+		})
+
+		expect(formatted).toContain('Anchor point: x=128.46, y=-64.5')
+	})
+
+	it('omits the anchor line for panel requests', () => {
+		const formatted = formatCanvasContextForModel({
+			boardID: 'board-1',
+			relatedShapes: [],
+			relationships: [],
+			selection: [],
+		})
+
+		expect(formatted).not.toContain('Anchor point')
 	})
 })

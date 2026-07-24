@@ -2,10 +2,12 @@ import { createTLSchema, defaultBindingSchemas, defaultShapeSchemas } from '@tld
 import { describe, expect, it } from 'vitest'
 import {
 	conceptMapProposalSchema,
+	equationProposalSchema,
 	flashcardProposalSchema,
 	flashcardShapeValidator,
 	quizProposalSchema,
 	reviewProposalSchema,
+	normalizeEquationLatex,
 	studyShapeSchemas,
 	walkthroughProposalSchema,
 } from './studyShapes'
@@ -101,5 +103,35 @@ describe('study shape contracts', () => {
 			],
 			edges: [{ from: 'one', to: 'missing', label: '' }],
 		}).success).toBe(false)
+	})
+
+	it('accepts a derivation of bounded equation lines', () => {
+		expect(equationProposalSchema.safeParse({
+			x: 40,
+			y: 60,
+			lines: ['ax^2 + bx + c = 0', 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}'],
+		}).success).toBe(true)
+	})
+
+	it('rejects an equation proposal with no lines', () => {
+		expect(equationProposalSchema.safeParse({ x: 0, y: 0, lines: [] }).success).toBe(false)
+	})
+})
+
+describe('normalizeEquationLatex', () => {
+	it('strips the math delimiters models add out of habit', () => {
+		expect(normalizeEquationLatex('$$x = 1$$')).toBe('x = 1')
+		expect(normalizeEquationLatex('$x = 1$')).toBe('x = 1')
+		expect(normalizeEquationLatex('\\[x = 1\\]')).toBe('x = 1')
+		expect(normalizeEquationLatex('\\(x = 1\\)')).toBe('x = 1')
+	})
+
+	it('leaves bare LaTeX and inner dollar-free math untouched', () => {
+		expect(normalizeEquationLatex('  \\frac{1}{2}  ')).toBe('\\frac{1}{2}')
+		expect(normalizeEquationLatex('a + b = c')).toBe('a + b = c')
+	})
+
+	it('drops a trailing row break left over from an aligned block', () => {
+		expect(normalizeEquationLatex('x = 2 \\\\')).toBe('x = 2')
 	})
 })

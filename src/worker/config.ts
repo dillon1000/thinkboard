@@ -1,14 +1,18 @@
 import type { PublicConfig } from '@agentboard/shared'
-import { getOAuthConfiguration } from './auth/createAuth'
+import { getOAuthConfiguration, getSpotifyConfiguration } from './auth/createAuth'
 
 export function getPublicConfig(env: Env): PublicConfig {
 	const oAuth = getOAuthConfiguration(env)
+	const spotify = getSpotifyConfiguration(env)
 
 	return {
 		oAuth: {
 			enabled: Boolean(oAuth),
 			providerID: oAuth?.providerID ?? env.OAUTH_PROVIDER_ID ?? 'campus-sso',
-			providerName: oAuth?.providerName ?? env.OAUTH_PROVIDER_NAME ?? 'Campus SSO',
+			providerName: oAuth?.providerName ?? env.OAUTH_PROVIDER_NAME ?? 'Passport',
+		},
+		spotify: {
+			enabled: Boolean(spotify),
 		},
 		tldrawLicenseKey: env.TLDRAW_LICENSE_KEY?.trim() || null,
 	}

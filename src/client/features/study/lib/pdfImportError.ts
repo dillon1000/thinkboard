@@ -1,0 +1,55 @@
+export interface PDFImportFailure {
+	details: string
+	summary: string
+}
+
+interface PDFImportErrorContext {
+	browser: string
+	fileName?: string
+	fileSize?: number
+	location: string
+	timestamp?: Date
+}
+
+export function describePDFImportFailure(
+	error: unknown,
+	context: PDFImportErrorContext
+): PDFImportFailure {
+	const summary = error instanceof Error && error.message
+		? error.message
+		: typeof error === 'string' && error
+			? error
+			: 'The PDF could not be imported.'
+	const metadata = [
+		'PDF import failed',
+		`Time: ${(context.timestamp ?? new Date()).toISOString()}`,
+		`Page: ${context.location}`,
+		`Browser: ${context.browser}`,
+		...(context.fileName ? [`File: ${context.fileName}`] : []),
+		...(typeof context.fileSize === 'number' ? [`File size: ${context.fileSize} bytes`] : []),
+	]
+	return {
+		details: `${metadata.join('\n')}\n\n${formatError(error)}`,
+		summary,
+	}
+}
+
+function formatError(error: unknown, label = 'Error'): string {
+	if (error instanceof Error) {
+		const lines = [
+			`${label}: ${error.name}`,
+			`Message: ${error.message}`,
+			...(error.stack ? [`Stack:\n${error.stack}`] : []),
+		]
+		const cause = Reflect.get(error, 'cause')
+		return cause === undefined
+			? lines.join('\n')
+			: `${lines.join('\n')}\n\n${formatError(cause, 'Cause')}`
+	}
+	if (typeof error === 'string') return `${label}: ${error}`
+	try {
+		return `${label}: ${JSON.stringify(error, null, 2)}`
+	} catch {
+		return `${label}: ${String(error)}`
+	}
+}

@@ -5,9 +5,21 @@ import {
 	IconCopy,
 	IconLayoutSidebarRightCollapse,
 	IconLayoutSidebarRightExpand,
+	IconLock,
+	IconPlayerPause,
+	IconPlayerPlay,
+	IconX,
 } from '@tabler/icons-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { ThemeToggle } from '../../theme/ThemeToggle'
+import { LockInSetup } from '../../lock-in/LockInSetup'
+import { LockInCelebration } from '../../lock-in/LockInCelebration'
+import { useLockIn } from '../../lock-in/LockInProvider'
+import {
+	formatLockInTime,
+	getLockInElapsedMS,
+	getLockInRemainingMS,
+} from '../../lock-in/lib/lockInSession'
 
 const STUDY_PANEL_STORAGE_KEY = 'agentboard.study-panel'
 
@@ -22,6 +34,14 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 	const [didCopy, setDidCopy] = useState(false)
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
 	const [isOnline, setIsOnline] = useState(navigator.onLine)
+	const {
+		endSession,
+		now,
+		openSetup,
+		pauseSession,
+		resumeSession,
+		session,
+	} = useLockIn()
 
 	useEffect(() => {
 		if (!didCopy) return
@@ -40,6 +60,10 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 		}
 	}, [])
 
+	useEffect(() => {
+		if (session) setStudyPanelOpen(true)
+	}, [session?.id])
+
 	async function copyBoardLink() {
 		await navigator.clipboard.writeText(window.location.href)
 		setDidCopy(true)
@@ -55,7 +79,7 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 	}
 
 	return (
-		<div className="BoardShell" data-study-open={isStudyOpen}>
+		<div className="BoardShell" data-lock-in={Boolean(session)} data-study-open={isStudyOpen}>
 			<div className="BoardShell-workspace">
 				<main className="BoardShell-content">{children}</main>
 				<header className="BoardShell-header">
@@ -70,6 +94,48 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 						</span>
 					</div>
 					<div className="BoardShell-headerGroup BoardShell-headerGroup--actions">
+						{session ? (
+							<div className="LockInTimer" role="timer">
+								<IconLock aria-hidden="true" size={15} stroke={1.9} />
+								<strong>{formatLockInTime(getLockInRemainingMS(session, now))}</strong>
+								<span className="LockInTimer-progress" aria-hidden="true">
+									<i style={{
+										transform: `scaleX(${Math.min(1, getLockInElapsedMS(session, now) / (session.durationMinutes * 60_000))})`,
+									}} />
+								</span>
+								<button
+									aria-label={session.runningSince === null ? 'Resume Lock In session' : 'Pause Lock In session'}
+									onClick={session.runningSince === null ? resumeSession : pauseSession}
+									title={session.runningSince === null ? 'Resume Lock In session' : 'Pause Lock In session'}
+									type="button"
+								>
+									{session.runningSince === null
+										? <IconPlayerPlay aria-hidden="true" size={15} />
+										: <IconPlayerPause aria-hidden="true" size={15} />}
+								</button>
+								<button
+									aria-label="End Lock In session"
+									className="LockInTimer-end"
+									onClick={endSession}
+									title="End Lock In session"
+									type="button"
+								>
+									<IconX aria-hidden="true" size={15} />
+								</button>
+							</div>
+						) : null}
+						{!session ? <button
+							className="BoardShell-lockIn"
+							onClick={() => {
+								setStudyPanelOpen(false)
+								openSetup()
+							}}
+							title="Start Lock In Mode"
+							type="button"
+						>
+							<IconLock aria-hidden="true" size={15} stroke={1.8} />
+							<span>Lock In</span>
+						</button> : null}
 						<button
 							aria-label={didCopy ? 'Board link copied' : 'Copy board link'}
 							aria-live="polite"
@@ -114,6 +180,8 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 						{studyPanel}
 					</div>
 				</aside>
+				<LockInSetup />
+				<LockInCelebration />
 			</div>
 		</div>
 	)

@@ -30,6 +30,28 @@ export async function handleStudyConversationMessages(request: IRequest, env: En
 	)
 }
 
+/**
+ * Cursor-invoked requests are one-shot, so they never touch a saved conversation. They still run
+ * through a Durable Object — the agent lives there — but on a per-student instance that stores
+ * nothing, which keeps an inline aside out of the panel's history.
+ */
+export async function handleInlineAgentRequest(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+
+	const database = createDatabase(env)
+	const userID = authentication.session.user.id
+	const boardID = request.params.boardID
+	const access = await getBoardAccess(database, boardID, userID)
+	if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+
+	return forwardStudyAgentRequest(
+		env.StudyAgent.getByName(`inline:${boardID}:${userID}`),
+		request,
+		{ boardID, userID }
+	)
+}
+
 interface StudyAgentFetcher {
 	fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
 }

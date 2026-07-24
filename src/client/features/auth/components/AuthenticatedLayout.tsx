@@ -1,6 +1,6 @@
 import { appRoutes } from '@agentboard/shared'
-import { IconSparkles } from '@tabler/icons-react'
 import { Navigate, Outlet, useLocation } from 'react-router'
+import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
 
 export function AuthenticatedLayout() {
@@ -9,9 +9,8 @@ export function AuthenticatedLayout() {
 
 	if (session.isPending) {
 		return (
-			<div className="AppLoading" role="status">
-				<span className="AppLoading-mark"><IconSparkles aria-hidden="true" size={20} stroke={1.8} /></span>
-				<span>Opening your workspace…</span>
+			<div className="AppLoading">
+				<ProgressBar label="Opening your workspace" />
 			</div>
 		)
 	}

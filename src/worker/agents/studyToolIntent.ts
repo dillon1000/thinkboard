@@ -5,7 +5,9 @@ export type StudyToolName =
 	| 'createPracticeSet'
 	| 'createQuiz'
 	| 'createWalkthrough'
+	| 'composeCanvas'
 	| 'recordMistake'
+	| 'writeEquation'
 
 interface ChatMessageLike {
 	parts: ReadonlyArray<{ type: string; text?: string }>
@@ -37,11 +39,17 @@ export function getRequestedStudyTool(
 	if (/\b(?:make|create|show|build)\b[\s\S]{0,100}\b(?:worked\s+example|walkthrough|step[- ]by[- ]step)\b/i.test(text)) {
 		return 'createWalkthrough'
 	}
+	if (/\b(?:write|put|place|show|add|derive)\b[\s\S]{0,80}\b(?:equations?|formulas?|derivations?|identity)\b/i.test(text)) {
+		return 'writeEquation'
+	}
 	if (/\b(?:save|record|remember|track)\b[\s\S]{0,80}\b(?:mistake|error)\b/i.test(text)) {
 		return 'recordMistake'
 	}
 	if (/\b(?:add|create|make|leave|put|place|write|propose)\b[\s\S]{0,80}\b(?:(?:review|correction|feedback)\s+note|correction)\b/i.test(text)) {
 		return 'addReviewNote'
+	}
+	if (/\b(?:add|arrange|build|change|color|connect|create|delete|diagram|draw|flowchart|frame|group|label|lay\s*out|make|move|place|remove|resize|restyle|shape|style)\b[\s\S]{0,120}\b(?:arrows?|board|boxes?|canvas|circles?|connectors?|diagram|ellipses?|frames?|groups?|lines?|map|notes?|rectangles?|shapes?|text)\b/i.test(text)) {
+		return 'composeCanvas'
 	}
 	return undefined
 }

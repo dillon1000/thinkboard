@@ -1,5 +1,7 @@
 import {
 	conceptMapProposalSchema,
+	canvasPlanSchema,
+	equationProposalSchema,
 	flashcardProposalSchema,
 	mistakeProposalSchema,
 	practiceSetProposalSchema,
@@ -15,7 +17,9 @@ export type SupportedProposalName =
 	| 'createPracticeSet'
 	| 'createQuiz'
 	| 'createWalkthrough'
+	| 'composeCanvas'
 	| 'recordMistake'
+	| 'writeEquation'
 
 export interface LeakedProposal {
 	input: unknown
@@ -29,6 +33,8 @@ const proposalNames: readonly SupportedProposalName[] = [
 	'createWalkthrough',
 	'createConceptMap',
 	'createPracticeSet',
+	'composeCanvas',
+	'writeEquation',
 	'recordMistake',
 ]
 
@@ -38,12 +44,6 @@ export function parseLeakedProposal(text: string): LeakedProposal | null {
 		if (proposal) return proposal
 	}
 	return null
-}
-
-export function looksLikeLeakedProposal(text: string) {
-	return proposalNames.some((toolName) =>
-		new RegExp(`(?:"(?:name|toolName)"\\s*:\\s*"|\\b)${toolName}\\b`).test(text)
-	)
 }
 
 function parseProposalValue(value: unknown): LeakedProposal | null {
@@ -80,7 +80,13 @@ function parseProposalValue(value: unknown): LeakedProposal | null {
 	if (toolName === 'createPracticeSet' && practiceSetProposalSchema.safeParse(input).success) {
 		return { input, toolName }
 	}
+	if (toolName === 'writeEquation' && equationProposalSchema.safeParse(input).success) {
+		return { input, toolName }
+	}
 	if (toolName === 'recordMistake' && mistakeProposalSchema.safeParse(input).success) {
+		return { input, toolName }
+	}
+	if (toolName === 'composeCanvas' && canvasPlanSchema.safeParse(input).success) {
 		return { input, toolName }
 	}
 	return null

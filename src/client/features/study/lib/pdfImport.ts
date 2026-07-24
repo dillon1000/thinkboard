@@ -7,14 +7,18 @@ import {
 	type DocumentSummary,
 	type PDFTextBlock,
 } from '@agentboard/shared'
-import { createShapeId, type Editor } from 'tldraw'
-import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import type { PDFPageProxy } from 'pdfjs-dist'
+import { createShapeId, isShapeId, type Editor } from 'tldraw'
+import { loadPDFJS } from './pdfRuntime'
 
 const MAX_RENDER_DIMENSION = 4_096
 const MAX_RENDER_PIXELS = 9_000_000
 const MAX_RENDER_SCALE = 4
 const MIN_RENDER_SCALE = 3
-const WEBP_QUALITY = 0.96
+const WEBP_QUALITY = 0.88
+const WEBP_FALLBACK_QUALITY = 0.76
+
+type PDFTextContent = Awaited<ReturnType<PDFPageProxy['getTextContent']>>
 
 export interface PDFImportProgress {
 	completed: number
@@ -27,6 +31,10 @@ interface ImportedPDFPage {
 	height: number
 	pageNumber: number
 	width: number
+}
+
+interface PDFPageShapeReference {
+	props: object
 }
 
 interface SavedImport {
@@ -45,8 +53,7 @@ export async function importPDFToBoard(
 	if (file.size > MAX_PDF_BYTES) throw new Error('PDF files must be 50 MB or smaller.')
 
 	onProgress({ completed: 0, stage: 'opening', total: 1 })
-	const pdfjs = await import('pdfjs-dist')
-	pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerURL
+	const pdfjs = await loadPDFJS()
 	const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer() })
 	const pdf = await loadingTask.promise
 	try {
@@ -98,6 +105,7 @@ export async function importPDFToBoard(
 				stage: 'pages',
 				total: pdf.numPages,
 			})
+			if (pageNumber < pdf.numPages) await yieldToBrowser()
 		}
 
 		const finalized = await finalizeDocument(boardID, documentID)
@@ -129,11 +137,11 @@ async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDo
 	const context = canvas.getContext('2d', { alpha: false })
 	if (!context) throw new Error('This browser cannot render PDF pages.')
 	await page.render({ canvas, canvasContext: context, viewport }).promise
-	const [image, textContent] = await Promise.all([
+	const [image, textItems] = await Promise.all([
 		canvasToBlob(canvas),
-		page.getTextContent(),
+		readPDFTextItems(page),
 	])
-	const textBlocks = textContent.items.flatMap((item): PDFTextBlock[] => {
+	const textBlocks = textItems.flatMap((item): PDFTextBlock[] => {
 		const text = Reflect.get(item, 'str')
 		const transform = Reflect.get(item, 'transform')
 		const width = Reflect.get(item, 'width')
@@ -162,6 +170,22 @@ async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDo
 		text: textBlocks.map(({ text }) => text).join(' ').replace(/\s+/g, ' ').trim(),
 		textBlocks,
 		width: displayViewport.width,
+	}
+}
+
+export async function readPDFTextItems(
+	page: Pick<PDFPageProxy, 'streamTextContent'>
+): Promise<PDFTextContent['items']> {
+	const reader = page.streamTextContent().getReader()
+	const items: PDFTextContent['items'] = []
+	try {
+		while (true) {
+			const chunk = await reader.read()
+			if (chunk.done) return items
+			items.push(...chunk.value.items)
+		}
+	} finally {
+		reader.releaseLock()
 	}
 }
 
@@ -259,7 +283,7 @@ export function placePDFPages(
 				: []
 		})
 	)
-	if (existingPageShapes.length) {
+	if (hasCompletePDFPageShapeSet(existingPageShapes, pages)) {
 		editor.updateShapes(existingPageShapes.map((shape) => ({
 			id: shape.id,
 			props: { renderVersion },
@@ -267,6 +291,26 @@ export function placePDFPages(
 		})))
 		return
 	}
+	const existingPageShapeIDs = new Set(existingPageShapes.map(({ id }) => id))
+	const replaceableFrames = [...new Map(existingPageShapes.flatMap((shape) => {
+		const parent = editor.getShape(shape.parentId)
+		if (
+			parent?.type !== 'frame' ||
+			!editor
+				.getSortedChildIdsForParent(parent.id)
+				.every((childID) => existingPageShapeIDs.has(childID))
+		) return []
+		return [[parent.id, parent] as const]
+	})).values()]
+	const replaceableFrameIDs = new Set(replaceableFrames.map(({ id }) => id))
+	const shapesToDelete = [
+		...replaceableFrameIDs,
+		...existingPageShapes
+			.filter(({ parentId }) =>
+				!isShapeId(parentId) || !replaceableFrameIDs.has(parentId)
+			)
+			.map(({ id }) => id),
+	]
 	const gutter = 24
 	const padding = 28
 	const maximumPageWidth = 760
@@ -278,17 +322,21 @@ export function placePDFPages(
 	const frameWidth = contentWidth + padding * 2
 	const frameHeight = laidOutPages.reduce((height, page) => height + page.h, padding * 2 + gutter * Math.max(0, pages.length - 1))
 	const viewport = editor.getViewportPageBounds()
-	const origin = findOpenFrameOrigin(editor, {
-		h: frameHeight,
-		w: frameWidth,
-		x: viewport.x + viewport.w / 2 - frameWidth / 2,
-		y: viewport.y + Math.max(48, viewport.h * 0.08),
-	})
+	const previousFrame = replaceableFrames[0]
+	const origin = previousFrame
+		? { x: previousFrame.x, y: previousFrame.y }
+		: findOpenFrameOrigin(editor, {
+			h: frameHeight,
+			w: frameWidth,
+			x: viewport.x + viewport.w / 2 - frameWidth / 2,
+			y: viewport.y + Math.max(48, viewport.h * 0.08),
+		})
 	const frameID = createShapeId()
 	const pageIDs = laidOutPages.map(() => createShapeId())
 	let y = padding
 	editor.markHistoryStoppingPoint('import pdf')
 	editor.run(() => {
+		if (shapesToDelete.length) editor.deleteShapes(shapesToDelete)
 		editor.createShape({
 			id: frameID,
 			type: 'frame',
@@ -314,9 +362,22 @@ export function placePDFPages(
 			y += page.h + gutter
 			return shape
 		}))
-		editor.setSelectedShapes([frameID])
+		editor.setSelectedShapes([pageIDs[0]])
 	})
 	editor.zoomToSelection({ animation: { duration: 300 } })
+}
+
+export function hasCompletePDFPageShapeSet(
+	existingShapes: readonly PDFPageShapeReference[],
+	pages: readonly Pick<ImportedPDFPage, 'pageNumber'>[]
+) {
+	const expectedPageNumbers = new Set(pages.map(({ pageNumber }) => pageNumber))
+	if (existingShapes.length !== expectedPageNumbers.size) return false
+	const existingPageNumbers = new Set(existingShapes.map(({ props }) =>
+		Reflect.get(props, 'pageNumber')
+	))
+	return existingPageNumbers.size === expectedPageNumbers.size &&
+		[...expectedPageNumbers].every((pageNumber) => existingPageNumbers.has(pageNumber))
 }
 
 function findOpenFrameOrigin(
@@ -341,11 +402,10 @@ function rectanglesIntersect(
 	return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement) {
-	return encodeCanvas(canvas, 'image/png').then(async (png) => {
-		if (png.size <= MAX_PDF_PAGE_IMAGE_BYTES) return png
-		return encodeCanvas(canvas, 'image/webp', WEBP_QUALITY)
-	})
+export async function canvasToBlob(canvas: HTMLCanvasElement) {
+	const image = await encodeCanvas(canvas, 'image/webp', WEBP_QUALITY)
+	if (image.size <= MAX_PDF_PAGE_IMAGE_BYTES) return image
+	return encodeCanvas(canvas, 'image/webp', WEBP_FALLBACK_QUALITY)
 }
 
 function encodeCanvas(canvas: HTMLCanvasElement, type: string, quality?: number) {
@@ -362,6 +422,21 @@ function imageExtension(contentType: string) {
 	if (contentType === 'image/png') return 'png'
 	if (contentType === 'image/jpeg') return 'jpg'
 	return 'webp'
+}
+
+interface BrowserScheduler {
+	yield?: () => Promise<void>
+}
+
+export async function yieldToBrowser() {
+	const browserScheduler = (globalThis as typeof globalThis & {
+		scheduler?: BrowserScheduler
+	}).scheduler
+	if (browserScheduler?.yield) {
+		await browserScheduler.yield()
+		return
+	}
+	await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0))
 }
 
 function clamp01(value: number) {

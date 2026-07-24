@@ -10,6 +10,7 @@ import {
 	IconLogout2,
 	IconPencil,
 	IconPlus,
+	IconSettings,
 	IconSparkles,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
@@ -162,6 +163,7 @@ export function Component() {
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
 				</nav>
 				<div className="Dashboard-user">
 					<div className="Dashboard-avatar" aria-hidden="true">{getInitial(session.data?.user.name)}</div>

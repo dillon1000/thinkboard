@@ -6,7 +6,16 @@ OAUTH_CLIENT_ID=replace-with-your-oauth-client-id
 OAUTH_CLIENT_SECRET=replace-with-your-oauth-client-secret
 TLDRAW_LICENSE_KEY=replace-with-your-tldraw-license-key
 
+# Spotify connection. Register http://127.0.0.1:5173/api/auth/callback/spotify
+# and open the local app through 127.0.0.1 rather than localhost.
+SPOTIFY_CLIENT_ID=replace-with-your-spotify-client-id
+SPOTIFY_CLIENT_SECRET=replace-with-your-spotify-client-secret
+
+# Exa powers the study agent's Search, Answer, and Crawl tools.
+EXA_API_KEY=replace-with-your-exa-api-key
+
 # Optional overrides
 # OAUTH_PROVIDER_ID=passport
 # OAUTH_PROVIDER_NAME=Passport
 # OAUTH_SCOPES=openid,email,profile,offline_access
+# LOCK_IN_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct

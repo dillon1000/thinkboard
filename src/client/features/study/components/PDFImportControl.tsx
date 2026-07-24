@@ -1,7 +1,8 @@
 import type { DocumentSummary } from '@agentboard/shared'
-import { IconFileTypePdf, IconRefresh, IconX } from '@tabler/icons-react'
+import { IconCheck, IconCopy, IconFileTypePdf, IconRefresh, IconX } from '@tabler/icons-react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ThinkingOrb, type OrbState } from 'thinking-orbs'
 import type { Editor } from 'tldraw'
 import {
 	importPDFToBoard,
@@ -9,6 +10,10 @@ import {
 	retryDocumentProcessing,
 	type PDFImportProgress,
 } from '../lib/pdfImport'
+import {
+	describePDFImportFailure,
+	type PDFImportFailure,
+} from '../lib/pdfImportError'
 
 interface PDFImportControlProps {
 	boardID: string
@@ -17,7 +22,7 @@ interface PDFImportControlProps {
 
 export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const [progress, setProgress] = useState<PDFImportProgress | null>(null)
-	const [error, setError] = useState<string | null>(null)
+	const [error, setError] = useState<PDFImportFailure | null>(null)
 	const [failedDocuments, setFailedDocuments] = useState<DocumentSummary[]>([])
 	const [processingDocumentCount, setProcessingDocumentCount] = useState(0)
 	const inputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +71,12 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 			window.setTimeout(() => setProgress(null), 2_500)
 		} catch (caught) {
 			setProgress(null)
-			setError(caught instanceof Error ? caught.message : 'The PDF could not be imported.')
+			setError(describePDFImportFailure(caught, {
+				browser: navigator.userAgent,
+				fileName: file.name,
+				fileSize: file.size,
+				location: window.location.href,
+			}))
 		}
 	}
 
@@ -82,7 +92,10 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 			await retryDocumentProcessing(boardID, documentID)
 			await refreshDocuments()
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : 'Processing could not be retried.')
+			setError(describePDFImportFailure(caught, {
+				browser: navigator.userAgent,
+				location: window.location.href,
+			}))
 		}
 	}
 
@@ -97,15 +110,14 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				title="Import PDF pages onto this board"
 				type="button"
 			>
-				<IconFileTypePdf aria-hidden="true" size={17} stroke={1.8} />
-				<span>{progressLabel ?? 'Import PDF'}</span>
+				{progress && progress.stage !== 'ready' ? (
+					<ThinkingOrb aria-hidden="true" size={20} state={getProgressOrbState(progress)} />
+				) : (
+					<IconFileTypePdf aria-hidden="true" size={17} stroke={1.8} />
+				)}
+				<span aria-live="polite">{progressLabel ?? 'Import PDF'}</span>
 			</button>
-			{error ? (
-				<div className="PDFImportNotice" role="alert">
-					<span>{error}</span>
-					<button aria-label="Dismiss PDF import error" onClick={() => setError(null)} type="button"><IconX size={14} /></button>
-				</div>
-			) : null}
+			{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
 			{failedDocuments.map((document) => (
 				<div className="PDFImportNotice" key={document.id} role="status">
 					<span><strong>{document.title}</strong> needs processing again.</span>
@@ -116,12 +128,97 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	)
 }
 
+function PDFImportErrorModal({
+	error,
+	onClose,
+}: {
+	error: PDFImportFailure
+	onClose: () => void
+}) {
+	const [copied, setCopied] = useState(false)
+	const copyButtonRef = useRef<HTMLButtonElement>(null)
+	const detailsRef = useRef<HTMLTextAreaElement>(null)
+
+	useEffect(() => {
+		copyButtonRef.current?.focus()
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') onClose()
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [onClose])
+
+	async function copyError() {
+		try {
+			if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
+			await navigator.clipboard.writeText(error.details)
+			setCopied(true)
+		} catch {
+			detailsRef.current?.focus()
+			detailsRef.current?.select()
+		}
+	}
+
+	return (
+		<div className="PDFErrorModalBackdrop">
+			<section
+				aria-describedby="pdf-error-summary"
+				aria-labelledby="pdf-error-title"
+				aria-modal="true"
+				className="PDFErrorModal"
+				role="dialog"
+			>
+				<header>
+					<div>
+						<h2 id="pdf-error-title">PDF import error</h2>
+						<p id="pdf-error-summary">{error.summary}</p>
+					</div>
+					<button aria-label="Close PDF import error" onClick={onClose} title="Close" type="button">
+						<IconX aria-hidden="true" size={18} />
+					</button>
+				</header>
+				<label>
+					<span>Full error details</span>
+					<textarea
+						aria-label="Full PDF import error details"
+						onFocus={(event) => event.currentTarget.select()}
+						readOnly
+						ref={detailsRef}
+						spellCheck={false}
+						value={error.details}
+					/>
+				</label>
+				<footer>
+					<button className="PDFErrorModal-secondary" onClick={onClose} type="button">Close</button>
+					<button
+						aria-live="polite"
+						className="PDFErrorModal-primary"
+						onClick={() => void copyError()}
+						ref={copyButtonRef}
+						type="button"
+					>
+						{copied ? <IconCheck aria-hidden="true" size={17} /> : <IconCopy aria-hidden="true" size={17} />}
+						{copied ? 'Copied' : 'Copy error'}
+					</button>
+				</footer>
+			</section>
+		</div>
+	)
+}
+
 function formatProgress(progress: PDFImportProgress) {
 	if (progress.stage === 'opening') return 'Opening PDF…'
 	if (progress.stage === 'original') return 'Saving original…'
 	if (progress.stage === 'pages') return `Importing ${progress.completed}/${progress.total}`
 	if (progress.stage === 'processing') return 'Pages added · indexing…'
 	return 'PDF ready'
+}
+
+function getProgressOrbState(progress: PDFImportProgress): OrbState {
+	if (progress.stage === 'opening') return 'searching'
+	if (progress.stage === 'pages') return 'shaping'
+	if (progress.stage === 'processing') return 'searching'
+	return 'working'
 }
 
 function findPDF(files: FileList | null | undefined) {

@@ -14,6 +14,9 @@ export interface PublicConfig {
 		providerID: string
 		providerName: string
 	}
+	spotify: {
+		enabled: boolean
+	}
 	tldrawLicenseKey: string | null
 }
 

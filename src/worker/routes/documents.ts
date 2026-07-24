@@ -298,7 +298,14 @@ export async function handleDocumentOriginalDownload(
 		request.params.documentID
 	)
 	if (!documentRow) return documentError(404, 'DOCUMENT_NOT_FOUND', 'Document not found.')
-	return serveAuthorizedR2Object(request, env, ctx, documentRow.r2Key)
+	const downloadDisposition = getOriginalPDFDownloadDisposition(request.url, documentRow.title)
+	return serveAuthorizedR2Object(
+		request,
+		env,
+		ctx,
+		documentRow.r2Key,
+		downloadDisposition ? { contentDisposition: downloadDisposition } : undefined
+	)
 }
 
 export async function handleDocumentPageDownload(
@@ -345,10 +352,11 @@ async function serveAuthorizedR2Object(
 	request: IRequest,
 	env: Env,
 	ctx: ExecutionContext,
-	objectName: string
+	objectName: string,
+	options?: { contentDisposition: string }
 ) {
 	const cacheKey = new Request(request.url, { headers: request.headers })
-	const cached = await caches.default.match(cacheKey)
+	const cached = options ? null : await caches.default.match(cacheKey)
 	if (cached) return cached
 	const object = await env.TLDRAW_BUCKET.get(objectName, {
 		onlyIf: request.headers,
@@ -358,10 +366,15 @@ async function serveAuthorizedR2Object(
 
 	const headers = new Headers()
 	object.writeHttpMetadata(headers)
-	headers.set('cache-control', 'private, max-age=31536000, immutable')
+	headers.set(
+		'cache-control',
+		options ? 'private, no-store' : 'private, max-age=31536000, immutable'
+	)
+	if (options) headers.set('content-disposition', options.contentDisposition)
 	headers.set('content-security-policy', "default-src 'none'")
 	headers.set('x-content-type-options', 'nosniff')
 	headers.set('etag', object.httpEtag)
+	headers.set('accept-ranges', 'bytes')
 	let contentRange: string | undefined
 	if (object.range) {
 		if ('suffix' in object.range) {
@@ -377,7 +390,7 @@ async function serveAuthorizedR2Object(
 	if (contentRange) headers.set('content-range', contentRange)
 	const body = 'body' in object && object.body ? object.body : null
 	const status = body ? (contentRange ? 206 : 200) : 304
-	if (body && status === 200) {
+	if (body && status === 200 && !options) {
 		const [cacheBody, responseBody] = body.tee()
 		ctx.waitUntil(caches.default.put(cacheKey, new Response(cacheBody, { headers, status })))
 		return new Response(responseBody, { headers, status })
@@ -456,6 +469,11 @@ function safeFilename(title: string) {
 		.replace(/[^\x20-\x7e]/g, '_')
 		.replace(/["\\/\r\n]+/g, '_')
 	return normalized.toLowerCase().endsWith('.pdf') ? normalized : `${normalized}.pdf`
+}
+
+export function getOriginalPDFDownloadDisposition(requestURL: string, title: string) {
+	const isDownload = new URL(requestURL).searchParams.get('download') === '1'
+	return isDownload ? `attachment; filename="${safeFilename(title)}"` : null
 }
 
 function startOfUTCDay() {

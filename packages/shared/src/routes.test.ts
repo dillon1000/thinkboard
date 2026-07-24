@@ -33,6 +33,12 @@ describe('route builders', () => {
 		)
 	})
 
+	it('scopes Lock In reviews to their board', () => {
+		expect(apiRoutes.boardLockInReview('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/lock-in/review'
+		)
+	})
+
 	it('builds learning-science routes', () => {
 		expect(apiRoutes.boardFlashcards('biology/week 1')).toBe(
 			'/api/boards/biology%2Fweek%201/flashcards'
@@ -48,5 +54,10 @@ describe('route builders', () => {
 		expect(apiRoutes.bookmarkPreview('https://example.com/?a=1&b=2')).toBe(
 			'/api/unfurl?url=https%3A%2F%2Fexample.com%2F%3Fa%3D1%26b%3D2'
 		)
+	})
+
+	it('provides stable Settings and Spotify player routes', () => {
+		expect(appRoutes.settings).toBe('/settings')
+		expect(apiRoutes.spotifyPlayer).toBe('/api/integrations/spotify/player')
 	})
 })

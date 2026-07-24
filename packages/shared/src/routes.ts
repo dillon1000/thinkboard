@@ -1,6 +1,8 @@
 export const apiRoutePatterns = {
 	boardSocket: '/api/connect/:boardID',
 	boardContext: '/api/boards/:boardID/context',
+	boardInlineAgent: '/api/boards/:boardID/inline',
+	boardLockInReview: '/api/boards/:boardID/lock-in/review',
 	boardFlashcards: '/api/boards/:boardID/flashcards',
 	boardMistakes: '/api/boards/:boardID/mistakes',
 	boardDocuments: '/api/boards/:boardID/documents',
@@ -20,11 +22,13 @@ export const apiRoutePatterns = {
 	asset: '/api/boards/:boardID/assets/:assetID',
 	bookmarkPreview: '/api/unfurl',
 	config: '/api/config',
+	spotifyPlayer: '/api/integrations/spotify/player',
 } as const
 
 export const appRoutes = {
 	home: '/boards',
 	login: '/login',
+	settings: '/settings',
 	board: (boardID: string) => `/boards/${encodeURIComponent(boardID)}`,
 } as const
 
@@ -33,6 +37,10 @@ export const apiRoutes = {
 	board: (boardID: string) => `/api/boards/${encodeURIComponent(boardID)}`,
 	boardContext: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/context`,
+	boardInlineAgent: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/inline`,
+	boardLockInReview: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/lock-in/review`,
 	boardFlashcards: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/flashcards`,
 	boardMistakes: (boardID: string) =>
@@ -64,4 +72,5 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/assets/${encodeURIComponent(assetID)}`,
 	bookmarkPreview: (url: string) => `/api/unfurl?url=${encodeURIComponent(url)}`,
 	config: '/api/config',
+	spotifyPlayer: '/api/integrations/spotify/player',
 } as const

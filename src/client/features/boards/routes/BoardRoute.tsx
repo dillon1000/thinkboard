@@ -3,15 +3,20 @@ import { PDF_PAGE_SHAPE_TYPE, apiRoutes, type Board, type PublicConfig } from '@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import { Editor, Tldraw } from 'tldraw'
+import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
 import { BoardShell } from '../components/BoardShell'
 import { StudyPanel } from '../../study/components/StudyPanel'
 import { PDFImportControl } from '../../study/components/PDFImportControl'
-import { studyShapeUtils, synchronizedShapeUtils } from '../../study/shapes/studyShapeUtils'
+import { canvasShapeUtils, synchronizedShapeUtils } from '../lib/canvasShapes'
+import { createCanvasComponents } from '../lib/canvasComponents'
+import { canvasOverrides, canvasTools } from '../lib/canvasOverrides'
 import { getBookmarkPreview } from '../lib/getBookmarkPreview'
 import { createMultiplayerAssetStore } from '../lib/multiplayerAssetStore'
+import { canvasThemes } from '../lib/canvasThemes'
 import { useTheme } from '../../theme/ThemeProvider'
+import { LockInProvider } from '../../lock-in/LockInProvider'
 
 export function Component() {
 	const { boardID } = useParams<{ boardID: string }>()
@@ -23,6 +28,7 @@ export function Component() {
 	const [configError, setConfigError] = useState<string | null>(null)
 	const [title, setTitle] = useState('Study board')
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
+	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
 
 	const store = useSync({
 		uri: `${window.location.origin}${apiRoutes.boardSocket(resolvedBoardID)}`,
@@ -63,24 +69,30 @@ export function Component() {
 
 	if (!boardID) throw new Error('Missing board ID')
 	if (configError) return <div className="RouteMessage" role="alert"><h1>Unable to open this board</h1><p>{configError}</p></div>
-	if (!publicConfig) return <div className="RouteMessage" role="status"><p>Opening your board…</p></div>
+	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your board" /></div>
 
 	return (
-		<BoardShell boardID={boardID} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
-			<div className="BoardCanvas">
-				<Tldraw
-					licenseKey={publicConfig.tldrawLicenseKey ?? undefined}
-					store={store}
-					shapeUtils={studyShapeUtils}
-					options={{ deepLinks: true }}
-					onMount={(editor) => {
-						setEditor(editor)
-						editor.user.updateUserPreferences({ colorScheme: theme })
-						editor.registerExternalAssetHandler('url', getBookmarkPreview)
-					}}
-				/>
-				<PDFImportControl boardID={boardID} editor={editor} />
-			</div>
-		</BoardShell>
+		<LockInProvider boardID={boardID} editor={editor}>
+			<BoardShell boardID={boardID} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
+				<div className="BoardCanvas">
+					<Tldraw
+						components={components}
+						licenseKey={publicConfig.tldrawLicenseKey ?? undefined}
+						store={store}
+						themes={canvasThemes}
+						shapeUtils={canvasShapeUtils}
+						tools={canvasTools}
+						overrides={canvasOverrides}
+						options={{ deepLinks: true }}
+						onMount={(editor) => {
+							setEditor(editor)
+							editor.user.updateUserPreferences({ colorScheme: theme })
+							editor.registerExternalAssetHandler('url', getBookmarkPreview)
+						}}
+					/>
+					<PDFImportControl boardID={boardID} editor={editor} />
+				</div>
+			</BoardShell>
+		</LockInProvider>
 	)
 }

@@ -19,21 +19,27 @@ export type {
 } from './documents'
 export {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,
+	canvasAnchorSchema,
 	canvasContextSchema,
 	canvasSelectionImageSchema,
 	canvasShapeRelationshipSchema,
 	canvasShapeSchema,
 	canvasShapeTextSchema,
+	canvasContextShapeStyleSchema,
 	canvasPDFPageRegionSchema,
+	canvasPDFTextSelectionSchema,
 	canvasDocumentTextSchema,
 } from './canvasContext'
 export type {
+	CanvasAnchor,
 	CanvasContext,
 	CanvasSelectionImage,
 	CanvasShape,
 	CanvasShapeRelationship,
 	CanvasShapeText,
+	CanvasContextShapeStyle,
 	CanvasPDFPageRegion,
+	CanvasPDFTextSelection,
 	CanvasDocumentText,
 } from './canvasContext'
 export {
@@ -77,6 +83,7 @@ export {
 	QUIZ_SHAPE_TYPE,
 	REVIEW_SHAPE_TYPE,
 	WALKTHROUGH_SHAPE_TYPE,
+	MATH_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	conceptMapProposalSchema,
 	conceptMapShapeProps,
@@ -87,6 +94,11 @@ export {
 	quizProposalSchema,
 	quizShapeProps,
 	quizShapeValidator,
+	MAX_EQUATION_LINES,
+	equationProposalSchema,
+	mathShapeProps,
+	mathShapeValidator,
+	normalizeEquationLatex,
 	practiceSetProposalSchema,
 	reviewProposalSchema,
 	reviewShapeProps,
@@ -102,8 +114,10 @@ export {
 export type {
 	ConceptMapProposal,
 	ConceptMapShapeProps,
+	EquationProposal,
 	FlashcardProposal,
 	FlashcardShapeProps,
+	MathShapeProps,
 	PracticeSetProposal,
 	QuizProposal,
 	QuizShapeProps,
@@ -115,12 +129,27 @@ export type {
 } from './studyShapes'
 export type { Board, BoardRole, PublicConfig, StudyConversation } from './types'
 export {
+	SPOTIFY_SCOPES,
+	spotifyAgentPlayInputSchema,
+	spotifyAgentPlayOutputSchema,
+	spotifyPlaybackActionSchema,
+} from './spotify'
+export type {
+	SpotifyAgentPlayInput,
+	SpotifyAgentPlayOutput,
+	SpotifyPlayback,
+	SpotifyPlaybackAction,
+	SpotifyPlaybackItem,
+	SpotifyPlayerResponse,
+} from './spotify'
+export {
 	DEFAULT_STUDY_MODEL,
 	DEFAULT_STUDY_MODEL_MODE,
 	STUDY_CONTEXT_WINDOW_TOKENS,
 	STUDY_MODELS,
 	getStudyModel,
 	studyModelModeSchema,
+	studyModelSupportsReasoning,
 } from './studyChat'
 export type { StudyMessageMetadata, StudyModelMode } from './studyChat'
 export {
@@ -137,3 +166,18 @@ export type {
 	StudyMistake,
 	StudyMode,
 } from './studyLearning'
+export {
+	DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,
+	LOCK_IN_REVIEW_INTERVAL_OPTIONS,
+	MAX_LOCK_IN_IMAGE_DATA_LENGTH,
+	lockInReviewImageSchema,
+	lockInReviewRequestSchema,
+	lockInReviewResponseSchema,
+	lockInReviewStatusSchema,
+} from './lockIn'
+export type {
+	LockInReviewImage,
+	LockInReviewRequest,
+	LockInReviewResponse,
+	LockInReviewStatus,
+} from './lockIn'

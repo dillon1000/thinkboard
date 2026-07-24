@@ -9,18 +9,21 @@ export const STUDY_MODELS = {
 		label: 'Quicker',
 		description: 'Fast explanations for everyday study questions.',
 		contextWindowTokens: 131_000,
+		supportsReasoning: false,
 	},
 	smarter: {
 		id: '@cf/moonshotai/kimi-k2.6',
 		label: 'Smarter',
 		description: 'Deep reasoning for difficult, multi-step problems.',
 		contextWindowTokens: 262_144,
+		supportsReasoning: true,
 	},
 } as const satisfies Record<StudyModelMode, {
 	id: string
 	label: string
 	description: string
 	contextWindowTokens: number
+	supportsReasoning: boolean
 }>
 
 export const DEFAULT_STUDY_MODEL_MODE = 'quicker' satisfies StudyModelMode
@@ -29,6 +32,10 @@ export const STUDY_CONTEXT_WINDOW_TOKENS = STUDY_MODELS[DEFAULT_STUDY_MODEL_MODE
 
 export function getStudyModel(mode: StudyModelMode) {
 	return STUDY_MODELS[mode]
+}
+
+export function studyModelSupportsReasoning(mode: StudyModelMode) {
+	return STUDY_MODELS[mode].supportsReasoning
 }
 
 export interface StudyMessageMetadata {

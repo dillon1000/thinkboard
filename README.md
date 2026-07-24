@@ -24,6 +24,17 @@ http://localhost:5173/api/auth/oauth2/callback/campus-sso
 
 Set `TLDRAW_LICENSE_KEY` in the same file for local development and as a Worker secret in production. The public configuration endpoint passes this key to the tldraw client at runtime.
 
+The optional Spotify canvas player uses a linked Spotify account through Better Auth. Create an app in the Spotify Developer Dashboard and register these redirect URIs:
+
+```text
+http://127.0.0.1:5173/api/auth/callback/spotify
+https://board.dillon.network/api/auth/callback/spotify
+```
+
+Spotify does not accept `localhost` as a local redirect URI, so open local development through `http://127.0.0.1:5173`. Add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` to `infra/cloudflare/.dev.vars`. The client secret stays in the Worker; the browser calls Agentboard’s authenticated playback proxy and never receives Spotify tokens or credentials.
+
+The study agent's [Search](https://exa.ai/docs/reference/search-api-guide), [Answer](https://exa.ai/docs/reference/answer), and [Crawl](https://exa.ai/docs/reference/get-contents) tools use Exa. Add `EXA_API_KEY` to `infra/cloudflare/.dev.vars` for local development. The key remains in the Worker; Search returns relevant web excerpts, Answer returns a grounded synthesis with citations, and Crawl retrieves bounded page text from specific URLs. The tools are not offered to the model when the key is missing.
+
 The local app is served by Vite and the Cloudflare Vite plugin. Useful commands:
 
 ```bash
@@ -53,6 +64,8 @@ wrangler secret put BETTER_AUTH_URL --config infra/cloudflare/wrangler.jsonc
 wrangler secret put OAUTH_DISCOVERY_URL --config infra/cloudflare/wrangler.jsonc
 wrangler secret put OAUTH_CLIENT_ID --config infra/cloudflare/wrangler.jsonc
 wrangler secret put OAUTH_CLIENT_SECRET --config infra/cloudflare/wrangler.jsonc
+wrangler secret put SPOTIFY_CLIENT_SECRET --config infra/cloudflare/wrangler.jsonc
+wrangler secret put EXA_API_KEY --config infra/cloudflare/wrangler.jsonc
 pnpm db:migrate:remote
 pnpm deploy
 ```
@@ -60,6 +73,8 @@ pnpm deploy
 Native PDF imports also require a Queue, a dead-letter Queue, and a 768-dimensional Vectorize index with indexed `boardId` metadata. See [Native PDF operations](./docs/native-pdf-operations.md) for the provisioning commands and model configuration.
 
 OAuth sign-in is enabled when its discovery URL, client ID, and client secret are all present; without them, the login page shows a configuration notice and exposes no fallback authentication method. Register `https://YOUR_DOMAIN/api/auth/oauth2/callback/campus-sso` with the identity provider. `OAUTH_PROVIDER_ID`, `OAUTH_PROVIDER_NAME`, `OAUTH_SCOPES`, and `AI_MODEL` can be changed in the Wrangler variables.
+
+Spotify connections are enabled when `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` are both present. The connection requests playback-state, currently-playing, playback-control, and private-profile access so the study agent can identify current playback, search Spotify, and play an explicitly requested track. Users can connect, update access, disconnect Spotify, or hide the board status from Settings.
 
 ## Repository structure
 

@@ -5,7 +5,8 @@ import type {
 } from '@agentboard/shared'
 import type { ModelMessage, UserModelMessage } from 'ai'
 
-const MAX_CANVAS_CONTEXT_TEXT_LENGTH = 18_000
+const MAX_CANVAS_CONTEXT_TEXT_LENGTH = 430_000
+const MAX_SELECTED_PDF_TEXT_LENGTH = 400_000
 const SELECTION_IMAGE_INSTRUCTION =
 	'The next image is the CURRENT canvas selection for the latest user request. Prefer it over images from earlier conversation turns. Read visible handwriting, math, labels, and diagrams directly. If a detail is genuinely illegible, identify that detail precisely rather than treating the whole selection as unknown.'
 const SELECTED_WORK_INSTRUCTION =
@@ -18,7 +19,10 @@ export function attachCanvasContext(
 	canvasContext: CanvasContext | undefined
 ): ModelMessage[] {
 	if (!canvasContext) return messages
-	const hasSelection = Boolean(canvasContext?.selection.length)
+	const hasSelection = Boolean(
+		canvasContext.selection.length ||
+		canvasContext.documentText?.length
+	)
 	const image = canvasContext?.selectionImage
 
 	const userMessageIndex = messages.findLastIndex((message) => message.role === 'user')
@@ -75,6 +79,9 @@ function removeHistoricalImages(messages: ModelMessage[], currentUserMessageInde
 export function formatCanvasContextForModel(canvasContext: CanvasContext) {
 	const lines = [
 		`Board: ${canvasContext.boardID}`,
+		...(canvasContext.anchor
+			? [`Anchor point: x=${formatNumber(canvasContext.anchor.x)}, y=${formatNumber(canvasContext.anchor.y)}`]
+			: []),
 		...(canvasContext.pageID ? [`Page: ${canvasContext.pageID}`] : []),
 		...(canvasContext.documentClock !== undefined
 			? [`Document clock: ${canvasContext.documentClock}`]
@@ -121,14 +128,38 @@ export function formatCanvasContextForModel(canvasContext: CanvasContext) {
 	if (canvasContext.documentText?.length) {
 		lines.push(
 			'',
-			'Authorized PDF text intersecting the current selection:',
-			...canvasContext.documentText.map((page) =>
-				`- ${page.documentTitle}, page ${page.pageNumber} (${page.documentID})\n  ${page.text.replace(/\n/g, '\n  ')}`
-			)
+			'Selected PDF text:',
+			...formatSelectedPDFText(canvasContext.documentText)
 		)
 	}
 
 	return lines.join('\n').slice(0, MAX_CANVAS_CONTEXT_TEXT_LENGTH)
+}
+
+function formatSelectedPDFText(pages: NonNullable<CanvasContext['documentText']>) {
+	const completeEntries = pages.map((page) =>
+		`- ${page.documentTitle}, page ${page.pageNumber} (${page.documentID})\n  ${page.text.replace(/\n/g, '\n  ')}`
+	)
+	if (completeEntries.join('\n').length <= MAX_SELECTED_PDF_TEXT_LENGTH) {
+		return completeEntries
+	}
+
+	const entries: string[] = []
+	let remainingCharacters = MAX_SELECTED_PDF_TEXT_LENGTH
+	for (const [index, page] of pages.entries()) {
+		const remainingPages = pages.length - index
+		const pageBudget = Math.floor(remainingCharacters / remainingPages)
+		const header = `- ${page.documentTitle}, page ${page.pageNumber} (${page.documentID})`
+		const text = page.text.replace(/\n/g, '\n  ')
+		const textBudget = Math.max(0, pageBudget - header.length - 3)
+		const clippedText = text.length > textBudget
+			? `${text.slice(0, Math.max(0, textBudget - 1))}…`
+			: text
+		const entry = clippedText ? `${header}\n  ${clippedText}` : header
+		entries.push(entry)
+		remainingCharacters = Math.max(0, remainingCharacters - entry.length - 1)
+	}
+	return entries
 }
 
 function formatRelationships(
@@ -180,11 +211,20 @@ function formatRelationships(
 
 function formatShape(shape: CanvasShape) {
 	const parent = shape.parentShapeID ? `, parent=${shape.parentShapeID}` : ''
-	const geometry = `x=${formatNumber(shape.x)}, y=${formatNumber(shape.y)}, w=${formatNumber(shape.w)}, h=${formatNumber(shape.h)}, rotation=${formatNumber(shape.rotation)}`
+	const children = shape.childShapeIDs?.length ? `, children=${shape.childShapeIDs.join('|')}` : ''
+	const layer = shape.index ? `, layer=${shape.index}` : ''
+	const locked = shape.isLocked ? ', locked=true' : ''
+	const opacity = shape.opacity === undefined || shape.opacity === 1
+		? ''
+		: `, opacity=${formatNumber(shape.opacity)}`
+	const style = shape.style
+		? `, style=${Object.entries(shape.style).map(([key, value]) => `${key}:${value}`).join('|')}`
+		: ''
+	const geometry = `x=${formatNumber(shape.x)}, y=${formatNumber(shape.y)}, w=${formatNumber(shape.w)}, h=${formatNumber(shape.h)}, rotation=${formatNumber(shape.rotation)}${layer}${locked}${opacity}${style}`
 	const text = shape.text?.plainText.trim()
 	const html = shape.text?.html?.trim()
 	return [
-		`- ${shape.id} [${shape.type}${parent}] (${geometry})`,
+		`- ${shape.id} [${shape.type}${parent}${children}] (${geometry})`,
 		...(text ? [`  text: ${text.replace(/\n/g, '\n  ')}`] : []),
 		...(html ? [`  rich text (HTML): ${html}`] : []),
 	].join('\n')

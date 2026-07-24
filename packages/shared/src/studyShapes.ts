@@ -7,6 +7,7 @@ export const CONCEPT_MAP_SHAPE_TYPE = 'agentboard-concept-map' as const
 export const QUIZ_SHAPE_TYPE = 'agentboard-quiz' as const
 export const REVIEW_SHAPE_TYPE = 'agentboard-review' as const
 export const WALKTHROUGH_SHAPE_TYPE = 'agentboard-walkthrough' as const
+export const MATH_SHAPE_TYPE = 'agentboard-math' as const
 export const PDF_PAGE_SHAPE_TYPE = 'pdf-page' as const
 
 export interface FlashcardShapeProps {
@@ -56,6 +57,14 @@ export interface ConceptMapShapeProps {
 	title: string
 	nodes: Array<{ id: string; label: string; x: number; y: number }>
 	edges: Array<{ from: string; to: string; label: string }>
+	schemaVersion: number
+}
+
+export interface MathShapeProps {
+	w: number
+	h: number
+	latex: string
+	fontSize: number
 	schemaVersion: number
 }
 
@@ -117,6 +126,14 @@ export const conceptMapShapeProps = {
 	schemaVersion: T.positiveInteger,
 }
 
+export const mathShapeProps = {
+	w: T.number,
+	h: T.number,
+	latex: T.string,
+	fontSize: T.number,
+	schemaVersion: T.positiveInteger,
+}
+
 export const pdfPageShapeProps = {
 	documentId: T.string,
 	pageNumber: T.positiveInteger,
@@ -142,6 +159,7 @@ export const quizShapeValidator = T.object(quizShapeProps)
 export const reviewShapeValidator = T.object(reviewShapeProps)
 export const walkthroughShapeValidator = T.object(walkthroughShapeProps)
 export const conceptMapShapeValidator = T.object(conceptMapShapeProps)
+export const mathShapeValidator = T.object(mathShapeProps)
 export const pdfPageShapeValidator = T.object(pdfPageShapeProps)
 
 export const studyShapeSchemas = {
@@ -150,6 +168,7 @@ export const studyShapeSchemas = {
 	[QUIZ_SHAPE_TYPE]: { props: quizShapeProps },
 	[REVIEW_SHAPE_TYPE]: { props: reviewShapeProps },
 	[WALKTHROUGH_SHAPE_TYPE]: { props: walkthroughShapeProps },
+	[MATH_SHAPE_TYPE]: { props: mathShapeProps },
 	[PDF_PAGE_SHAPE_TYPE]: { migrations: pdfPageShapeMigrations, props: pdfPageShapeProps },
 } as const
 
@@ -228,6 +247,40 @@ export const conceptMapProposalSchema = z.object({
 	}
 })
 
+export const MAX_EQUATION_LINES = 8
+
+export const equationProposalSchema = z.object({
+	...proposalPositionSchema,
+	lines: z
+		.array(
+			z
+				.string()
+				.trim()
+				.min(1)
+				.max(400)
+				.describe('One equation written as bare LaTeX, with no $ or \\[ delimiters.')
+		)
+		.min(1)
+		.max(MAX_EQUATION_LINES)
+		.describe('Equations in reading order. Use several lines to lay a derivation out step by step.'),
+})
+
+/**
+ * Models wrap math in $...$ out of habit, which would be typeset literally. The shapes store bare
+ * LaTeX, so the delimiters come off before anything reaches the canvas.
+ */
+export function normalizeEquationLatex(latex: string) {
+	let normalized = latex.trim()
+	for (const [opening, closing] of [['$$', '$$'], ['$', '$'], ['\\[', '\\]'], ['\\(', '\\)']]) {
+		if (normalized.length <= opening.length + closing.length) continue
+		if (!normalized.startsWith(opening) || !normalized.endsWith(closing)) continue
+		normalized = normalized.slice(opening.length, -closing.length).trim()
+		break
+	}
+	// A trailing row break is meaningful in an aligned block but not in a standalone equation.
+	return normalized.replace(/\\\\$/, '').trim()
+}
+
 export const practiceSetProposalSchema = z.object({
 	...proposalPositionSchema,
 	quizzes: z.array(z.object(quizContentShape)).min(2).max(5),
@@ -249,3 +302,4 @@ export type QuizProposal = z.infer<typeof quizProposalSchema>
 export type WalkthroughProposal = z.infer<typeof walkthroughProposalSchema>
 export type ConceptMapProposal = z.infer<typeof conceptMapProposalSchema>
 export type PracticeSetProposal = z.infer<typeof practiceSetProposalSchema>
+export type EquationProposal = z.infer<typeof equationProposalSchema>

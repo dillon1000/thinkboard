@@ -20,17 +20,17 @@ import {
 	pdfPageShapeProps,
 	type PDFPageShapeProps,
 } from '@agentboard/shared'
-import { IconCards, IconMessageCircleCheck, IconQuestionMark } from '@tabler/icons-react'
+import { IconCards, IconDownload, IconMessageCircleCheck, IconQuestionMark } from '@tabler/icons-react'
 import { useLayoutEffect, useRef } from 'react'
 import { useParams } from 'react-router'
 import { Streamdown } from 'streamdown'
 import {
 	BaseBoxShapeUtil,
-	defaultShapeUtils,
 	HTMLContainer,
 	type TLShape,
 	useEditor,
 } from 'tldraw'
+import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 
 declare module '@tldraw/tlschema' {
@@ -411,6 +411,8 @@ export class PDFPageShapeUtil extends BaseBoxShapeUtil<PDFPageShape> {
 
 function PDFPageComponent({ shape }: { shape: PDFPageShape }) {
 	const { boardID = '' } = useParams<{ boardID: string }>()
+	const originalPDFURL = apiRoutes.boardDocumentOriginal(boardID, shape.props.documentId)
+	const downloadPDFURL = `${originalPDFURL}?download=1`
 	return (
 		<HTMLContainer className="PDFPageShape">
 			<img
@@ -418,6 +420,28 @@ function PDFPageComponent({ shape }: { shape: PDFPageShape }) {
 				draggable={false}
 				loading="lazy"
 				src={`${apiRoutes.boardDocumentPage(boardID, shape.props.documentId, shape.props.pageNumber)}?v=${shape.props.renderVersion}`}
+			/>
+			{shape.props.pageNumber === 1 ? (
+				<a
+					{...canvasInteractionHandlers}
+					aria-label="Download PDF"
+					className="PDFPageDownload"
+					download
+					href={downloadPDFURL}
+					onClick={stopCanvasInteraction}
+					title="Download original PDF"
+				>
+					<IconDownload aria-hidden="true" size={14} stroke={1.8} />
+					<span>Download PDF</span>
+				</a>
+			) : null}
+			<PDFPageInteractiveLayer
+				boardID={boardID}
+				documentID={shape.props.documentId}
+				height={shape.props.h}
+				pageNumber={shape.props.pageNumber}
+				shapeID={shape.id}
+				width={shape.props.w}
 			/>
 		</HTMLContainer>
 	)
@@ -470,5 +494,3 @@ export const studyShapeUtils = [
 	ConceptMapShapeUtil,
 	PDFPageShapeUtil,
 ] as const
-
-export const synchronizedShapeUtils = [...defaultShapeUtils, ...studyShapeUtils] as const

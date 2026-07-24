@@ -5,8 +5,12 @@ interface Env {
 	OAUTH_CLIENT_SECRET?: string
 	OAUTH_DISCOVERY_URL?: string
 	OAUTH_SCOPES?: string
+	SPOTIFY_CLIENT_ID?: string
+	SPOTIFY_CLIENT_SECRET?: string
+	EXA_API_KEY?: string
 	TLDRAW_LICENSE_KEY?: string
 	AI_GATEWAY_ID?: string
+	LOCK_IN_MODEL?: string
 	EMBEDDING_MODEL?: string
 	OCR_MODEL?: string
 	PDF_DAILY_PAGE_QUOTA?: string

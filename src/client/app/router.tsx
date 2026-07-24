@@ -26,6 +26,10 @@ export const router = createBrowserRouter([
 				path: '/boards/:boardID',
 				lazy: () => import('../features/boards/routes/BoardRoute'),
 			},
+			{
+				path: '/settings',
+				lazy: () => import('../features/settings/routes/SettingsRoute'),
+			},
 		],
 	},
 	{

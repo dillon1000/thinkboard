@@ -23,6 +23,15 @@ describe('getStudyToolContinuation', () => {
 		])).toBe('dismissed')
 	})
 
+	it('recognizes an applied native canvas plan', () => {
+		expect(getStudyToolContinuation([
+			{
+				role: 'assistant',
+				parts: [{ type: 'tool-composeCanvas', state: 'output-available', output: { applied: true } }],
+			},
+		])).toBe('applied')
+	})
+
 	it('ignores an ordinary assistant response', () => {
 		expect(getStudyToolContinuation([
 			{ role: 'assistant', parts: [{ type: 'text' }] },

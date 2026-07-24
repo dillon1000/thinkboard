@@ -20,7 +20,9 @@ import {
 	handleStudyConversationUpdate,
 	handleStudyConversationsList,
 } from './routes/studyConversations'
-import { handleStudyConversationMessages } from './routes/studyChat'
+import { handleSpotifyPlayerAction, handleSpotifyPlayerGet } from './routes/spotify'
+import { handleInlineAgentRequest, handleStudyConversationMessages } from './routes/studyChat'
+import { handleLockInReview } from './routes/lockIn'
 import {
 	handleBoardMistakes,
 	handleDueFlashcards,
@@ -55,12 +57,16 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.config, (_request, env) => {
 		return Response.json(getPublicConfig(env))
 	})
+	.get(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerGet)
+	.post(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerAction)
 	.get(apiRoutePatterns.boards, handleBoardsList)
 	.post(apiRoutePatterns.boards, handleBoardCreate)
 	.get(apiRoutePatterns.studyConversations, handleStudyConversationsList)
 	.post(apiRoutePatterns.studyConversations, handleStudyConversationCreate)
 	.get(apiRoutePatterns.studyConversationMessages, handleStudyConversationMessages)
 	.post(apiRoutePatterns.studyConversationMessages, handleStudyConversationMessages)
+	.post(apiRoutePatterns.boardInlineAgent, handleInlineAgentRequest)
+	.post(apiRoutePatterns.boardLockInReview, handleLockInReview)
 	.patch(apiRoutePatterns.studyConversation, handleStudyConversationUpdate)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)

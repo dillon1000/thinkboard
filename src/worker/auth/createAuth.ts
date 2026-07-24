@@ -1,4 +1,5 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
+import { SPOTIFY_SCOPES } from '@agentboard/shared'
 import { betterAuth } from 'better-auth'
 import { genericOAuth } from 'better-auth/plugins'
 import { createDatabase } from '../db/client'
@@ -15,6 +16,11 @@ export interface OAuthConfiguration {
 	scopes: string[]
 }
 
+export interface SpotifyConfiguration {
+	clientID: string
+	clientSecret: string
+}
+
 export function getOAuthConfiguration(env: Env): OAuthConfiguration | null {
 	if (!env.OAUTH_CLIENT_ID || !env.OAUTH_CLIENT_SECRET || !env.OAUTH_DISCOVERY_URL) return null
 
@@ -23,7 +29,7 @@ export function getOAuthConfiguration(env: Env): OAuthConfiguration | null {
 		clientSecret: env.OAUTH_CLIENT_SECRET,
 		discoveryURL: env.OAUTH_DISCOVERY_URL,
 		providerID: env.OAUTH_PROVIDER_ID ?? 'campus-sso',
-		providerName: env.OAUTH_PROVIDER_NAME ?? 'Campus SSO',
+		providerName: env.OAUTH_PROVIDER_NAME ?? 'Passport',
 		scopes: env.OAUTH_SCOPES?.split(',').map((scope) => scope.trim()).filter(Boolean) ?? [
 			'openid',
 			'email',
@@ -32,10 +38,20 @@ export function getOAuthConfiguration(env: Env): OAuthConfiguration | null {
 	}
 }
 
+export function getSpotifyConfiguration(env: Env): SpotifyConfiguration | null {
+	if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) return null
+
+	return {
+		clientID: env.SPOTIFY_CLIENT_ID,
+		clientSecret: env.SPOTIFY_CLIENT_SECRET,
+	}
+}
+
 export function createAuth(request: Request, env: Env) {
 	const requestURL = new URL(request.url)
 	const baseURL = env.BETTER_AUTH_URL ?? requestURL.origin
 	const oAuth = getOAuthConfiguration(env)
+	const spotify = getSpotifyConfiguration(env)
 	const secret = getAuthSecret(env, requestURL)
 	const plugins = oAuth
 		? [
@@ -68,7 +84,24 @@ export function createAuth(request: Request, env: Env) {
 		advanced: {
 			useSecureCookies: new URL(baseURL).protocol === 'https:',
 		},
+		account: {
+			accountLinking: {
+				allowDifferentEmails: true,
+				enabled: true,
+				trustedProviders: spotify ? ['spotify'] : [],
+			},
+		},
 		plugins,
+		socialProviders: spotify
+			? {
+					spotify: {
+						clientId: spotify.clientID,
+						clientSecret: spotify.clientSecret,
+						disableSignUp: true,
+						scope: [...SPOTIFY_SCOPES],
+					},
+				}
+			: {},
 	})
 }
 

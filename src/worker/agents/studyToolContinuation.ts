@@ -12,7 +12,9 @@ const STUDY_TOOL_TYPES = new Set([
 	'tool-createWalkthrough',
 	'tool-createConceptMap',
 	'tool-createPracticeSet',
+	'tool-composeCanvas',
 	'tool-recordMistake',
+	'tool-writeEquation',
 ])
 
 export function getStudyToolContinuation(
