@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CANVAS_CUSTOM_COLOR_NAMES } from './canvasColors'
 
 export const CANVAS_PLAN_VERSION = 1 as const
 export const MAX_CANVAS_PLAN_ELEMENTS = 60
@@ -31,12 +32,7 @@ export const canvasColorSchema = z.enum([
 	'light-red',
 	'red',
 	'white',
-	'agent-blue',
-	'agent-purple',
-	'agent-teal',
-	'agent-amber',
-	'agent-coral',
-	'agent-pink',
+	...CANVAS_CUSTOM_COLOR_NAMES,
 ])
 
 export const canvasObjectReferenceSchema = z.discriminatedUnion('type', [

@@ -1,3 +1,4 @@
+import type { CanvasCustomColor } from '@agentboard/shared'
 import {
 	DEFAULT_THEME,
 	registerColorsFromThemes,
@@ -5,17 +6,6 @@ import {
 	type TLTheme,
 	type TLThemes,
 } from 'tldraw'
-
-declare module '@tldraw/tlschema' {
-	interface TLThemeDefaultColors {
-		'agent-blue': TLDefaultColor
-		'agent-purple': TLDefaultColor
-		'agent-teal': TLDefaultColor
-		'agent-amber': TLDefaultColor
-		'agent-coral': TLDefaultColor
-		'agent-pink': TLDefaultColor
-	}
-}
 
 interface CanvasColorDefinition {
 	darkSolid: string
@@ -61,7 +51,7 @@ const colorDefinitions = {
 		lightSolid: '#C43D83',
 		lightSurface: '#FCE6F2',
 	},
-} satisfies Record<string, CanvasColorDefinition>
+} satisfies Record<CanvasCustomColor, CanvasColorDefinition>
 
 const lightColors = Object.fromEntries(
 	Object.entries(colorDefinitions).map(([name, definition]) => [

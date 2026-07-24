@@ -43,6 +43,11 @@ export type {
 	CanvasDocumentText,
 } from './canvasContext'
 export {
+	CANVAS_CUSTOM_COLOR_NAMES,
+	registerCanvasCustomColors,
+} from './canvasColors'
+export type { CanvasCustomColor } from './canvasColors'
+export {
 	CANVAS_PLAN_VERSION,
 	MAX_CANVAS_PLAN_CONNECTORS,
 	MAX_CANVAS_PLAN_ELEMENTS,

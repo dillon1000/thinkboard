@@ -4,20 +4,11 @@ import {
 	SQLiteSyncStorage,
 	TLSocketRoom,
 } from '@tldraw/sync-core'
-import {
-	createTLSchema,
-	defaultBindingSchemas,
-	defaultShapeSchemas,
-	TLRecord,
-} from '@tldraw/tlschema'
-import { apiRoutePatterns, studyShapeSchemas } from '@agentboard/shared'
+import { TLRecord } from '@tldraw/tlschema'
+import { apiRoutePatterns } from '@agentboard/shared'
 import { DurableObject } from 'cloudflare:workers'
 import { AutoRouter, error, IRequest } from 'itty-router'
-
-const schema = createTLSchema({
-	shapes: { ...defaultShapeSchemas, ...studyShapeSchemas },
-	bindings: defaultBindingSchemas,
-})
+import { boardSchema } from '../boardSchema'
 
 interface SocketAttachment {
 	sessionID: string
@@ -51,7 +42,7 @@ export class BoardRoom extends DurableObject<Env> {
 			const storage = new SQLiteSyncStorage<TLRecord>({ sql })
 
 			this.room = new TLSocketRoom<TLRecord, void>({
-				schema,
+				schema: boardSchema,
 				storage,
 				clientTimeout: Infinity,
 				onSessionSnapshot: (sessionID, snapshot) => {
