@@ -34,6 +34,7 @@ import {
 	IconCheck,
 	IconChevronRight,
 	IconCircleCheck,
+	IconCopy,
 	IconFileText,
 	IconFocus2,
 	IconHistory,
@@ -76,6 +77,7 @@ import {
 	clearPDFTextSelection,
 } from '../lib/pdfTextSelection'
 import { studyMarkdownPlugins } from '../lib/studyMath'
+import { getMessageCopyText } from '../lib/studyMessageActions'
 import {
 	parseLeakedProposal,
 	type LeakedProposal,
@@ -395,10 +397,12 @@ function StudyConversationChat({
 	const [input, setInput] = useState('')
 	const [attachments, setAttachments] = useState<FileUIPart[]>([])
 	const [attachmentError, setAttachmentError] = useState<string | null>(null)
+	const [copiedMessageID, setCopiedMessageID] = useState<string | null>(null)
 	const [modelMode, setModelMode] = useState<StudyModelMode>(readStudyModelMode)
 	const [reasoningEffort, setReasoningEffort] = useState<StudyReasoningEffort>(readStudyReasoningEffort)
 	const [studyMode, setStudyMode] = useState<StudyMode>(readStudyMode)
 	const fileInputRef = useRef<HTMLInputElement>(null)
+	const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const canvasContextRef = useRef<CanvasContext | null>(null)
 	const transport = useMemo(() => new DefaultChatTransport<StudyUIMessage>({
 		api: apiRoutes.studyConversationMessages(boardID, conversation.id),
@@ -429,6 +433,10 @@ function StudyConversationChat({
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 		transport,
 	})
+
+	useEffect(() => () => {
+		if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current)
+	}, [])
 
 	function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()
@@ -495,6 +503,20 @@ function StudyConversationChat({
 		writeStudyReasoningEffort(effort)
 	}
 
+	async function copyMessage(messageID: string, text: string) {
+		try {
+			await navigator.clipboard.writeText(text)
+			setCopiedMessageID(messageID)
+			if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current)
+			copyResetTimerRef.current = setTimeout(() => {
+				setCopiedMessageID(null)
+				copyResetTimerRef.current = null
+			}, 1_500)
+		} catch (error) {
+			console.error('Failed to copy chat message', error)
+		}
+	}
+
 	function toggleStudyMode() {
 		const nextMode = studyMode === 'socratic' ? 'direct' : 'socratic'
 		setStudyMode(nextMode)
@@ -551,62 +573,89 @@ function StudyConversationChat({
 								</MessageScroller.Item>
 							) : null}
 
-							{chat.messages.map((message) => (
-								<MessageScroller.Item
-									className={`ChatMessage ChatMessage--${message.role}`}
-									key={message.id}
-									messageId={message.id}
-									scrollAnchor={message.role === 'user'}
-								>
-									<span className="sr-only">{message.role === 'user' ? 'You' : 'Study partner'}</span>
-									{message.parts.map((part, index) => {
-									if (part.type === 'reasoning') {
-										if (message.role !== 'assistant') return null
-										const isStreamingPart = part.state === 'streaming'
-											&& chat.status === 'streaming'
-											&& message.id === chat.messages.at(-1)?.id
-										return <ReasoningTrail isStreaming={isStreamingPart} key={index} text={part.text} />
-									}
-									if (part.type === 'text') {
-										if (message.role === 'user') return <p key={index}>{part.text}</p>
-										const isAnimating = chat.status === 'streaming'
-											&& message.id === chat.messages.at(-1)?.id
-										const leakedProposal = isAnimating
-											? null
-											: parseLeakedProposal(part.text)
-										if (leakedProposal) {
+							{chat.messages.map((message) => {
+								const copyText = getMessageCopyText(message.parts)
+								return (
+									<MessageScroller.Item
+										className={`ChatMessage ChatMessage--${message.role}`}
+										key={message.id}
+										messageId={message.id}
+										scrollAnchor={message.role === 'user'}
+									>
+										<span className="sr-only">{message.role === 'user' ? 'You' : 'Study partner'}</span>
+										{message.parts.map((part, index) => {
+											if (part.type === 'reasoning') {
+												if (message.role !== 'assistant') return null
+												const isStreamingPart = part.state === 'streaming'
+													&& chat.status === 'streaming'
+													&& message.id === chat.messages.at(-1)?.id
+												return <ReasoningTrail isStreaming={isStreamingPart} key={index} text={part.text} />
+											}
+											if (part.type === 'text') {
+												if (message.role === 'user') return <p key={index}>{part.text}</p>
+												const isAnimating = chat.status === 'streaming'
+													&& message.id === chat.messages.at(-1)?.id
+												const leakedProposal = isAnimating
+													? null
+													: parseLeakedProposal(part.text)
+												if (leakedProposal) {
+													return (
+														<LeakedProposalCall
+															boardID={boardID}
+															editor={editor}
+															key={index}
+															proposal={leakedProposal}
+														/>
+													)
+												}
+												return <AssistantMarkdown boardID={boardID} editor={editor} isAnimating={isAnimating} key={index}>{part.text}</AssistantMarkdown>
+											}
+											if (part.type === 'file' && part.mediaType.startsWith('image/')) {
+												return <img alt={part.filename ?? 'Image attachment'} className="ChatAttachment" key={index} src={part.url} />
+											}
+											if (!isToolUIPart(part)) return null
+											const toolName = getToolName(part)
+											if (!isStudyToolName(toolName)) return null
+											const isApplied = part.state === 'output-available' && isAppliedOutput(part.output)
 											return (
-												<LeakedProposalCall
-													boardID={boardID}
-													editor={editor}
-													key={index}
-													proposal={leakedProposal}
+												<ProposalToolCall
+													acceptDisabled={!editor && toolName !== 'recordMistake'}
+													input={part.input}
+													key={part.toolCallId}
+													onAccept={() => resolveProposal(toolName, part.toolCallId, part.input, true)}
+													onReject={() => resolveProposal(toolName, part.toolCallId, part.input, false)}
+													status={proposalCallStatus(part.state, isApplied)}
+													toolName={toolName}
 												/>
 											)
-										}
-										return <AssistantMarkdown boardID={boardID} editor={editor} isAnimating={isAnimating} key={index}>{part.text}</AssistantMarkdown>
-									}
-									if (part.type === 'file' && part.mediaType.startsWith('image/')) {
-										return <img alt={part.filename ?? 'Image attachment'} className="ChatAttachment" key={index} src={part.url} />
-									}
-									if (!isToolUIPart(part)) return null
-									const toolName = getToolName(part)
-									if (!isStudyToolName(toolName)) return null
-									const isApplied = part.state === 'output-available' && isAppliedOutput(part.output)
-									return (
-										<ProposalToolCall
-											acceptDisabled={!editor && toolName !== 'recordMistake'}
-											input={part.input}
-											key={part.toolCallId}
-											onAccept={() => resolveProposal(toolName, part.toolCallId, part.input, true)}
-											onReject={() => resolveProposal(toolName, part.toolCallId, part.input, false)}
-											status={proposalCallStatus(part.state, isApplied)}
-											toolName={toolName}
-										/>
-									)
-									})}
-								</MessageScroller.Item>
-							))}
+										})}
+										{message.role === 'assistant' ? (
+											<div aria-label="Message actions" className="ChatMessage-actions" role="group">
+												<button
+													aria-label={copiedMessageID === message.id ? 'Copied' : 'Copy response'}
+													disabled={!copyText}
+													onClick={() => void copyMessage(message.id, copyText)}
+													title={copiedMessageID === message.id ? 'Copied' : 'Copy response'}
+													type="button"
+												>
+													{copiedMessageID === message.id
+														? <IconCheck aria-hidden="true" size={15} stroke={2.2} />
+														: <IconCopy aria-hidden="true" size={15} stroke={1.8} />}
+												</button>
+												<button
+													aria-label="Retry response"
+													disabled={chat.status !== 'ready'}
+													onClick={() => void chat.regenerate({ messageId: message.id })}
+													title="Retry response"
+													type="button"
+												>
+													<IconRefresh aria-hidden="true" size={15} stroke={1.8} />
+												</button>
+											</div>
+										) : null}
+									</MessageScroller.Item>
+								)
+							})}
 							{chat.status === 'submitted' || chat.status === 'streaming' ? (
 								<MessageScroller.Item messageId="study-response-status">
 									<ThinkingStatus

@@ -649,10 +649,17 @@ img { max-width: 100%; }
 .StudyPrompts { display: grid; gap: 6px; margin-top: 16px; }
 .StudyPrompts button { display: flex; min-height: 34px; align-items: center; gap: 8px; border: 0; border-radius: 6px; background: var(--panel); padding: 0 10px; color: var(--ink); box-shadow: var(--shadow-border); font-size: 12.5px; font-weight: 500; text-align: left; transition: box-shadow 140ms var(--ease-swift), background-color 140ms var(--ease-swift); }
 .StudyPrompts button > svg { color: var(--accent); }
-.ChatMessage { margin-bottom: 14px; }
+.ChatMessage { position: relative; margin-bottom: 14px; }
+.ChatMessage--assistant { margin-bottom: 32px; }
 .ChatMessage > p { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
 .ChatMessage--user { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .ChatMessage--user > p { max-width: 88%; border-radius: 10px 10px 3px 10px; background: var(--surface-hover); padding: 7px 11px; box-shadow: inset 0 0 0 1px var(--line); }
+.ChatMessage-actions { position: absolute; bottom: -28px; left: -4px; display: flex; gap: 8px; opacity: 1; transform-origin: left center; transition: opacity 180ms var(--ease-swift), filter 180ms var(--ease-swift), scale 180ms var(--ease-swift); }
+.ChatMessage-actions button { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), scale 100ms var(--ease-swift); }
+.ChatMessage-actions button::after { position: absolute; inset: -4px; content: ''; }
+.ChatMessage-actions button:active:not(:disabled) { scale: .96; }
+.ChatMessage-actions button:disabled { opacity: .35; }
+.ChatMessage-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .ChatMarkdown { margin-top: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; line-height: 1.58; }
 .ChatMarkdown + .ChatMarkdown { margin-top: 7px; }
 .ChatMarkdown > :first-child { margin-top: 0; }
@@ -901,6 +908,9 @@ img { max-width: 100%; }
 	.StudyComposer .StudyComposer-send:hover:not(:disabled) { background: var(--accent-hover); }
 	.StudyPanel-actions button:hover, .StudyHistory > div button:hover, .StudyHistory > button:hover:not(.is-current) { background: var(--surface-hover); color: var(--ink); }
 	.StudyPrompts button:hover { background: var(--sidebar); box-shadow: var(--shadow-border-hover); }
+	.ChatMessage-actions { opacity: 0; filter: blur(4px); scale: .25; pointer-events: none; }
+	.ChatMessage:hover .ChatMessage-actions, .ChatMessage:focus-within .ChatMessage-actions { opacity: 1; filter: blur(0); scale: 1; pointer-events: auto; }
+	.ChatMessage-actions button:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
 	.ChatMarkdown .PDFCitation:hover { background: var(--surface-hover); box-shadow: var(--shadow-border-hover); color: var(--ink); }
 	.ModelSelector > button:hover:not(.is-selected), .StudyComposer .StudyComposer-attachment:hover:not(:disabled), .StudyAttachments button:hover, .ProposalCall-toggle:hover:not(:disabled), .ProposalCall-action--reject:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
 	.ProposalCall-action--accept:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); }
