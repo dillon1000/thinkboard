@@ -250,12 +250,8 @@ export class StudyAgent extends DurableObject<Env> {
 		if (!apiKey) {
 			return Response.json({ error: 'The study models are not configured' }, { status: 503 })
 		}
-		const gatewayID = this.env.AI_GATEWAY_ID?.trim() || 'default'
-		// The binding returns the provider base URL and authenticates it. A suffix changes the gateway route.
-		const gatewayURL = await this.env.AI.gateway(gatewayID).getUrl('openrouter')
 		const openRouter = createOpenRouter({
 			apiKey,
-			baseURL: gatewayURL,
 			compatibility: 'strict',
 		})
 		const languageModel = openRouter(modelID)

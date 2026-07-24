@@ -35,7 +35,7 @@ Spotify does not accept `localhost` as a local redirect URI, so open local devel
 
 The study agent's [Search](https://exa.ai/docs/reference/search-api-guide), [Answer](https://exa.ai/docs/reference/answer), and [Crawl](https://exa.ai/docs/reference/get-contents) tools use Exa. Add `EXA_API_KEY` to `infra/cloudflare/.dev.vars` for local development. The key remains in the Worker; Search returns relevant web excerpts, Answer returns a grounded synthesis with citations, and Crawl retrieves bounded page text from specific URLs. The tools are not offered to the model when the key is missing.
 
-The Quicker and Smarter study modes use Thinking Machines Inkling and Meta Muse Spark 1.1 through OpenRouter and Cloudflare AI Gateway. Set `OPENROUTER_API_KEY` in `infra/cloudflare/.dev.vars` for local development and as a Worker secret in production. The Worker returns a service-unavailable response for study-model requests when this key is missing.
+The Quicker and Smarter study modes use Thinking Machines Inkling and Meta Muse Spark 1.1 through OpenRouter. Set `OPENROUTER_API_KEY` in `infra/cloudflare/.dev.vars` for local development and as a Worker secret in production. The Worker returns a service-unavailable response for study-model requests when this key is missing.
 
 The local app is served by Vite and the Cloudflare Vite plugin. Useful commands:
 
