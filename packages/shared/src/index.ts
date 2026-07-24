@@ -145,13 +145,20 @@ export type {
 export {
 	DEFAULT_STUDY_MODEL,
 	DEFAULT_STUDY_MODEL_MODE,
+	DEFAULT_STUDY_REASONING_EFFORT,
 	STUDY_CONTEXT_WINDOW_TOKENS,
 	STUDY_MODELS,
+	STUDY_REASONING_EFFORTS,
 	getStudyModel,
 	studyModelModeSchema,
 	studyModelSupportsReasoning,
+	studyReasoningEffortSchema,
 } from './studyChat'
-export type { StudyMessageMetadata, StudyModelMode } from './studyChat'
+export type {
+	StudyMessageMetadata,
+	StudyModelMode,
+	StudyReasoningEffort,
+} from './studyChat'
 export {
 	flashcardReviewRatingSchema,
 	mistakeProposalSchema,

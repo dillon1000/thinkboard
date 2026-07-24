@@ -1,8 +1,10 @@
 import {
 	FLASHCARD_SHAPE_TYPE,
 	STUDY_MODELS,
+	STUDY_REASONING_EFFORTS,
 	apiRoutes,
 	getStudyModel,
+	studyReasoningEffortSchema,
 	type ConceptMapProposal,
 	type CanvasPlan,
 	type CanvasContext,
@@ -18,6 +20,7 @@ import {
 	type StudyMessageMetadata,
 	type StudyModelMode,
 	type StudyMode,
+	type StudyReasoningEffort,
 	type WalkthroughProposal,
 } from '@agentboard/shared'
 import { useChat, type UseChatHelpers } from '@ai-sdk/react'
@@ -60,8 +63,10 @@ import { apiRequest } from '../../../lib/api'
 import {
 	readStudyMode,
 	readStudyModelMode,
+	readStudyReasoningEffort,
 	writeStudyMode,
 	writeStudyModelMode,
+	writeStudyReasoningEffort,
 } from '../lib/studyPreferences'
 import { captureCanvasContext } from '../lib/canvasContextCapture'
 import { resolveCanvasContextForRequest } from '../lib/canvasContextRequest'
@@ -391,6 +396,7 @@ function StudyConversationChat({
 	const [attachments, setAttachments] = useState<FileUIPart[]>([])
 	const [attachmentError, setAttachmentError] = useState<string | null>(null)
 	const [modelMode, setModelMode] = useState<StudyModelMode>(readStudyModelMode)
+	const [reasoningEffort, setReasoningEffort] = useState<StudyReasoningEffort>(readStudyReasoningEffort)
 	const [studyMode, setStudyMode] = useState<StudyMode>(readStudyMode)
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const canvasContextRef = useRef<CanvasContext | null>(null)
@@ -410,12 +416,13 @@ function StudyConversationChat({
 					messageId,
 					messages,
 					modelMode,
+					reasoningEffort,
 					studyMode,
 					trigger,
 				},
 			}
 		},
-	}), [boardID, conversation.id, editor, modelMode, studyMode])
+	}), [boardID, conversation.id, editor, modelMode, reasoningEffort, studyMode])
 	const chat = useChat<StudyUIMessage>({
 		id: conversation.id,
 		messages: initialMessages,
@@ -481,6 +488,11 @@ function StudyConversationChat({
 	function chooseModel(mode: StudyModelMode) {
 		setModelMode(mode)
 		writeStudyModelMode(mode)
+	}
+
+	function chooseReasoningEffort(effort: StudyReasoningEffort) {
+		setReasoningEffort(effort)
+		writeStudyReasoningEffort(effort)
 	}
 
 	function toggleStudyMode() {
@@ -660,6 +672,9 @@ function StudyConversationChat({
 						<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
 						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
 						<ModelSelector onChange={chooseModel} value={modelMode} />
+						{STUDY_MODELS[modelMode].supportsReasoning ? (
+							<ReasoningSelector onChange={chooseReasoningEffort} value={reasoningEffort} />
+						) : null}
 						<button aria-pressed={studyMode === 'socratic'} className={`SocraticToggle${studyMode === 'socratic' ? ' is-selected' : ''}`} onClick={toggleStudyMode} title="Ask guiding questions instead of giving answers" type="button">Socratic</button>
 					</div>
 					<div className="StudyComposer-controls">
@@ -786,6 +801,30 @@ function ModelSelector({ onChange, value }: { onChange: (mode: StudyModelMode) =
 				)
 			})}
 		</div>
+	)
+}
+
+function ReasoningSelector({
+	onChange,
+	value,
+}: {
+	onChange: (effort: StudyReasoningEffort) => void
+	value: StudyReasoningEffort
+}) {
+	return (
+		<select
+			aria-label="Reasoning effort"
+			className="ReasoningSelector"
+			onChange={(event) => onChange(studyReasoningEffortSchema.parse(event.target.value))}
+			title="Control how much reasoning the smarter model uses"
+			value={value}
+		>
+			{STUDY_REASONING_EFFORTS.map((effort) => (
+				<option key={effort} value={effort}>
+					{effort[0]?.toUpperCase()}{effort.slice(1)}
+				</option>
+			))}
+		</select>
 	)
 }
 

@@ -1,5 +1,6 @@
 import {
 	DEFAULT_STUDY_MODEL_MODE,
+	DEFAULT_STUDY_REASONING_EFFORT,
 	canvasContextSchema,
 	canvasPlanSchema,
 	conceptMapProposalSchema,
@@ -13,6 +14,7 @@ import {
 	spotifyAgentPlayInputSchema,
 	spotifyAgentPlayOutputSchema,
 	studyModelModeSchema,
+	studyReasoningEffortSchema,
 	studyModeSchema,
 	walkthroughProposalSchema,
 	type ConceptMapProposal,
@@ -160,6 +162,7 @@ const chatRequestSchema = z.object({
 	inline: z.boolean().default(false),
 	messages: z.unknown(),
 	modelMode: studyModelModeSchema.default(DEFAULT_STUDY_MODEL_MODE),
+	reasoningEffort: studyReasoningEffortSchema.default(DEFAULT_STUDY_REASONING_EFFORT),
 	studyMode: studyModeSchema.default('direct'),
 })
 
@@ -239,12 +242,13 @@ export class StudyAgent extends DurableObject<Env> {
 		const toolContinuation = getStudyToolContinuation(messages)
 		const workersAI = createWorkersAI({ binding: this.env.AI })
 		const modelMode = parsed.data.modelMode
+		const reasoningEffort = parsed.data.reasoningEffort
 		const model = getStudyModel(modelMode)
 		const modelID = modelMode === 'quicker'
 			? this.env.AI_MODEL ?? model.id
 			: model.id
 		const languageModel = model.supportsReasoning
-			? workersAI(modelID, { reasoning_effort: 'medium' })
+			? workersAI(modelID, { reasoning_effort: reasoningEffort })
 			: workersAI(modelID)
 		const userID = request.headers.get('x-agentboard-user-id')
 		const [mistakePatterns, spotifyPlayback] = await Promise.all([
@@ -359,6 +363,7 @@ ${spotifyContext}
 					contextWindowTokens: model.contextWindowTokens,
 					model: modelID,
 					modelMode,
+					reasoningEffort: model.supportsReasoning ? reasoningEffort : undefined,
 				}
 			},
 			onError: (error) => {

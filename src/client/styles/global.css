@@ -751,6 +751,8 @@ img { max-width: 100%; }
 .ModelSelector > button.is-selected { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px rgba(15, 15, 15, .07), 0 1px 2px rgba(15, 15, 15, .06); }
 .ModelSelector > button.is-selected > svg { color: var(--accent); }
 :root[data-theme='dark'] .ModelSelector > button.is-selected { background: var(--surface-active); box-shadow: 0 0 0 1px rgba(255, 255, 255, .06); }
+.ReasoningSelector { min-height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); padding: 0 5px; color: var(--muted); font: inherit; font-weight: 550; }
+.ReasoningSelector:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .SocraticToggle { min-height: 26px; border: 0; border-radius: 5px; background: transparent; padding: 0 7px; color: var(--muted); font-size: 11.5px; font-weight: 550; }
 .SocraticToggle.is-selected { background: #f3eefa; color: #7152a3; box-shadow: inset 0 0 0 1px rgba(113, 82, 163, .16); }
 :root[data-theme='dark'] .SocraticToggle.is-selected { background: rgba(138, 104, 190, .18); color: #bda2e2; }
@@ -1035,7 +1037,7 @@ img { max-width: 100%; }
 	.ChatMarkdown .PDFCitation { min-height: 40px; }
 	.StudyMessageScroller-jump { min-height: 36px; }
 	.StudyChatError button { min-height: 36px; }
-	.ModelSelector > button, .SocraticToggle { min-height: 32px; }
+	.ModelSelector > button, .ReasoningSelector, .SocraticToggle { min-height: 32px; }
 	.StudyAttachments button { width: 32px; height: 32px; }
 	.StudyComposer .StudyComposer-attachment, .StudyComposer .StudyComposer-send { width: 40px; height: 40px; }
 }

@@ -12,7 +12,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor, useValue, type Editor, type TLShapeId } from 'tldraw'
 import { TextShimmer } from '../../../components/TextShimmer'
 import { captureCanvasContext } from '../../study/lib/canvasContextCapture'
-import { readStudyMode, readStudyModelMode } from '../../study/lib/studyPreferences'
+import {
+	readStudyMode,
+	readStudyModelMode,
+	readStudyReasoningEffort,
+} from '../../study/lib/studyPreferences'
 import {
 	applyProposal,
 	isStudyToolName,
@@ -80,6 +84,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 					inline: true,
 					messages,
 					modelMode: readStudyModelMode(),
+					reasoningEffort: readStudyReasoningEffort(),
 					studyMode: readStudyMode(),
 				},
 			}
