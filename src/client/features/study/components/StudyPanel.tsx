@@ -725,24 +725,27 @@ function StudyConversationChat({
 						event.preventDefault()
 						event.currentTarget.form?.requestSubmit()
 					}
-				}} onPaste={handlePaste} placeholder="Ask about your board…" rows={2} value={input} />
+				}} onPaste={handlePaste} placeholder="Ask about your board…" rows={3} value={input} />
+				<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
 				<div className="StudyComposer-footer">
-					<div className="StudyComposer-actions">
-						<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
-						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
+					<div className="StudyComposer-options">
 						<ModelSelector onChange={chooseModel} value={modelMode} />
 						{STUDY_MODELS[modelMode].supportsReasoning ? (
 							<ReasoningSelector onChange={chooseReasoningEffort} value={reasoningEffort} />
 						) : null}
 						<button aria-pressed={studyMode === 'socratic'} className={`SocraticToggle${studyMode === 'socratic' ? ' is-selected' : ''}`} onClick={toggleStudyMode} title="Ask guiding questions instead of giving answers" type="button">Socratic</button>
 					</div>
-					<div className="StudyComposer-controls">
-						<ContextMeter messages={chat.messages} modelMode={modelMode} />
-						{chat.status === 'submitted' || chat.status === 'streaming' ? (
-							<button aria-label="Stop response" className="StudyComposer-send" onClick={() => void chat.stop()} title="Stop response" type="button"><IconPlayerStop aria-hidden="true" size={15} stroke={2} /></button>
-						) : (
-							<button aria-label="Send message" className="StudyComposer-send" disabled={!input.trim() && attachments.length === 0} type="submit"><IconArrowUp aria-hidden="true" size={17} stroke={2} /></button>
-						)}
+					<div className="StudyComposer-toolbar">
+						<button aria-label="Attach images" className="StudyComposer-attachment" disabled={chat.status !== 'ready' || attachments.length >= 3} onClick={() => fileInputRef.current?.click()} title="Attach images, or paste them into the box" type="button"><IconPaperclip aria-hidden="true" size={16} stroke={1.8} /></button>
+						<span className="StudyComposer-shortcut">Enter to send · Shift + Enter for a new line</span>
+						<div className="StudyComposer-controls">
+							<ContextMeter messages={chat.messages} modelMode={modelMode} />
+							{chat.status === 'submitted' || chat.status === 'streaming' ? (
+								<button aria-label="Stop response" className="StudyComposer-send" onClick={() => void chat.stop()} title="Stop response" type="button"><IconPlayerStop aria-hidden="true" size={15} stroke={2} /></button>
+							) : (
+								<button aria-label="Send message" className="StudyComposer-send" disabled={!input.trim() && attachments.length === 0} type="submit"><IconArrowUp aria-hidden="true" size={17} stroke={2} /></button>
+							)}
+						</div>
 					</div>
 				</div>
 			</form>

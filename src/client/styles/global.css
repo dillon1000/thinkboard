@@ -41,6 +41,18 @@
 	--chrome-edge: 0 0 0 1px rgba(15, 15, 15, .07), 0 1px 2px rgba(15, 15, 15, .05), 0 10px 30px rgba(15, 15, 15, .08);
 	--chrome-inset: 8px;
 	--chrome-radius: 11px;
+	/* Study surfaces run a bolder, higher-contrast language: a solid pane, crisp edges, and the
+	   app's own blue pushed into a confident pigment-ink — no gradients — to mark AI affordances
+	   (the assistant orb, proposals, the send key, focus rings). Colour lives in the orbs. */
+	--spark: #1567d3;
+	--spark-a: #1f74e0;
+	--spark-b: #1560cc;
+	--spark-soft: rgba(21, 103, 211, .12);
+	--spark-text: #1662c4;
+	--pane: #ffffff;
+	--pane-edge: rgba(55, 53, 47, .12);
+	--user-bubble: #37352f;
+	--user-ink: #ffffff;
 }
 
 :root[data-theme='dark'] {
@@ -70,6 +82,15 @@
 	--shadow-pop: 0 0 0 1px rgba(255, 255, 255, .09), 0 6px 16px rgba(0, 0, 0, .4), 0 16px 44px rgba(0, 0, 0, .44);
 	--chrome: color-mix(in srgb, var(--panel) 80%, transparent);
 	--chrome-edge: 0 0 0 1px rgba(255, 255, 255, .1), 0 1px 3px rgba(0, 0, 0, .36), 0 12px 34px rgba(0, 0, 0, .36);
+	--spark: #4aa3ff;
+	--spark-a: #6bb5ff;
+	--spark-b: #3f97f5;
+	--spark-soft: rgba(74, 163, 255, .16);
+	--spark-text: #8fc0e4;
+	--pane: #0f0f0f;
+	--pane-edge: rgba(255, 255, 255, .1);
+	--user-bubble: #2a2a2c;
+	--user-ink: #f3f3f2;
 }
 
 * { box-sizing: border-box; }
@@ -875,39 +896,42 @@ img { max-width: 100%; }
 .StudyChatError button { display: inline-flex; min-height: 26px; align-items: center; gap: 4px; border: 0; border-radius: 5px; background: transparent; padding: 0 5px; color: inherit; font-weight: 600; }
 .TextShimmer { --shimmer-base: #a5a4a1; --shimmer-gradient: #37352f; display: inline-block; background-image: linear-gradient(90deg, transparent calc(50% - var(--shimmer-spread)), var(--shimmer-gradient), transparent calc(50% + var(--shimmer-spread))), linear-gradient(var(--shimmer-base), var(--shimmer-base)); background-position: 100% center; background-repeat: no-repeat, padding-box; background-size: 250% 100%, auto; background-clip: text; color: transparent; -webkit-background-clip: text; }
 .StudyThinking { margin: 3px 0 10px; }
-.StudyComposer { margin: 8px; overflow: hidden; border-radius: 8px; background: var(--panel); box-shadow: var(--shadow-border); transition: box-shadow 140ms var(--ease-swift); }
-.StudyComposer:focus-within { box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft); }
-.ModelSelector { display: inline-flex; gap: 2px; border-radius: 6px; background: var(--surface); padding: 2px; }
-.ModelSelector > button { display: inline-flex; min-height: 22px; align-items: center; gap: 4px; border: 0; border-radius: 4px; background: transparent; padding: 0 7px; color: var(--muted); font-size: 11.5px; font-weight: 550; white-space: nowrap; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift); }
+.StudyComposer { position: relative; overflow: hidden; margin: 10px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--pane-edge); transition: box-shadow 160ms var(--ease-swift); }
+.StudyComposer:focus-within { box-shadow: 0 0 0 1px var(--spark-b), 0 0 0 4px var(--spark-soft), 0 10px 26px rgba(0, 0, 0, .16); }
+.ModelSelector { display: inline-flex; gap: 2px; border-radius: 9px; background: var(--surface); padding: 3px; }
+.ModelSelector > button { display: inline-flex; min-height: 26px; align-items: center; gap: 5px; border: 0; border-radius: 7px; background: transparent; padding: 0 9px; color: var(--muted); font-size: 11.5px; font-weight: 560; white-space: nowrap; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift); }
 .ModelSelector > button.is-selected { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px rgba(15, 15, 15, .07), 0 1px 2px rgba(15, 15, 15, .06); }
-.ModelSelector > button.is-selected > svg { color: var(--accent); }
+.ModelSelector > button.is-selected > svg { color: var(--spark-text); }
 :root[data-theme='dark'] .ModelSelector > button.is-selected { background: var(--surface-active); box-shadow: 0 0 0 1px rgba(255, 255, 255, .06); }
-.ReasoningSelector { min-height: 26px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); padding: 0 5px; color: var(--muted); font: inherit; font-weight: 550; }
-.ReasoningSelector:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.SocraticToggle { min-height: 26px; border: 0; border-radius: 5px; background: transparent; padding: 0 7px; color: var(--muted); font-size: 11.5px; font-weight: 550; }
-.SocraticToggle.is-selected { background: #f3eefa; color: #7152a3; box-shadow: inset 0 0 0 1px rgba(113, 82, 163, .16); }
-:root[data-theme='dark'] .SocraticToggle.is-selected { background: rgba(138, 104, 190, .18); color: #bda2e2; }
-.StudyContextChips { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 8px 0; }
-.StudyContextChip { display: flex; align-items: center; gap: 5px; border-radius: 5px; background: var(--accent-soft); padding: 4px 8px; color: var(--accent-text); font-size: 11.5px; font-weight: 500; font-variant-numeric: tabular-nums; animation: pop-in 180ms var(--ease-swift) backwards; }
-.StudyContextChip > svg { flex: 0 0 auto; }
-.StudyAttachments { display: flex; gap: 6px; overflow-x: auto; padding: 8px 9px 0; }
+.ReasoningSelector { min-height: 30px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 0 8px; color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 560; }
+.ReasoningSelector:focus-visible { outline: 2px solid var(--spark-b); outline-offset: 1px; }
+.SocraticToggle { min-height: 30px; border: 1px solid var(--line); border-radius: 9px; background: transparent; padding: 0 11px; color: var(--muted); font-size: 11.5px; font-weight: 560; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), border-color 140ms var(--ease-swift); }
+.SocraticToggle.is-selected { border-color: transparent; background: var(--spark-soft); color: var(--spark-text); }
+.StudyContextChips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 10px 0; }
+.StudyContextChip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-hover); padding: 4px 9px 4px 7px; color: var(--muted); font-size: 11px; font-weight: 520; font-variant-numeric: tabular-nums; animation: pop-in 180ms var(--ease-swift) backwards; }
+.StudyContextChip > svg { flex: 0 0 auto; color: var(--spark-text); }
+.StudyAttachments { display: flex; gap: 6px; overflow-x: auto; padding: 10px 10px 0; }
 .StudyAttachments > div { display: grid; min-width: 0; grid-template-columns: 26px minmax(0, 1fr) 24px; align-items: center; gap: 6px; border-radius: 6px; background: var(--surface); padding: 3px; color: var(--muted); animation: pop-in 180ms var(--ease-swift) backwards; }
 .StudyAttachments img { width: 26px; height: 26px; border-radius: 4px; object-fit: cover; outline: 1px solid rgba(0, 0, 0, .1); outline-offset: -1px; }
 :root[data-theme='dark'] .StudyAttachments img { outline-color: rgba(255, 255, 255, .1); }
 .StudyAttachments span { max-width: 90px; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .StudyAttachments button { display: grid; width: 24px; height: 24px; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--faint); }
 .StudyAttachmentError { margin: 7px 10px 0; color: var(--danger); font-size: 11.5px; }
-.StudyComposer textarea { display: block; width: 100%; resize: none; border: 0; background: transparent; padding: 9px 11px 6px; color: var(--ink); font-size: 13px; line-height: 1.5; }
+.StudyComposer textarea { display: block; width: 100%; min-height: 96px; max-height: 240px; resize: none; border: 0; background: transparent; padding: 16px 16px 12px; color: var(--ink); font-family: var(--font-sans); font-size: 13.5px; line-height: 1.5; }
 .StudyComposer textarea:focus-visible { outline: 0; }
-.StudyComposer-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 6px 10px; color: var(--faint); font-size: 11px; }
-.StudyComposer-actions { display: flex; min-width: 0; align-items: center; gap: 6px; }
-.StudyComposer .StudyComposer-attachment { display: grid; width: 26px; height: 26px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
-.StudyComposer-controls { display: flex; align-items: center; gap: 8px; }
-.ContextMeter { display: inline-flex; align-items: center; gap: 5px; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
-.ContextMeter-chart { display: block; width: 15px; height: 15px; border-radius: 50%; background: conic-gradient(var(--accent) var(--context-fill), var(--surface) 0); box-shadow: inset 0 0 0 1px var(--line); }
-.StudyComposer .StudyComposer-send { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: var(--accent); color: #fff; transition: background-color 140ms var(--ease-swift), opacity 140ms var(--ease-swift); }
+.StudyComposer-footer { display: grid; gap: 9px; border-top: 1px solid var(--line); background: var(--surface-hover); padding: 10px; color: var(--faint); font-size: 11px; }
+.StudyComposer-options { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 6px; }
+.StudyComposer-toolbar { display: flex; min-width: 0; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding-top: 9px; }
+.StudyComposer .StudyComposer-attachment { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.StudyComposer .StudyComposer-attachment:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
+.StudyComposer-shortcut { min-width: 0; flex: 1 1 auto; overflow: hidden; color: var(--faint); font-size: 10.5px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.StudyComposer-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.ContextMeter { display: inline-flex; align-items: center; gap: 6px; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ContextMeter-chart { display: block; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(var(--spark-b) var(--context-fill), var(--surface) 0); box-shadow: inset 0 0 0 1px var(--line); }
+.StudyComposer .StudyComposer-send { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 11px; background: var(--spark); color: #fff; box-shadow: 0 5px 14px var(--spark-soft), inset 0 0 0 1px rgba(255, 255, 255, .14); transition: filter 140ms var(--ease-swift), opacity 140ms var(--ease-swift); }
+.StudyComposer .StudyComposer-send:hover:not(:disabled) { filter: brightness(1.06); }
 .StudyComposer .StudyComposer-send > svg { animation: icon-in 200ms var(--ease-swift); }
-.StudyComposer button:disabled { cursor: default; opacity: .35; }
+.StudyComposer button:disabled { cursor: default; opacity: .4; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 
 /* ---------- Inline agent (cmd+I) ---------- */
@@ -1131,8 +1155,8 @@ img { max-width: 100%; }
 	.StudyPanel-messageContent { padding: 10px; }
 	.StudyWelcome { padding-block: 10px 14px; }
 	.StudyComposer { margin: 6px; }
-	.StudyComposer-footer { gap: 4px; padding-left: 6px; }
-	.StudyComposer-actions { gap: 3px; }
+	.StudyComposer-footer { padding: 9px; }
+	.StudyComposer-options { gap: 5px; }
 	.StudyComposer-controls { gap: 5px; }
 	.ContextMeter > span:last-child { display: none; }
 }
@@ -1174,6 +1198,7 @@ img { max-width: 100%; }
 	.ModelSelector > button, .ReasoningSelector, .SocraticToggle { min-height: 32px; }
 	.StudyAttachments button { width: 32px; height: 32px; }
 	.StudyComposer .StudyComposer-attachment, .StudyComposer .StudyComposer-send { width: 40px; height: 40px; }
+	.StudyComposer-shortcut { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
