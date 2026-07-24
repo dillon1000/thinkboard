@@ -240,6 +240,12 @@ export class StudyAgent extends DurableObject<Env> {
 		)
 		const requestedTool = getRequestedStudyTool(messages)
 		const toolContinuation = getStudyToolContinuation(messages)
+		// Muse Spark accepts automatic tool choice. This list selects one requested tool and removes tools after a result.
+		const activeTools = toolContinuation
+			? []
+			: requestedTool
+				? [requestedTool]
+				: undefined
 		const modelMode = parsed.data.modelMode
 		const reasoningEffort = parsed.data.reasoningEffort
 		const model = getStudyModel(modelMode)
@@ -322,7 +328,7 @@ ${spotifyContext}
 
 <tool-contract>
 - Use a proposal tool only when a canvas artifact materially helps the request.
-- Emit a native tool call; never print tool names, parameters, JSON, or schema text.
+${requestedTool ? `- The latest request requires ${requestedTool}. Call the available proposal tool before writing assistant text.\n` : ''}- Emit a native tool call; never print tool names, parameters, JSON, or schema text.
 - The student must explicitly add or dismiss each proposal in the interface.
 - Never reveal flashcard backs, quiz answers, or quiz explanations in assistant text.
 - Use LaTeX delimiters inside tool text fields when needed.
@@ -347,11 +353,8 @@ ${spotifyContext}
 </tool-contract>`,
 			messages: modelMessages,
 			tools,
-			toolChoice: requestedTool
-				? { type: 'tool', toolName: requestedTool }
-				: toolContinuation
-					? 'none'
-					: 'auto',
+			activeTools,
+			toolChoice: 'auto',
 			temperature: 0,
 			providerOptions: model.supportsReasoning
 				? { openrouter: { reasoning: { effort: reasoningEffort } } }

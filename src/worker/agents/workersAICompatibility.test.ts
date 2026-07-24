@@ -1,7 +1,8 @@
 import { STUDY_MODELS } from '@agentboard/shared'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { streamText } from 'ai'
+import { streamText, tool } from 'ai'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 describe('Study model providers on AI SDK 6', () => {
 	it('adapts the quicker model to the AI SDK 6 runtime', async () => {
@@ -82,6 +83,50 @@ describe('Study model providers on AI SDK 6', () => {
 				},
 			},
 			url: 'https://openrouter.ai/api/v1/chat/completions',
+		})
+	})
+
+	it('uses automatic tool choice for the smarter model', async () => {
+		const encoder = new TextEncoder()
+		let capturedRequest: unknown
+		const openRouter = createOpenRouter({
+			apiKey: 'test-key',
+			compatibility: 'strict',
+			fetch: async (_input, init) => {
+				capturedRequest = JSON.parse(String(init?.body))
+				const stream = new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(encoder.encode('data: {"choices":[{"index":0,"delta":{"content":"Preparing a board proposal."}}]}\n\n'))
+						controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+						controller.close()
+					},
+				})
+				return new Response(stream, {
+					headers: { 'content-type': 'text/event-stream' },
+				})
+			},
+		})
+		const result = streamText({
+			model: openRouter(STUDY_MODELS.smarter.id),
+			prompt: 'Add this explanation to the board.',
+			tools: {
+				composeCanvas: tool({
+					description: 'Create a canvas proposal.',
+					inputSchema: z.object({ text: z.string() }),
+				}),
+			},
+			activeTools: ['composeCanvas'],
+			toolChoice: 'auto',
+		})
+
+		expect(await result.text).toBe('Preparing a board proposal.')
+		expect(capturedRequest).toMatchObject({
+			model: 'meta/muse-spark-1.1',
+			tool_choice: 'auto',
+			tools: [{
+				function: { name: 'composeCanvas' },
+				type: 'function',
+			}],
 		})
 	})
 
