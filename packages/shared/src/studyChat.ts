@@ -9,10 +9,10 @@ export type StudyReasoningEffort = z.infer<typeof studyReasoningEffortSchema>
 
 export const STUDY_MODELS = {
 	quicker: {
-		id: '@cf/meta/llama-4-scout-17b-16e-instruct',
+		id: 'thinkingmachines/inkling',
 		label: 'Quicker',
 		description: 'Fast explanations for everyday study questions.',
-		contextWindowTokens: 131_000,
+		contextWindowTokens: 1_000_000,
 		supportsReasoning: false,
 	},
 	smarter: {

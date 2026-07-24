@@ -92,9 +92,6 @@ importers:
       tldraw:
         specifier: ^5.2.5
         version: 5.2.5(@floating-ui/dom@1.8.0)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      workers-ai-provider:
-        specifier: ^3.3.1
-        version: 3.3.1(@ai-sdk/provider@3.0.14)(ai@6.0.230(zod@4.4.3))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -3996,22 +3993,6 @@ packages:
     resolution: {integrity: sha512-oIbQzfdyl9UQUnG6XLegcSq0Mgt/7WKDbFOoqGgOWCS+/fhyGB460uKEgdAQQ9RHCO/ttcNCX/KiMIQzdoeu3Q==}
     engines: {node: '>=16'}
     hasBin: true
-
-  workers-ai-provider@3.3.1:
-    resolution: {integrity: sha512-vArwnmiAxQQF1clsXJd9ADn1xK9YUZVxE4umaMhrdsxM2kucxP430LfaoH4rn0AfoqtnuH3bfRhW1ak0r1x/8A==}
-    peerDependencies:
-      '@ai-sdk/anthropic': ^3.0.0
-      '@ai-sdk/google': ^3.0.0
-      '@ai-sdk/openai': ^3.0.0
-      '@ai-sdk/provider': ^3.0.0
-      ai: ^6.0.0
-    peerDependenciesMeta:
-      '@ai-sdk/anthropic':
-        optional: true
-      '@ai-sdk/google':
-        optional: true
-      '@ai-sdk/openai':
-        optional: true
 
   wrangler@4.112.0:
     resolution: {integrity: sha512-5H+XUD0TySCv1LuktFHDIEOkboH2nTfQs+35L+USt3MtntjDTMVIJprLgQcL2WBjulOyjxpd1vyTiSTJVW5MjQ==}
@@ -8005,11 +7986,6 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20260714.1
       '@cloudflare/workerd-linux-arm64': 1.20260714.1
       '@cloudflare/workerd-windows-64': 1.20260714.1
-
-  workers-ai-provider@3.3.1(@ai-sdk/provider@3.0.14)(ai@6.0.230(zod@4.4.3)):
-    dependencies:
-      '@ai-sdk/provider': 3.0.14
-      ai: 6.0.230(zod@4.4.3)
 
   wrangler@4.112.0(@cloudflare/workers-types@5.20260719.1):
     dependencies:
