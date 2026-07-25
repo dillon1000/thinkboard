@@ -33,7 +33,6 @@ import {
 	IconCards,
 	IconCheck,
 	IconChevronDown,
-	IconChevronRight,
 	IconCircleCheck,
 	IconCopy,
 	IconFileText,
@@ -62,6 +61,7 @@ import { Streamdown, type Components } from 'streamdown'
 import { Editor } from 'tldraw'
 import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
+import { ReasoningTrail } from './ReasoningTrail'
 import {
 	readStudyMode,
 	readStudyModelMode,
@@ -580,6 +580,9 @@ function StudyConversationChat({
 
 							{chat.messages.map((message) => {
 								const copyText = getMessageCopyText(message.parts)
+								const hasReadableReasoning = message.parts.some(
+									(part) => part.type === 'reasoning' && part.text.trim().length > 0
+								)
 								return (
 									<MessageScroller.Item
 										className={`ChatMessage ChatMessage--${message.role}`}
@@ -640,6 +643,14 @@ function StudyConversationChat({
 												/>
 											)
 										})}
+										{message.role === 'assistant'
+											&& !hasReadableReasoning
+											&& message.metadata?.reasoningEffort ? (
+												<ReasoningTrail
+													isStreaming={false}
+													text={`The model used ${message.metadata.reasoningEffort} private reasoning. Its provider returned the trace encrypted, so its text is not available.`}
+												/>
+											) : null}
 										{message.role === 'assistant' ? (
 											<div aria-label="Message actions" className="ChatMessage-actions" role="group">
 												<button
@@ -820,31 +831,6 @@ function AssistantMarkdownLink({
 			<IconFileText aria-hidden="true" size={13} stroke={1.8} />
 			<span>{children}</span>
 		</button>
-	)
-}
-
-function ReasoningTrail({ isStreaming, text }: { isStreaming: boolean; text: string }) {
-	/** Null until the student decides, so the trail follows the stream on its own. */
-	const [expansion, setExpansion] = useState<boolean | null>(null)
-	const trail = text.trim()
-	if (!trail) return null
-	const isExpanded = expansion ?? isStreaming
-
-	return (
-		<div className="ReasoningTrail">
-			<button
-				aria-expanded={isExpanded}
-				className={`ReasoningTrail-toggle${isExpanded ? ' is-expanded' : ''}`}
-				onClick={() => setExpansion(!isExpanded)}
-				type="button"
-			>
-				<IconChevronRight aria-hidden="true" size={13} stroke={2} />
-				{isStreaming
-					? <ThinkingStatus state="solving">Thinking through it…</ThinkingStatus>
-					: <span>Thought process</span>}
-			</button>
-			{isExpanded ? <div className="ReasoningTrail-body">{trail}</div> : null}
-		</div>
 	)
 }
 
