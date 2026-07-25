@@ -9,18 +9,21 @@ export type StudyReasoningEffort = z.infer<typeof studyReasoningEffortSchema>
 
 export const STUDY_MODELS = {
 	quicker: {
-		id: 'thinkingmachines/inkling',
+		id: 'deepseek/deepseek-v4-flash',
 		label: 'Quicker',
-		description: 'Fast explanations for everyday study questions.',
-		contextWindowTokens: 1_000_000,
-		supportsReasoning: false,
+		description: 'Fast reasoning for everyday study questions.',
+		contextWindowTokens: 1_048_576,
+		supportsReasoning: true,
+		openRouterProvider: undefined,
 	},
 	smarter: {
-		id: 'meta/muse-spark-1.1',
+		id: 'deepseek/deepseek-v4-pro',
 		label: 'Smarter',
 		description: 'Deep reasoning for difficult, multi-step problems.',
-		contextWindowTokens: 1_000_000,
+		contextWindowTokens: 1_048_576,
 		supportsReasoning: true,
+		// This exact OpenRouter endpoint uses BaseTen's FP4 deployment and disables provider fallback.
+		openRouterProvider: 'baseten/fp4',
 	},
 } as const satisfies Record<StudyModelMode, {
 	id: string
@@ -28,6 +31,7 @@ export const STUDY_MODELS = {
 	description: string
 	contextWindowTokens: number
 	supportsReasoning: boolean
+	openRouterProvider: string | undefined
 }>
 
 export const DEFAULT_STUDY_MODEL_MODE = 'quicker' satisfies StudyModelMode

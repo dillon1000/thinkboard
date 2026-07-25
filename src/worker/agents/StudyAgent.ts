@@ -240,7 +240,7 @@ export class StudyAgent extends DurableObject<Env> {
 		)
 		const requestedTool = getRequestedStudyTool(messages)
 		const toolContinuation = getStudyToolContinuation(messages)
-		// Muse Spark accepts automatic tool choice. This list selects one requested tool and removes tools after a result.
+		// This list selects one requested tool and removes tools after a result.
 		const activeTools = toolContinuation
 			? []
 			: requestedTool
@@ -260,7 +260,15 @@ export class StudyAgent extends DurableObject<Env> {
 			apiKey,
 			compatibility: 'strict',
 		})
-		const languageModel = openRouter(modelID)
+		const languageModel = openRouter(modelID, model.openRouterProvider
+			? {
+					provider: {
+						only: [model.openRouterProvider],
+						allow_fallbacks: false,
+						require_parameters: true,
+					},
+				}
+			: undefined)
 		const userID = request.headers.get('x-agentboard-user-id')
 		const [mistakePatterns, spotifyPlayback] = await Promise.all([
 			userID

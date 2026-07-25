@@ -35,7 +35,7 @@ describe('Study model providers on AI SDK 6', () => {
 
 		expect(await result.text).toBe('Hello from OpenRouter')
 		expect(capturedRequest).toMatchObject({
-			body: { model: 'thinkingmachines/inkling' },
+			body: { model: 'deepseek/deepseek-v4-flash' },
 			url: 'https://openrouter.ai/api/v1/chat/completions',
 		})
 	})
@@ -66,7 +66,13 @@ describe('Study model providers on AI SDK 6', () => {
 			},
 		})
 		const result = streamText({
-			model: openRouter(STUDY_MODELS.smarter.id),
+			model: openRouter(STUDY_MODELS.smarter.id, {
+				provider: {
+					only: [STUDY_MODELS.smarter.openRouterProvider],
+					allow_fallbacks: false,
+					require_parameters: true,
+				},
+			}),
 			prompt: 'Why is my derivative wrong?',
 			providerOptions: {
 				openrouter: { reasoning: { effort: 'medium' } },
@@ -77,7 +83,12 @@ describe('Study model providers on AI SDK 6', () => {
 		expect(await result.reasoningText).toBe('The student flipped the chain rule order.')
 		expect(capturedRequest).toMatchObject({
 			body: {
-				model: 'meta/muse-spark-1.1',
+				model: 'deepseek/deepseek-v4-pro',
+				provider: {
+					only: ['baseten/fp4'],
+					allow_fallbacks: false,
+					require_parameters: true,
+				},
 				reasoning: {
 					effort: 'medium',
 				},
@@ -121,7 +132,7 @@ describe('Study model providers on AI SDK 6', () => {
 
 		expect(await result.text).toBe('Preparing a board proposal.')
 		expect(capturedRequest).toMatchObject({
-			model: 'meta/muse-spark-1.1',
+			model: 'deepseek/deepseek-v4-pro',
 			tool_choice: 'auto',
 			tools: [{
 				function: { name: 'composeCanvas' },
