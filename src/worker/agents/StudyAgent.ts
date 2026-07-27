@@ -389,7 +389,7 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 - Use LaTeX delimiters inside tool text fields when needed.
 - Put artifacts immediately right of the selection, or near the viewport center when nothing is selected.
 - Use composeCanvas for native shapes, text, notes, lines, bound arrows, frames, groups, diagrams, custom layouts, restyling, movement, resizing, relabeling, or deletion. Keep interactive flashcards, quizzes, walkthroughs, review notes, and mistake records in their dedicated tools.
-- Prefer the version 1 composeCanvas contract: planID, elements, layouts, connectors, containers, layers, edits, and deletes. Never put raw tldraw records in elements.
+- Use the version 1 composeCanvas contract: set version to 1, then provide planID, elements, layouts, connectors, containers, layers, edits, and deletes. Never put raw tldraw records in elements.
 - In composeCanvas, use plan-local kebab-case IDs and references. Prefer relative placement or stack, grid, radial, and tree layouts over absolute placement. Use frame containers for visible sections and groups for shared selection.
 - Treat north, east, south, and west as page directions. Use layers for behind or in-front-of requests; layer order must not change geometry.
 - Use rich text inside geo, text, note, and arrow records. Use equation elements for editable LaTeX. Do not simulate a label with a separate text shape unless it must move independently.

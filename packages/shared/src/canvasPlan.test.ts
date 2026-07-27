@@ -118,6 +118,38 @@ describe('canvasPlanSchema', () => {
 		expect(emptyResult.success).toBe(false)
 	})
 
+	it('defaults a missing version on a current canvas plan', () => {
+		const input = {
+			planID: 'deposit-check-reminder',
+			baseDocumentClock: 72,
+			elements: [{
+				id: 'deposit-check-note',
+				kind: 'note',
+				text: 'Deposit tuition check before work',
+				style: {
+					color: 'agent-amber',
+					fill: 'semi',
+					font: 'sans',
+					size: 'm',
+				},
+				placement: {
+					relation: 'south',
+					of: { type: 'shape', id: 'existing-shape' },
+					gap: 'lg',
+					align: 'start',
+				},
+			}],
+		}
+
+		expect(canvasPlanInputSchema.parse(input)).toMatchObject({
+			version: 1,
+			planID: input.planID,
+			baseDocumentClock: input.baseDocumentClock,
+			elements: input.elements,
+		})
+		expect(normalizeCanvasPlanInput(input).version).toBe(1)
+	})
+
 	it('converts validated native-shape calls into a layout plan', () => {
 		const input = {
 			baseDocumentClock: 4,

@@ -273,7 +273,7 @@ export const canvasEditSchema = z.object({
 })
 
 export const canvasPlanSchema = z.object({
-	version: z.literal(CANVAS_PLAN_VERSION),
+	version: z.literal(CANVAS_PLAN_VERSION).default(CANVAS_PLAN_VERSION),
 	planID: canvasPlanIDSchema,
 	baseDocumentClock: z.number().int().nonnegative().optional(),
 	elements: z.array(canvasPlanElementSchema).max(MAX_CANVAS_PLAN_ELEMENTS).default([]),
