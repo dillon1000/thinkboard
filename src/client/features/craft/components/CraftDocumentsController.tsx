@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
+import type { Editor } from 'tldraw'
 import {
 	CRAFT_DOCUMENT_PREVIEW_EVENT,
 	readCraftDocumentPreviewEvent,
 } from '../craftPreviewEvent'
 import { CraftDocumentsDialog } from './CraftDocumentsDialog'
 
-export function CraftDocumentsController({ boardID }: { boardID: string }) {
+export function CraftDocumentsController({
+	boardID,
+	editor,
+}: {
+	boardID: string
+	editor: Editor | null
+}) {
 	const [isOpen, setIsOpen] = useState(false)
 	const [initialLinkID, setInitialLinkID] = useState<string | null>(null)
 
@@ -24,6 +31,7 @@ export function CraftDocumentsController({ boardID }: { boardID: string }) {
 	return (
 		<CraftDocumentsDialog
 			boardID={boardID}
+			editor={editor}
 			initialLinkID={initialLinkID}
 			onClose={() => {
 				setIsOpen(false)

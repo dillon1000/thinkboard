@@ -8,6 +8,7 @@ import {
 	ReviewShapeUtil,
 	WalkthroughShapeUtil,
 } from '../../study/shapes/studyShapeUtils'
+import { CraftDocumentShapeUtil } from '../../craft/shapes/CraftDocumentShapeUtil'
 import { MathShapeUtil } from '../shapes/MathShapeUtil'
 import { synchronizedShapeUtils } from './canvasShapes'
 
@@ -17,6 +18,7 @@ describe('synchronizedShapeUtils', () => {
 		expect(synchronizedShapeUtils).toEqual(
 			expect.arrayContaining([
 				ConceptMapShapeUtil,
+				CraftDocumentShapeUtil,
 				FlashcardShapeUtil,
 				QuizShapeUtil,
 				PDFPageShapeUtil,

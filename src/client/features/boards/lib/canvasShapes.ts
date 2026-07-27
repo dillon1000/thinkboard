@@ -1,9 +1,14 @@
 import { defaultShapeUtils } from 'tldraw'
+import { CraftDocumentShapeUtil } from '../../craft/shapes/CraftDocumentShapeUtil'
 import { studyShapeUtils } from '../../study/shapes/studyShapeUtils'
 import { MathShapeUtil } from '../shapes/MathShapeUtil'
 
 /** Everything the board can draw: tldraw's own shapes, the tutor's study shapes, and equations. */
-export const canvasShapeUtils = [...studyShapeUtils, MathShapeUtil] as const
+export const canvasShapeUtils = [
+	...studyShapeUtils,
+	CraftDocumentShapeUtil,
+	MathShapeUtil,
+] as const
 
 /**
  * The store speaks the full schema — the sync client validates every shape arriving from another

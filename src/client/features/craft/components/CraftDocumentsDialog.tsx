@@ -19,17 +19,24 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Streamdown } from 'streamdown'
+import type { Editor } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
+import {
+	addCraftDocumentShape,
+	removeCraftDocumentShapes,
+} from '../shapes/CraftDocumentShapeUtil'
 import './craftDocumentsDialog.css'
 
 interface CraftDocumentsDialogProps {
 	boardID: string
+	editor: Editor | null
 	initialLinkID: string | null
 	onClose: () => void
 }
 
 export function CraftDocumentsDialog({
 	boardID,
+	editor,
 	initialLinkID,
 	onClose,
 }: CraftDocumentsDialogProps) {
@@ -96,6 +103,10 @@ export function CraftDocumentsDialog({
 
 	async function addDocument(candidate: CraftDocumentCandidate) {
 		setError(null)
+		if (!editor) {
+			setError('The board is still loading. Try again.')
+			return
+		}
 		setPendingDocumentID(candidate.documentID)
 		try {
 			const response = await apiRequest<{ document: CraftDocumentLink }>(
@@ -112,6 +123,7 @@ export function CraftDocumentsDialog({
 				...current.filter(({ id }) => id !== response.document.id),
 				response.document,
 			])
+			addCraftDocumentShape(editor, response.document)
 		} catch (caught) {
 			setError(getErrorMessage(caught))
 		} finally {
@@ -127,6 +139,7 @@ export function CraftDocumentsDialog({
 			await apiRequest(craftAPIRoutes.boardDocument(boardID, document.id), {
 				method: 'DELETE',
 			})
+			if (editor) removeCraftDocumentShapes(editor, document.id)
 			setDocuments((current) => current.filter(({ id }) => id !== document.id))
 			if (previewLinkID === document.id) {
 				setPreview(null)

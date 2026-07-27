@@ -1,4 +1,5 @@
 import {
+	craftShapeSchemas,
 	registerCanvasCustomColors,
 	studyShapeSchemas,
 } from '@agentboard/shared'
@@ -12,6 +13,6 @@ import {
 registerCanvasCustomColors()
 
 export const boardSchema = createTLSchema({
-	shapes: { ...defaultShapeSchemas, ...studyShapeSchemas },
+	shapes: { ...defaultShapeSchemas, ...studyShapeSchemas, ...craftShapeSchemas },
 	bindings: defaultBindingSchemas,
 })

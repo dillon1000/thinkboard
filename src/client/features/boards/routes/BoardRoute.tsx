@@ -74,7 +74,7 @@ export function Component() {
 
 	return (
 		<LockInProvider boardID={boardID} editor={editor}>
-			<CraftDocumentsController boardID={boardID} />
+			<CraftDocumentsController boardID={boardID} editor={editor} />
 			<BoardShell boardID={boardID} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
 				<div className="BoardCanvas">
 					<Tldraw

@@ -1,7 +1,33 @@
+import { T } from '@tldraw/validate'
 import { z } from 'zod'
 
 export const MAX_CRAFT_DOCUMENT_LINKS = 20
 export const MAX_CRAFT_APPEND_MARKDOWN_LENGTH = 20_000
+export const CRAFT_DOCUMENT_SHAPE_TYPE = 'agentboard-craft-document' as const
+
+export interface CraftDocumentShapeProps {
+	documentID: string
+	h: number
+	linkID: string
+	schemaVersion: number
+	title: string
+	w: number
+}
+
+export const craftDocumentShapeProps = {
+	documentID: T.string,
+	h: T.number,
+	linkID: T.string,
+	schemaVersion: T.positiveInteger,
+	title: T.string,
+	w: T.number,
+}
+
+export const craftDocumentShapeValidator = T.object(craftDocumentShapeProps)
+
+export const craftShapeSchemas = {
+	[CRAFT_DOCUMENT_SHAPE_TYPE]: { props: craftDocumentShapeProps },
+} as const
 
 export const craftConnectionInputSchema = z.object({
 	apiURL: z.string().trim().min(1).max(1_024),

@@ -18,12 +18,16 @@ export type {
 	PDFTextBlock,
 } from './documents'
 export {
+	CRAFT_DOCUMENT_SHAPE_TYPE,
 	MAX_CRAFT_APPEND_MARKDOWN_LENGTH,
 	MAX_CRAFT_DOCUMENT_LINKS,
 	craftAPIRoutes,
 	craftConnectionInputSchema,
 	craftDocumentAppendInputSchema,
 	craftDocumentLinkInputSchema,
+	craftDocumentShapeProps,
+	craftDocumentShapeValidator,
+	craftShapeSchemas,
 	getCraftDocumentCitationHref,
 	parseCraftDocumentCitationHref,
 } from './craft'
@@ -33,6 +37,7 @@ export type {
 	CraftDocumentCandidate,
 	CraftDocumentLink,
 	CraftDocumentPreview,
+	CraftDocumentShapeProps,
 } from './craft'
 export {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,
