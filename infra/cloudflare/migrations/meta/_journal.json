@@ -43,6 +43,13 @@
       "when": 1784518735017,
       "tag": "0005_bored_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785138249274,
+      "tag": "0006_flowery_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

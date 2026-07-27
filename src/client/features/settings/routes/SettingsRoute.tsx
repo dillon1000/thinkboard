@@ -18,6 +18,7 @@ import {
 	readSpotifyStatusVisibility,
 	writeSpotifyStatusVisibility,
 } from '../../spotify/lib/spotifyPreferences'
+import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
 export function Component() {
 	const [config, setConfig] = useState<PublicConfig | null>(null)
@@ -186,6 +187,8 @@ export function Component() {
 								)}
 							</div>
 						</article>
+
+						<CraftConnectionCard />
 					</div>
 
 					<a className="Settings-docLink" href="https://www.spotify.com/account/apps/" rel="noreferrer" target="_blank">

@@ -1,0 +1,357 @@
+.CraftDocuments-backdrop {
+	position: fixed;
+	z-index: 1300;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: rgb(18 16 14 / 36%);
+	padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+	pointer-events: auto;
+	backdrop-filter: blur(12px);
+}
+
+.CraftDocuments-trigger {
+	display: flex;
+	width: 100%;
+	min-height: 34px;
+	align-items: center;
+	gap: 9px;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	padding: 0 9px;
+	color: var(--ink);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 550;
+	text-align: left;
+}
+
+.CraftDocuments-dialog {
+	display: grid;
+	width: min(980px, 100%);
+	height: min(720px, calc(100vh - 40px));
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	overflow: hidden;
+	border-radius: 16px;
+	background: var(--panel);
+	color: var(--ink);
+	box-shadow: 0 28px 80px rgb(14 12 10 / 24%), var(--shadow-border);
+}
+
+.CraftDocuments-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px solid var(--border);
+	padding: 15px 18px;
+}
+
+.CraftDocuments-brand {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+}
+
+.CraftDocuments-brand > span {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border-radius: 9px;
+	background: #f3eee8;
+	color: #28231f;
+}
+
+.CraftDocuments-brand h2,
+.CraftDocuments-brand p {
+	margin: 0;
+}
+
+.CraftDocuments-brand h2 {
+	font-size: 14px;
+	font-weight: 680;
+}
+
+.CraftDocuments-brand p {
+	margin-top: 2px;
+	color: var(--faint);
+	font-size: 11.5px;
+}
+
+.CraftDocuments-header > button,
+.CraftDocuments-preview header a {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	place-items: center;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+}
+
+.CraftDocuments-layout {
+	display: grid;
+	min-height: 0;
+	grid-template-columns: minmax(290px, 36%) minmax(0, 1fr);
+}
+
+.CraftDocuments-browser {
+	overflow-y: auto;
+	border-right: 1px solid var(--border);
+	background: var(--sidebar);
+	padding: 16px;
+}
+
+.CraftDocuments-browser > section + section {
+	margin-top: 24px;
+}
+
+.CraftDocuments-sectionHeading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.CraftDocuments-sectionHeading h3 {
+	margin: 0;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+
+.CraftDocuments-sectionHeading span {
+	color: var(--faint);
+	font-size: 10.5px;
+}
+
+.CraftDocuments-list {
+	display: grid;
+	gap: 4px;
+}
+
+.CraftDocuments-row {
+	display: flex;
+	min-width: 0;
+	align-items: center;
+	gap: 6px;
+	border-radius: 9px;
+	padding: 3px;
+}
+
+.CraftDocuments-row[data-selected='true'] {
+	background: var(--accent-soft);
+}
+
+.CraftDocuments-row > button:first-child,
+.CraftDocuments-row > div {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	align-items: center;
+	gap: 9px;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	padding: 7px;
+	color: var(--ink);
+	text-align: left;
+}
+
+.CraftDocuments-row > button:last-child {
+	display: grid;
+	width: 30px;
+	height: 30px;
+	flex: 0 0 auto;
+	place-items: center;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--faint);
+}
+
+.CraftDocuments-row > button:last-child:disabled {
+	opacity: .45;
+}
+
+.CraftDocuments-row svg {
+	flex: 0 0 auto;
+}
+
+.CraftDocuments-row span {
+	display: grid;
+	min-width: 0;
+	gap: 2px;
+}
+
+.CraftDocuments-row strong,
+.CraftDocuments-row small {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.CraftDocuments-row strong {
+	font-size: 12px;
+	font-weight: 610;
+}
+
+.CraftDocuments-row small {
+	color: var(--faint);
+	font-size: 10.5px;
+}
+
+.CraftDocuments-empty,
+.CraftDocuments-connect {
+	margin: 8px 4px;
+	color: var(--faint);
+	font-size: 11.5px;
+	line-height: 1.5;
+}
+
+.CraftDocuments-connect a {
+	color: var(--accent-text);
+}
+
+.CraftDocuments-search {
+	display: flex;
+	height: 36px;
+	align-items: center;
+	gap: 7px;
+	margin-bottom: 8px;
+	border-radius: 8px;
+	background: var(--panel);
+	padding: 0 10px;
+	color: var(--faint);
+	box-shadow: var(--shadow-border);
+}
+
+.CraftDocuments-search input {
+	min-width: 0;
+	flex: 1;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--ink);
+	font: inherit;
+	font-size: 12px;
+}
+
+.CraftDocuments-preview {
+	min-width: 0;
+	overflow-y: auto;
+	background: color-mix(in srgb, var(--panel) 96%, #e9dfd2);
+	padding: clamp(24px, 4vw, 48px);
+}
+
+.CraftDocuments-preview[data-empty='true'] {
+	display: grid;
+	place-items: center;
+}
+
+.CraftDocuments-preview[data-empty='true'] > div {
+	display: grid;
+	max-width: 280px;
+	place-items: center;
+	gap: 7px;
+	color: var(--faint);
+	text-align: center;
+}
+
+.CraftDocuments-preview[data-empty='true'] strong {
+	color: var(--muted);
+	font-size: 13px;
+}
+
+.CraftDocuments-preview[data-empty='true'] span,
+.CraftDocuments-preview > p {
+	color: var(--faint);
+	font-size: 11.5px;
+}
+
+.CraftDocuments-preview > header {
+	display: flex;
+	align-items: start;
+	justify-content: space-between;
+	margin-bottom: 24px;
+}
+
+.CraftDocuments-preview > header span {
+	color: var(--faint);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+}
+
+.CraftDocuments-preview > header h3 {
+	margin: 5px 0 0;
+	font-size: clamp(22px, 3vw, 32px);
+	font-weight: 700;
+	letter-spacing: -.03em;
+}
+
+.CraftDocuments-markdown {
+	color: var(--ink);
+	font-size: 13px;
+	line-height: 1.65;
+}
+
+.CraftDocuments-error {
+	margin: 0;
+	border-top: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+	background: var(--danger-soft);
+	padding: 10px 18px;
+	color: var(--danger);
+	font-size: 11.5px;
+}
+
+@media (hover: hover) {
+	.CraftDocuments-header > button:hover,
+	.CraftDocuments-preview header a:hover,
+	.CraftDocuments-row > button:hover,
+	.CraftDocuments-trigger:hover {
+		background: var(--surface-hover);
+		color: var(--ink);
+	}
+
+	.CraftDocuments-row > button:last-child:hover {
+		background: var(--danger-soft);
+		color: var(--danger);
+	}
+}
+
+@media (max-width: 720px) {
+	.CraftDocuments-backdrop {
+		align-items: end;
+		padding: 0;
+	}
+
+	.CraftDocuments-dialog {
+		width: 100%;
+		height: min(88vh, 760px);
+		border-radius: 18px 18px 0 0;
+	}
+
+	.CraftDocuments-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.CraftDocuments-browser {
+		border-right: 0;
+	}
+
+	.CraftDocuments-preview {
+		display: none;
+		position: absolute;
+		z-index: 1;
+		inset: 67px 0 0;
+	}
+
+	.CraftDocuments-preview:not([data-empty='true']) {
+		display: block;
+	}
+}

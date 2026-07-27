@@ -44,6 +44,16 @@ import {
 } from './routes/documents'
 import { processDocumentBatch } from './documents/pipeline'
 import type { DocumentPipelineMessage } from './documents/types'
+import {
+	handleCraftCandidatesList,
+	handleCraftConnectionDelete,
+	handleCraftConnectionGet,
+	handleCraftConnectionPut,
+	handleCraftDocumentCreate,
+	handleCraftDocumentDelete,
+	handleCraftDocumentPreview,
+	handleCraftDocumentsList,
+} from './routes/craft'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -59,6 +69,9 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	})
 	.get(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerGet)
 	.post(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerAction)
+	.get('/api/integrations/craft', handleCraftConnectionGet)
+	.put('/api/integrations/craft', handleCraftConnectionPut)
+	.delete('/api/integrations/craft', handleCraftConnectionDelete)
 	.get(apiRoutePatterns.boards, handleBoardsList)
 	.post(apiRoutePatterns.boards, handleBoardCreate)
 	.get(apiRoutePatterns.studyConversations, handleStudyConversationsList)
@@ -83,6 +96,17 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.put(apiRoutePatterns.boardDocumentPage, authorizeBoardRequest(handleDocumentPageUpload))
 	.get(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentGet))
 	.delete(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentDelete))
+	.get('/api/boards/:boardID/craft/candidates', authorizeBoardRequest(handleCraftCandidatesList))
+	.get('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentsList))
+	.post('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentCreate))
+	.get(
+		'/api/boards/:boardID/craft/documents/:linkID/preview',
+		authorizeBoardRequest(handleCraftDocumentPreview)
+	)
+	.delete(
+		'/api/boards/:boardID/craft/documents/:linkID',
+		authorizeBoardRequest(handleCraftDocumentDelete)
+	)
 	.get(apiRoutePatterns.boardContext, async (request, env) => {
 		const authentication = await requireSession(request, env)
 		if ('response' in authentication) return authentication.response

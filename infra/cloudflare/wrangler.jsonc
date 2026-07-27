@@ -63,6 +63,12 @@
 			"storage": "sqlite"
 		}
 	},
+	"kv_namespaces": [
+		{
+			"binding": "INTEGRATIONS",
+			"id": "44d8ed38fecd4c878866db35f0e8e03d"
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

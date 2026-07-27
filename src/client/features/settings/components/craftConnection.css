@@ -1,0 +1,59 @@
+.CraftConnection-icon {
+	background: #f3eee8;
+	color: #28231f;
+}
+
+.CraftConnection-form {
+	display: flex;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.CraftConnection-form label {
+	flex: 1;
+}
+
+.CraftConnection-form input {
+	width: 100%;
+	height: 38px;
+	border: 0;
+	border-radius: 7px;
+	background: var(--panel);
+	padding: 0 10px;
+	color: var(--ink);
+	box-shadow: var(--shadow-border);
+	font: inherit;
+	font-size: 12px;
+}
+
+.CraftConnection-form input:focus {
+	outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+	outline-offset: 1px;
+}
+
+.CraftConnection-form .Button {
+	min-height: 38px;
+}
+
+.ConnectionCard-copy .CraftConnection-error {
+	margin-top: 8px;
+	color: var(--danger);
+	font-size: 11.5px;
+}
+
+.CraftConnection .ConnectionCard-copy > a {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 9px;
+	color: var(--faint);
+	font-size: 11.5px;
+	text-decoration: none;
+}
+
+@media (max-width: 560px) {
+	.CraftConnection-form {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}

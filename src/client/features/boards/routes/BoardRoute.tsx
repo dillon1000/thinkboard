@@ -17,6 +17,7 @@ import { createMultiplayerAssetStore } from '../lib/multiplayerAssetStore'
 import { canvasThemes } from '../lib/canvasThemes'
 import { useTheme } from '../../theme/ThemeProvider'
 import { LockInProvider } from '../../lock-in/LockInProvider'
+import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
 
 export function Component() {
 	const { boardID } = useParams<{ boardID: string }>()
@@ -73,6 +74,7 @@ export function Component() {
 
 	return (
 		<LockInProvider boardID={boardID} editor={editor}>
+			<CraftDocumentsController boardID={boardID} />
 			<BoardShell boardID={boardID} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
 				<div className="BoardCanvas">
 					<Tldraw

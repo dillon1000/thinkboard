@@ -4,6 +4,7 @@ import {
 	canvasContextSchema,
 	canvasPlanInputSchema,
 	conceptMapProposalSchema,
+	craftDocumentAppendInputSchema,
 	equationProposalSchema,
 	flashcardProposalSchema,
 	getStudyModel,
@@ -19,6 +20,7 @@ import {
 	walkthroughProposalSchema,
 	type ConceptMapProposal,
 	type CanvasPlanInput,
+	type CraftDocumentAppendOutput,
 	type EquationProposal,
 	type FlashcardProposal,
 	type MistakeProposal,
@@ -59,6 +61,10 @@ import { attachCanvasContext } from './canvasContext'
 import { hydratePDFSelectionContext } from './pdfContext'
 import { formatSpotifyContextForModel } from './spotifyContext'
 import {
+	attachCraftDocumentContext,
+	retrieveBoardCraftContext,
+} from './craftContext'
+import {
 	attachDocumentRetrieval,
 	retrieveBoardDocuments,
 } from '../documents/retrieval'
@@ -76,9 +82,14 @@ import {
 	type ExaSearchInput,
 	type ExaSearchOutput,
 } from './exaTools'
+import { appendCraftDocumentForUser } from '../routes/craft'
 
 const MAX_PERSISTED_MESSAGES = 100
 const proposalOutputSchema = z.object({ applied: z.boolean() })
+const craftDocumentAppendOutputSchema = z.object({
+	added: z.boolean(),
+	title: z.string(),
+})
 
 const proposalTools = {
 	addReviewNote: tool({
@@ -135,6 +146,11 @@ const studyTools = {
 		inputSchema: spotifyAgentPlayInputSchema,
 		outputSchema: spotifyAgentPlayOutputSchema,
 	}),
+	appendCraftDocument: tool({
+		description: 'Append Markdown to a Craft document linked to this board. Use only when the student explicitly asks to change that document.',
+		inputSchema: craftDocumentAppendInputSchema,
+		outputSchema: craftDocumentAppendOutputSchema,
+	}),
 	...createExaTools(),
 }
 
@@ -149,6 +165,10 @@ type StudyTools = {
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
 	playSpotify: { input: SpotifyAgentPlayInput; output: SpotifyAgentPlayOutput }
+	appendCraftDocument: {
+		input: z.infer<typeof craftDocumentAppendInputSchema>
+		output: CraftDocumentAppendOutput
+	}
 	search: { input: ExaSearchInput; output: ExaSearchOutput }
 	answer: { input: ExaAnswerInput; output: ExaAnswerOutput }
 	crawl: { input: ExaCrawlInput; output: ExaCrawlOutput }
@@ -225,19 +245,33 @@ export class StudyAgent extends DurableObject<Env> {
 			return Response.json({ error: 'Invalid canvas context' }, { status: 400 })
 		}
 		const queryText = extractLatestUserText(messages)
-		const retrieval = await retrieveBoardDocuments(
-			this.env,
-			applicationDatabase,
-			boardID,
-			queryText
-		).catch((error) => {
-			console.error('Document retrieval failed', error)
-			return []
-		})
-		const modelMessages = attachDocumentRetrieval(
-			attachCanvasContext(await convertToModelMessages(messages), canvasContext),
-			retrieval
-		)
+			const [retrieval, craftContext] = await Promise.all([
+				retrieveBoardDocuments(
+					this.env,
+					applicationDatabase,
+					boardID,
+					queryText
+				).catch((error) => {
+					console.error('Document retrieval failed', error)
+					return []
+				}),
+				retrieveBoardCraftContext(
+					this.env,
+					applicationDatabase,
+					boardID,
+					queryText
+				).catch((error) => {
+					console.error('Craft document retrieval failed', error)
+					return []
+				}),
+			])
+			const modelMessages = attachCraftDocumentContext(
+				attachDocumentRetrieval(
+					attachCanvasContext(await convertToModelMessages(messages), canvasContext),
+					retrieval
+				),
+				craftContext
+			)
 		const requestedTool = getRequestedStudyTool(messages)
 		const toolContinuation = getStudyToolContinuation(messages)
 		// This list selects one requested tool and removes tools after a result.
@@ -288,13 +322,25 @@ export class StudyAgent extends DurableObject<Env> {
 		const userTools = userID
 			? {
 					...proposalTools,
-					playSpotify: tool({
+						playSpotify: tool({
 						description: 'Find and immediately play the closest Spotify track matching the student’s explicit music request. This changes playback and does not require a canvas confirmation.',
 						inputSchema: spotifyAgentPlayInputSchema,
 						outputSchema: spotifyAgentPlayOutputSchema,
-						execute: ({ query }) => playSpotifyForAgent(request, this.env, query),
-					}),
-				}
+							execute: ({ query }) => playSpotifyForAgent(request, this.env, query),
+						}),
+						appendCraftDocument: tool({
+							description: 'Append Markdown to a Craft document linked to this board. Use only when the student explicitly asks to change that document.',
+							inputSchema: craftDocumentAppendInputSchema,
+							outputSchema: craftDocumentAppendOutputSchema,
+							execute: (input) => appendCraftDocumentForUser(
+								this.env,
+								applicationDatabase,
+								boardID,
+								userID,
+								input
+							),
+						}),
+					}
 			: proposalTools
 		const exaAPIKey = this.env.EXA_API_KEY?.trim()
 		const tools = exaAPIKey
@@ -332,6 +378,7 @@ ${spotifyContext}
 - Never claim a board mutation has happened before the browser reports a tool result.${getStudyToolContinuationInstruction(toolContinuation)}
 - When you identify a concrete error pattern in selected student work, you may propose recordMistake. Never claim it was saved until approval succeeds.
 - When document retrieval supports a factual claim, cite the supplied source using its exact Markdown link, including the document title and page number. Never invent a citation or change its link target.
+- When Craft context supports a claim, cite its exact Markdown source link. Never invent a Craft citation or change its link target.
 </response-contract>
 
 <tool-contract>
@@ -352,6 +399,8 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 - Use createPracticeSet when the student asks for multiple similar problems; use createQuiz for one.
 - Use writeEquation when the student wants a formula, a result, or a derivation on the board itself; give one equation per line, in reading order, and keep the surrounding explanation in chat.
 - Use playSpotify only when the student explicitly asks to start or change music. Never change playback because of an inferred mood, study topic, or preference.
+- Use appendCraftDocument only when the student explicitly asks to add or write content in a linked Craft document. This changes an external document immediately, so never infer permission from a request to summarize, review, or reference it.
+- Preserve the supplied linked document ID exactly when calling appendCraftDocument, and tell the student which document changed after the call succeeds.
 - Preserve useful song and artist details from the student’s request in the Spotify search query. After a successful call, briefly name the track that started.
 - If Spotify is disconnected, unavailable, or needs updated access, direct the student to Settings instead of repeatedly calling the tool.
 - Use search for current or external facts, answer when a sourced synthesis is more efficient, and crawl when you need to read specific URLs in depth.

@@ -1,5 +1,12 @@
 import type { DocumentSummary } from '@agentboard/shared'
-import { IconCheck, IconCopy, IconFileTypePdf, IconRefresh, IconX } from '@tabler/icons-react'
+import {
+	IconBrandCraft,
+	IconCheck,
+	IconCopy,
+	IconFileTypePdf,
+	IconRefresh,
+	IconX,
+} from '@tabler/icons-react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ThinkingOrb, type OrbState } from 'thinking-orbs'
@@ -14,6 +21,7 @@ import {
 	describePDFImportFailure,
 	type PDFImportFailure,
 } from '../lib/pdfImportError'
+import { openCraftDocuments } from '../../craft/craftPreviewEvent'
 
 interface PDFImportControlProps {
 	boardID: string
@@ -116,6 +124,15 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 					<IconFileTypePdf aria-hidden="true" size={17} stroke={1.8} />
 				)}
 				<span aria-live="polite">{progressLabel ?? 'Import PDF'}</span>
+			</button>
+			<button
+				className="CraftDocuments-trigger"
+				onClick={openCraftDocuments}
+				title="Link Craft documents to this board"
+				type="button"
+			>
+				<IconBrandCraft aria-hidden="true" size={17} stroke={1.7} />
+				<span>Craft documents</span>
 			</button>
 			{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
 			{failedDocuments.map((document) => (

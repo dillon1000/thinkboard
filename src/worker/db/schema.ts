@@ -248,6 +248,30 @@ export const documentProcessingUsage = sqliteTable(
 	(table) => [index('document_processing_usage_ownerID_createdAt_idx').on(table.ownerID, table.createdAt)]
 )
 
+export const craftDocumentLink = sqliteTable(
+	'craft_document_links',
+	{
+		id: text('id').primaryKey(),
+		boardID: text('boardID')
+			.notNull()
+			.references(() => board.id, { onDelete: 'cascade' }),
+		connectionOwnerID: text('connectionOwnerID')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		documentID: text('documentID').notNull(),
+		title: text('title').notNull(),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		uniqueIndex('craft_document_links_board_owner_document_unique').on(
+			table.boardID,
+			table.connectionOwnerID,
+			table.documentID
+		),
+		index('craft_document_links_board_created_idx').on(table.boardID, table.createdAt),
+	]
+)
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
@@ -258,6 +282,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	studyMistakes: many(studyMistake),
 	documents: many(document),
 	documentProcessingUsage: many(documentProcessingUsage),
+	craftDocumentLinks: many(craftDocumentLink),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -275,6 +300,7 @@ export const boardRelations = relations(board, ({ one, many }) => ({
 	flashcardReviews: many(flashcardReview),
 	studyMistakes: many(studyMistake),
 	documents: many(document),
+	craftDocumentLinks: many(craftDocumentLink),
 }))
 
 export const boardMemberRelations = relations(boardMember, ({ one }) => ({
@@ -314,4 +340,12 @@ export const documentChunkRelations = relations(documentChunk, ({ one }) => ({
 
 export const documentProcessingUsageRelations = relations(documentProcessingUsage, ({ one }) => ({
 	owner: one(user, { fields: [documentProcessingUsage.ownerID], references: [user.id] }),
+}))
+
+export const craftDocumentLinkRelations = relations(craftDocumentLink, ({ one }) => ({
+	board: one(board, { fields: [craftDocumentLink.boardID], references: [board.id] }),
+	connectionOwner: one(user, {
+		fields: [craftDocumentLink.connectionOwnerID],
+		references: [user.id],
+	}),
 }))

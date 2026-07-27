@@ -4,6 +4,7 @@ import {
 	STUDY_REASONING_EFFORTS,
 	apiRoutes,
 	getStudyModel,
+	parseCraftDocumentCitationHref,
 	studyReasoningEffortSchema,
 	type ConceptMapProposal,
 	type CanvasPlanInput,
@@ -30,6 +31,7 @@ import {
 	IconArrowUp,
 	IconBolt,
 	IconBrain,
+	IconBrandCraft,
 	IconCards,
 	IconCheck,
 	IconChevronDown,
@@ -99,6 +101,7 @@ import {
 import type { FlashcardShape } from '../shapes/studyShapeUtils'
 import { LockInPanel } from '../../lock-in/LockInPanel'
 import { useLockIn } from '../../lock-in/LockInProvider'
+import { openCraftDocumentPreview } from '../../craft/craftPreviewEvent'
 
 interface StudyPanelProps {
 	boardID: string
@@ -809,6 +812,21 @@ function AssistantMarkdownLink({
 	...props
 }: AssistantMarkdownLinkProps) {
 	const citation = parsePDFCitationHref(href)
+	const craftLinkID = parseCraftDocumentCitationHref(href)
+	if (craftLinkID) {
+		return (
+			<button
+				aria-label="Preview cited Craft document"
+				className="PDFCitation"
+				onClick={() => openCraftDocumentPreview(craftLinkID)}
+				title="Preview linked Craft document"
+				type="button"
+			>
+				<IconBrandCraft aria-hidden="true" size={13} stroke={1.8} />
+				<span>{children}</span>
+			</button>
+		)
+	}
 	if (!citation) {
 		return <a {...props} href={href} rel="noreferrer" target="_blank">{children}</a>
 	}
