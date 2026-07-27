@@ -23,6 +23,7 @@
 		"@agentboard/shared": "workspace:*",
 		"@ai-sdk/provider": "^3.0.14",
 		"@ai-sdk/react": "^3.0.232",
+		"@amplitude/unified": "^1.1.27",
 		"@better-auth/drizzle-adapter": "^1.6.23",
 		"@fontsource-variable/rubik": "^5.2.8",
 		"@openrouter/ai-sdk-provider": "2.9.1",
