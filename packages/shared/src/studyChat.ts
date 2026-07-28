@@ -9,21 +9,20 @@ export type StudyReasoningEffort = z.infer<typeof studyReasoningEffortSchema>
 
 export const STUDY_MODELS = {
 	quicker: {
-		id: 'deepseek/deepseek-v4-flash',
+		id: 'openai/gpt-5.6-luna',
 		label: 'Quicker',
 		description: 'Fast reasoning for everyday study questions.',
-		contextWindowTokens: 1_048_576,
+		contextWindowTokens: 1_050_000,
 		supportsReasoning: true,
 		openRouterProvider: undefined,
 	},
 	smarter: {
-		id: 'deepseek/deepseek-v4-pro',
+		id: 'x-ai/grok-4.5',
 		label: 'Smarter',
 		description: 'Deep reasoning for difficult, multi-step problems.',
-		contextWindowTokens: 1_048_576,
+		contextWindowTokens: 500_000,
 		supportsReasoning: true,
-		// This exact OpenRouter endpoint uses BaseTen's FP4 deployment and disables provider fallback.
-		openRouterProvider: 'baseten/fp4',
+		openRouterProvider: undefined,
 	},
 } as const satisfies Record<StudyModelMode, {
 	id: string

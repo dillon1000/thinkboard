@@ -9,7 +9,7 @@ interface __BaseEnv_Env {
 	DOCUMENT_PIPELINE: Queue;
 	AI: Ai;
 	ASSETS: Fetcher;
-	AI_MODEL: "@cf/meta/llama-4-scout-17b-16e-instruct";
+	AI_MODEL: "openai/gpt-5.6-luna";
 	LOCK_IN_MODEL: "@cf/meta/llama-4-scout-17b-16e-instruct";
 	AI_GATEWAY_ID: "default";
 	EMBEDDING_MODEL: "@cf/baai/bge-base-en-v1.5";
