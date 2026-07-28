@@ -7,6 +7,8 @@ export const MAX_CRAFT_APPEND_MARKDOWN_LENGTH = 20_000
 export const MAX_CRAFT_BLOCK_UPDATES = 10
 // Bounds experimental whiteboard payloads before AgentBoard forwards them to Craft.
 export const MAX_CRAFT_WHITEBOARD_ELEMENTS = 1_000
+export const CRAFT_WHITEBOARD_CONFLICT_MESSAGE =
+	'Craft changed since the last sync. Choose which copy to keep.'
 export const CRAFT_DOCUMENT_SHAPE_TYPE = 'agentboard-craft-document' as const
 
 export interface CraftDocumentShapeProps {
@@ -75,6 +77,7 @@ export const craftWhiteboardSaveInputSchema = z.object({
 	elementIDsToDelete: z.array(
 		z.string().trim().min(1).max(256)
 	).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
+	expectedRevision: z.string().regex(/^[a-f0-9]{64}$/),
 }).superRefine(({ elements, elementIDsToDelete }, context) => {
 	if (!elements.length && !elementIDsToDelete.length) {
 		context.addIssue({
@@ -150,8 +153,10 @@ export type CraftWhiteboardElement =
 export interface CraftWhiteboardImport {
 	appState: Record<string, unknown>
 	assets: Record<string, unknown>
+	connectionOwnerID?: string
 	documentID: string
 	elements: CraftWhiteboardElement[]
+	revision: string
 	title: string
 	whiteboardBlockID: string
 }
@@ -159,6 +164,7 @@ export interface CraftWhiteboardImport {
 export interface CraftWhiteboardSaveOutput {
 	added: number
 	deleted: number
+	revision: string
 }
 
 export const craftAPIRoutes = {
@@ -187,4 +193,30 @@ export function parseCraftDocumentCitationHref(href: string | undefined) {
 	if (!href?.startsWith('#')) return null
 	const linkID = new URLSearchParams(href.slice(1)).get('craft-document')?.trim()
 	return linkID || null
+}
+
+/**
+ * Creates a stable revision for Craft's untyped Excalidraw payload. Both the browser and Worker
+ * use this value so a save can stop when Craft changed after the last successful sync.
+ */
+export async function createCraftWhiteboardRevision(
+	value: unknown
+) {
+	const bytes = new TextEncoder().encode(stableJSONStringify(value))
+	const digest = await crypto.subtle.digest('SHA-256', bytes)
+	return [...new Uint8Array(digest)]
+		.map((value) => value.toString(16).padStart(2, '0'))
+		.join('')
+}
+
+function stableJSONStringify(value: unknown): string {
+	if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
+	if (Array.isArray(value)) {
+		return `[${value.map((item) => stableJSONStringify(item)).join(',')}]`
+	}
+	const record = value as Record<string, unknown>
+	return `{${Object.keys(record)
+		.sort()
+		.map((key) => `${JSON.stringify(key)}:${stableJSONStringify(record[key])}`)
+		.join(',')}}`
 }

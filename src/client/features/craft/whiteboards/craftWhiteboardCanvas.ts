@@ -1,6 +1,8 @@
 import {
+	CRAFT_WHITEBOARD_CONFLICT_MESSAGE,
 	MAX_CRAFT_WHITEBOARD_ELEMENTS,
 	craftAPIRoutes,
+	createCraftWhiteboardRevision,
 	type CraftWhiteboardElement,
 	type CraftWhiteboardImport,
 	type CraftWhiteboardSaveOutput,
@@ -46,10 +48,14 @@ const SAVABLE_EXCALIDRAW_TYPES = new Set([
 	'rectangle',
 	'text',
 ])
+const SAVABLE_TLDRAW_TYPES = new Set(['arrow', 'draw', 'geo', 'line', 'note', 'text'])
 
 interface CraftWhiteboardFrameMetadata {
+	connectionOwnerID: string | null
 	documentID: string
 	framePadding: number
+	localRevision: string | null
+	remoteRevision: string | null
 	schemaVersion: number
 	sourceElementIDs: string[]
 	sourceOriginX: number
@@ -60,6 +66,13 @@ interface CraftWhiteboardFrameMetadata {
 
 export interface ImportedCraftWhiteboard extends CraftWhiteboardFrameMetadata {
 	frameID: TLShapeId
+}
+
+export type CraftWhiteboardSyncResolution = 'agentboard' | 'craft' | 'safe'
+
+export interface CraftWhiteboardSyncResult {
+	status: 'conflict' | 'synced'
+	title: string
 }
 
 /**
@@ -110,9 +123,12 @@ export async function importCraftWhiteboard(
 	const sourceOrigin = getSourceOrigin(elements)
 	const frameID = createShapeId()
 	const metadata: CraftWhiteboardFrameMetadata = {
+		connectionOwnerID: source.connectionOwnerID ?? null,
 		documentID,
 		framePadding: CRAFT_WHITEBOARD_FRAME_PADDING,
-		schemaVersion: 1,
+		localRevision: null,
+		remoteRevision: source.revision,
+		schemaVersion: 2,
 		sourceElementIDs: elements.flatMap(({ id, type }) =>
 			SAVABLE_EXCALIDRAW_TYPES.has(type) ? [id] : []
 		),
@@ -135,9 +151,14 @@ export async function importCraftWhiteboard(
 		y: bounds.y - CRAFT_WHITEBOARD_FRAME_PADDING,
 	})
 	if (rootShapeIDs.length) editor.reparentShapes(rootShapeIDs, frameID)
+	const importedMetadata = {
+		...metadata,
+		localRevision: await createLocalWhiteboardRevision(editor, frameID),
+	}
+	updateCraftWhiteboardMetadata(editor, frameID, importedMetadata)
 	editor.select(frameID)
 	editor.zoomToSelection()
-	return { ...metadata, frameID }
+	return { ...importedMetadata, frameID }
 }
 
 /**
@@ -147,7 +168,9 @@ export async function importCraftWhiteboard(
 export async function saveCraftWhiteboard(
 	editor: Editor,
 	boardID: string,
-	frameID: TLShapeId
+	frameID: TLShapeId,
+	expectedRevision?: string,
+	connectionOwnerID?: string
 ) {
 	const frame = editor.getShape<TLFrameShape>(frameID)
 	const metadata = frame ? readCraftWhiteboardMetadata(frame.meta) : null
@@ -162,8 +185,12 @@ export async function saveCraftWhiteboard(
 		)
 	}
 	if (!elements.length && !metadata.sourceElementIDs.length) {
-		return { added: 0, deleted: 0 } satisfies CraftWhiteboardSaveOutput
+		const revision = expectedRevision ?? metadata.remoteRevision
+		if (!revision) throw new Error(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
+		return { added: 0, deleted: 0, revision } satisfies CraftWhiteboardSaveOutput
 	}
+	const revision = expectedRevision ?? metadata.remoteRevision
+	if (!revision) throw new Error(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
 
 	const output = await apiRequest<CraftWhiteboardSaveOutput>(
 		craftAPIRoutes.boardWhiteboard(
@@ -175,22 +202,102 @@ export async function saveCraftWhiteboard(
 			body: JSON.stringify({
 				elementIDsToDelete: metadata.sourceElementIDs,
 				elements,
+				expectedRevision: revision,
 			}),
 			method: 'PUT',
 		}
 	)
-	editor.updateShape({
-		id: frameID,
-		meta: {
-			...frame.meta,
-			[CRAFT_WHITEBOARD_META_KEY]: toMetadataJSON({
-				...metadata,
-				sourceElementIDs: elements.map(({ id }) => id),
-			}),
-		},
-		type: 'frame',
+	updateCraftWhiteboardMetadata(editor, frameID, {
+		...metadata,
+		connectionOwnerID: connectionOwnerID ?? metadata.connectionOwnerID,
+		localRevision: await createLocalWhiteboardRevision(editor, frameID),
+		remoteRevision: output.revision,
+		schemaVersion: 2,
+		sourceElementIDs: elements.map(({ id }) => id),
 	})
 	return output
+}
+
+/**
+ * Reconciles one imported frame with Craft. Safe mode stops on concurrent changes. The explicit
+ * resolutions let the user accept one side after they review a conflict.
+ */
+export async function syncCraftWhiteboard(
+	editor: Editor,
+	boardID: string,
+	frameID: TLShapeId,
+	resolution: CraftWhiteboardSyncResolution = 'safe'
+): Promise<CraftWhiteboardSyncResult> {
+	const frame = editor.getShape<TLFrameShape>(frameID)
+	const metadata = frame ? readCraftWhiteboardMetadata(frame.meta) : null
+	if (!frame || frame.type !== 'frame' || !metadata) {
+		throw new Error('The imported Craft whiteboard is no longer available.')
+	}
+	const source = await apiRequest<CraftWhiteboardImport>(
+		craftAPIRoutes.boardWhiteboard(
+			boardID,
+			metadata.documentID,
+			metadata.whiteboardBlockID
+		),
+		{ cache: 'no-store' }
+	)
+	if (resolution === 'craft') {
+		await replaceCraftWhiteboardFrame(editor, frame, metadata, source)
+		return { status: 'synced', title: metadata.title }
+	}
+
+	const localRevision = await createLocalWhiteboardRevision(editor, frameID)
+	if (!metadata.localRevision || !metadata.remoteRevision) {
+		if (resolution === 'agentboard') {
+			await saveCraftWhiteboard(
+				editor,
+				boardID,
+				frameID,
+				source.revision,
+				source.connectionOwnerID
+			)
+			return { status: 'synced', title: metadata.title }
+		}
+		return { status: 'conflict', title: metadata.title }
+	}
+
+	const localChanged = localRevision !== metadata.localRevision
+	const remoteChanged = source.revision !== metadata.remoteRevision
+	if (resolution === 'agentboard') {
+		await saveCraftWhiteboard(
+			editor,
+			boardID,
+			frameID,
+			source.revision,
+			source.connectionOwnerID
+		)
+		return { status: 'synced', title: metadata.title }
+	}
+	if (localChanged && remoteChanged) {
+		return { status: 'conflict', title: metadata.title }
+	}
+	if (remoteChanged) {
+		await replaceCraftWhiteboardFrame(editor, frame, metadata, source)
+	} else if (localChanged) {
+		await saveCraftWhiteboard(
+			editor,
+			boardID,
+			frameID,
+			metadata.remoteRevision,
+			source.connectionOwnerID
+		)
+	}
+	return { status: 'synced', title: metadata.title }
+}
+
+export async function hasCraftWhiteboardLocalChanges(
+	editor: Editor,
+	frameID: TLShapeId
+) {
+	const frame = editor.getShape<TLFrameShape>(frameID)
+	const metadata = frame ? readCraftWhiteboardMetadata(frame.meta) : null
+	if (!metadata?.localRevision) return true
+	return await createLocalWhiteboardRevision(editor, frameID) !== metadata.localRevision
 }
 
 export function listImportedCraftWhiteboards(editor: Editor): ImportedCraftWhiteboard[] {
@@ -198,6 +305,116 @@ export function listImportedCraftWhiteboards(editor: Editor): ImportedCraftWhite
 		if (shape.type !== 'frame') return []
 		const metadata = readCraftWhiteboardMetadata(shape.meta)
 		return metadata ? [{ ...metadata, frameID: shape.id }] : []
+	})
+}
+
+async function replaceCraftWhiteboardFrame(
+	editor: Editor,
+	frame: TLFrameShape,
+	metadata: CraftWhiteboardFrameMetadata,
+	source: CraftWhiteboardImport
+) {
+	const elements = normalizeImportElements(source)
+	const priorPageShapeIDs = new Set(editor.getCurrentPageShapeIds())
+	const oldDescendantIDs = [...editor.getShapeAndDescendantIds([frame.id])]
+		.filter((id) => id !== frame.id)
+	const frameOrigin = editor.getShapePageTransform(frame)?.applyToPoint({ x: 0, y: 0 })
+	if (!frameOrigin) throw new Error('The Craft whiteboard frame is not available.')
+
+	editor.markHistoryStoppingPoint('sync Craft whiteboard')
+	if (elements.length) {
+		await putExcalidrawContent(editor, {
+			elements,
+			files: source.assets,
+		})
+	}
+	const importedShapes = editor.getCurrentPageShapes().filter(({ id }) =>
+		!priorPageShapeIDs.has(id)
+	)
+	if (elements.length && !importedShapes.length) {
+		throw new Error('Craft returned whiteboard elements that AgentBoard cannot edit.')
+	}
+	const importedShapeIDs = new Set(importedShapes.map(({ id }) => id))
+	const rootShapeIDs = importedShapes
+		.filter(({ parentId }) => !importedShapeIDs.has(parentId as TLShapeId))
+		.map(({ id }) => id)
+	const bounds = importedShapes.length
+		? getCommonBounds(editor, importedShapes)
+		: { h: 64, w: 144, x: frameOrigin.x, y: frameOrigin.y }
+	if (rootShapeIDs.length) {
+		editor.nudgeShapes(rootShapeIDs, {
+			x: frameOrigin.x + metadata.framePadding - bounds.x,
+			y: frameOrigin.y + metadata.framePadding - bounds.y,
+		})
+		editor.reparentShapes(rootShapeIDs, frame.id)
+	}
+	if (oldDescendantIDs.length) editor.deleteShapes(oldDescendantIDs)
+
+	editor.updateShape({
+		id: frame.id,
+		props: {
+			h: Math.max(160, bounds.h + metadata.framePadding * 2),
+			w: Math.max(240, bounds.w + metadata.framePadding * 2),
+		},
+		type: 'frame',
+	})
+	const sourceOrigin = getSourceOrigin(elements)
+	const nextMetadata: CraftWhiteboardFrameMetadata = {
+		...metadata,
+		connectionOwnerID: source.connectionOwnerID ?? metadata.connectionOwnerID,
+		localRevision: null,
+		remoteRevision: source.revision,
+		schemaVersion: 2,
+		sourceElementIDs: elements.flatMap(({ id, type }) =>
+			SAVABLE_EXCALIDRAW_TYPES.has(type) ? [id] : []
+		),
+		sourceOriginX: sourceOrigin.x,
+		sourceOriginY: sourceOrigin.y,
+		title: source.title,
+	}
+	updateCraftWhiteboardMetadata(editor, frame.id, {
+		...nextMetadata,
+		localRevision: await createLocalWhiteboardRevision(editor, frame.id),
+	})
+}
+
+async function createLocalWhiteboardRevision(editor: Editor, frameID: TLShapeId) {
+	const elements = [...editor.getShapeAndDescendantIds([frameID])]
+		.flatMap((id) => {
+			const shape = editor.getShape(id)
+			if (!shape || !SAVABLE_TLDRAW_TYPES.has(shape.type)) return []
+			return [{
+				id: shape.id,
+				index: shape.index,
+				isLocked: shape.isLocked,
+				meta: shape.meta,
+				opacity: shape.opacity,
+				parentId: shape.parentId,
+				props: shape.props,
+				rotation: shape.rotation,
+				type: shape.type,
+				x: shape.x,
+				y: shape.y,
+			}]
+		})
+		.sort((left, right) => left.id.localeCompare(right.id))
+	return createCraftWhiteboardRevision(elements)
+}
+
+function updateCraftWhiteboardMetadata(
+	editor: Editor,
+	frameID: TLShapeId,
+	metadata: CraftWhiteboardFrameMetadata
+) {
+	const frame = editor.getShape<TLFrameShape>(frameID)
+	if (!frame) return
+	editor.updateShape({
+		id: frameID,
+		meta: {
+			...frame.meta,
+			[CRAFT_WHITEBOARD_META_KEY]: toMetadataJSON(metadata),
+		},
+		type: 'frame',
 	})
 }
 
@@ -609,8 +826,11 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 		!sourceElementIDs.every((value) => typeof value === 'string')
 	) return null
 	return {
+		connectionOwnerID: readString(record, 'connectionOwnerID'),
 		documentID,
 		framePadding,
+		localRevision: readString(record, 'localRevision'),
+		remoteRevision: readString(record, 'remoteRevision'),
 		schemaVersion: readNumber(record, 'schemaVersion') ?? 1,
 		sourceElementIDs,
 		sourceOriginX,
@@ -622,8 +842,11 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 
 function toMetadataJSON(metadata: CraftWhiteboardFrameMetadata): JsonObject {
 	return {
+		connectionOwnerID: metadata.connectionOwnerID,
 		documentID: metadata.documentID,
 		framePadding: metadata.framePadding,
+		localRevision: metadata.localRevision,
+		remoteRevision: metadata.remoteRevision,
 		schemaVersion: metadata.schemaVersion,
 		sourceElementIDs: metadata.sourceElementIDs,
 		sourceOriginX: metadata.sourceOriginX,

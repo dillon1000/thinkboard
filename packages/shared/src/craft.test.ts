@@ -5,6 +5,7 @@ import {
 	craftDocumentShapeValidator,
 	craftShapeSchemas,
 	craftWhiteboardSaveInputSchema,
+	createCraftWhiteboardRevision,
 } from './craft'
 
 describe('Craft document shape contracts', () => {
@@ -46,10 +47,37 @@ describe('Craft document shape contracts', () => {
 		expect(craftWhiteboardSaveInputSchema.safeParse({
 			elementIDsToDelete: ['old-element'],
 			elements: [{ id: 'new-element', type: 'rectangle', x: 0, y: 0 }],
+			expectedRevision: 'a'.repeat(64),
 		}).success).toBe(true)
 		expect(craftWhiteboardSaveInputSchema.safeParse({
 			elementIDsToDelete: ['old-element', 'old-element'],
 			elements: [],
+			expectedRevision: 'a'.repeat(64),
 		}).success).toBe(false)
+	})
+
+	it('creates stable revisions for whiteboard element objects', async () => {
+		const first = await createCraftWhiteboardRevision([{
+			height: 20,
+			id: 'element-1',
+			type: 'rectangle',
+			width: 40,
+		}])
+		const reordered = await createCraftWhiteboardRevision([{
+			width: 40,
+			type: 'rectangle',
+			id: 'element-1',
+			height: 20,
+		}])
+		const changed = await createCraftWhiteboardRevision([{
+			height: 20,
+			id: 'element-1',
+			type: 'rectangle',
+			width: 41,
+		}])
+
+		expect(first).toMatch(/^[a-f0-9]{64}$/)
+		expect(reordered).toBe(first)
+		expect(changed).not.toBe(first)
 	})
 })

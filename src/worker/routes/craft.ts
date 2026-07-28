@@ -22,6 +22,7 @@ import {
 import { createDatabase, type Database } from '../db/client'
 import {
 	appendCraftDocumentMarkdown,
+	CraftWhiteboardConflictError,
 	connectCraftAPI,
 	deleteCraftConnection,
 	getCraftConnection,
@@ -250,11 +251,15 @@ export async function handleCraftWhiteboardGet(
 		)
 	}
 	try {
-		return Response.json(await getCraftWhiteboard(
+		const whiteboard = await getCraftWhiteboard(
 			connection,
 			documentID,
 			request.params.whiteboardBlockID
-		))
+		)
+		return Response.json({
+			...whiteboard,
+			connectionOwnerID: authorization.userID,
+		})
 	} catch (error) {
 		return craftErrorResponse(error)
 	}
@@ -288,18 +293,19 @@ export async function handleCraftWhiteboardPut(
 		)
 	}
 	try {
-		await saveCraftWhiteboard(
+		const output = await saveCraftWhiteboard(
 			connection,
 			documentID,
 			request.params.whiteboardBlockID,
 			parsed.data.elements,
-			parsed.data.elementIDsToDelete
+			parsed.data.elementIDsToDelete,
+			parsed.data.expectedRevision
 		)
-		return Response.json({
-			added: parsed.data.elements.length,
-			deleted: parsed.data.elementIDsToDelete.length,
-		} satisfies CraftWhiteboardSaveOutput)
+		return Response.json(output satisfies CraftWhiteboardSaveOutput)
 	} catch (error) {
+		if (error instanceof CraftWhiteboardConflictError) {
+			return craftErrorResponse(error, 409)
+		}
 		return craftErrorResponse(error)
 	}
 }

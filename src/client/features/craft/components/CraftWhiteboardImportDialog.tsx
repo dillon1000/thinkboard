@@ -9,16 +9,22 @@ import {
 	IconArrowRight,
 	IconBrandCraft,
 	IconCheck,
-	IconDeviceFloppy,
 	IconFileDescription,
 	IconLayoutBoard,
 	IconLoader2,
+	IconRefresh,
 	IconSearch,
 	IconX,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { apiRequest } from '../../../lib/api'
+import type {
+	CraftWhiteboardSyncResolution,
+} from '../whiteboards/craftWhiteboardCanvas'
+import type {
+	CraftWhiteboardSyncStatus,
+} from '../whiteboards/useCraftWhiteboardSync'
 import './craftWhiteboardImportDialog.css'
 
 export interface CraftWhiteboardImportRequest {
@@ -30,6 +36,8 @@ export interface CraftWhiteboardImportRequest {
 
 export interface CraftWhiteboardImportedItem {
 	frameID: string
+	syncError: string | null
+	syncStatus: CraftWhiteboardSyncStatus
 	title: string
 }
 
@@ -39,7 +47,10 @@ interface CraftWhiteboardImportDialogProps {
 	initialBoardID?: string
 	onClose: () => void
 	onImport: (request: CraftWhiteboardImportRequest) => Promise<void> | void
-	onSaveImported?: (frameID: string) => Promise<void>
+	onSyncImported?: (
+		frameID: string,
+		resolution?: CraftWhiteboardSyncResolution
+	) => Promise<void>
 }
 
 export function CraftWhiteboardImportDialog({
@@ -48,7 +59,7 @@ export function CraftWhiteboardImportDialog({
 	initialBoardID,
 	onClose,
 	onImport,
-	onSaveImported,
+	onSyncImported,
 }: CraftWhiteboardImportDialogProps) {
 	const [boardID, setBoardID] = useState(initialBoardID ?? boards[0]?.id ?? '')
 	const [documents, setDocuments] = useState<CraftDocumentCandidate[]>([])
@@ -58,8 +69,7 @@ export function CraftWhiteboardImportDialog({
 	const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
 	const [isLoadingWhiteboards, setIsLoadingWhiteboards] = useState(false)
 	const [pendingWhiteboardID, setPendingWhiteboardID] = useState<string | null>(null)
-	const [savingFrameID, setSavingFrameID] = useState<string | null>(null)
-	const [savedFrameID, setSavedFrameID] = useState<string | null>(null)
+	const [pendingFrameID, setPendingFrameID] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
 	const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -133,18 +143,19 @@ export function CraftWhiteboardImportDialog({
 		}
 	}
 
-	async function saveImportedWhiteboard(frameID: string) {
-		if (!onSaveImported) return
-		setSavingFrameID(frameID)
-		setSavedFrameID(null)
+	async function syncImportedWhiteboard(
+		frameID: string,
+		resolution: CraftWhiteboardSyncResolution = 'safe'
+	) {
+		if (!onSyncImported) return
+		setPendingFrameID(frameID)
 		setError(null)
 		try {
-			await onSaveImported(frameID)
-			setSavedFrameID(frameID)
+			await onSyncImported(frameID, resolution)
 		} catch (caught) {
 			setError(getErrorMessage(caught))
 		} finally {
-			setSavingFrameID(null)
+			setPendingFrameID(null)
 		}
 	}
 
@@ -169,7 +180,7 @@ export function CraftWhiteboardImportDialog({
 						<span><IconBrandCraft aria-hidden="true" size={20} stroke={1.8} /></span>
 						<div>
 							<h2 id="craft-whiteboard-title">Import a Craft whiteboard</h2>
-							<p>Bring shapes into AgentBoard, edit them, and save common shapes back to Craft.</p>
+							<p>Bring shapes into AgentBoard and keep common shapes in sync with Craft.</p>
 						</div>
 					</div>
 					<button
@@ -187,27 +198,60 @@ export function CraftWhiteboardImportDialog({
 						<section className="CraftWhiteboard-imported" aria-labelledby="craft-imported-heading">
 							<div className="CraftWhiteboard-sectionHeading">
 								<h3 id="craft-imported-heading">Imported on this board</h3>
-								<span>Manual save keeps Craft changes deliberate.</span>
+								<span>Syncs while this board is open. Craft is checked every 30 seconds.</span>
 							</div>
 							<div className="CraftWhiteboard-importedList">
 								{importedWhiteboards.map((whiteboard) => (
-									<div key={whiteboard.frameID}>
+									<div
+										data-conflict={whiteboard.syncStatus === 'conflict'}
+										key={whiteboard.frameID}
+									>
 										<span>
 											<strong>{whiteboard.title}</strong>
-											<small>Common shapes, text, arrows, lines, and drawings</small>
+											<small data-status={whiteboard.syncStatus}>
+												{getSyncStatusLabel(whiteboard)}
+											</small>
 										</span>
-										<button
-											disabled={!onSaveImported || savingFrameID === whiteboard.frameID}
-											onClick={() => void saveImportedWhiteboard(whiteboard.frameID)}
-											type="button"
-										>
-											{savingFrameID === whiteboard.frameID
-												? <IconLoader2 aria-hidden="true" className="CraftWhiteboard-spinner" size={15} />
-												: savedFrameID === whiteboard.frameID
-													? <IconCheck aria-hidden="true" size={15} />
-													: <IconDeviceFloppy aria-hidden="true" size={15} />}
-											{savedFrameID === whiteboard.frameID ? 'Saved' : 'Save to Craft'}
-										</button>
+										{whiteboard.syncStatus === 'conflict' ? (
+											<div className="CraftWhiteboard-conflictActions">
+												<button
+													disabled={pendingFrameID === whiteboard.frameID}
+													onClick={() => void syncImportedWhiteboard(whiteboard.frameID, 'craft')}
+													type="button"
+												>
+													Use Craft
+												</button>
+												<button
+													disabled={pendingFrameID === whiteboard.frameID}
+													onClick={() => void syncImportedWhiteboard(whiteboard.frameID, 'agentboard')}
+													type="button"
+												>
+													Keep AgentBoard
+												</button>
+											</div>
+										) : (
+											<button
+												disabled={
+													!onSyncImported ||
+													pendingFrameID === whiteboard.frameID ||
+													whiteboard.syncStatus === 'syncing' ||
+													whiteboard.syncStatus === 'unavailable'
+												}
+												onClick={() => void syncImportedWhiteboard(whiteboard.frameID)}
+												type="button"
+											>
+												{whiteboard.syncStatus === 'syncing'
+													? <IconLoader2 aria-hidden="true" className="CraftWhiteboard-spinner" size={15} />
+													: whiteboard.syncStatus === 'synced'
+														? <IconCheck aria-hidden="true" size={15} />
+														: <IconRefresh aria-hidden="true" size={15} />}
+												{whiteboard.syncStatus === 'syncing'
+													? 'Syncing…'
+													: whiteboard.syncStatus === 'unavailable'
+														? 'Owner syncs'
+														: 'Sync now'}
+											</button>
+										)}
 									</div>
 								))}
 							</div>
@@ -304,7 +348,7 @@ export function CraftWhiteboardImportDialog({
 				</div>
 
 				<footer className="CraftWhiteboard-footer">
-					<p>Craft’s whiteboard API is experimental. Images and unsupported Craft-only elements remain unchanged when you save.</p>
+					<p>Craft’s whiteboard API is experimental. Images and unsupported Craft-only elements remain unchanged when AgentBoard syncs.</p>
 					{error ? (
 						<p className="CraftWhiteboard-error" role="alert">
 							{error} {error.includes('Connect Craft')
@@ -321,4 +365,13 @@ export function CraftWhiteboardImportDialog({
 
 function getErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : 'Craft is unavailable right now.'
+}
+
+function getSyncStatusLabel(whiteboard: CraftWhiteboardImportedItem) {
+	if (whiteboard.syncStatus === 'conflict') return 'Both copies changed · choose which copy to keep'
+	if (whiteboard.syncStatus === 'error') return whiteboard.syncError ?? 'Sync stopped'
+	if (whiteboard.syncStatus === 'local-changes') return 'Local changes · saving soon'
+	if (whiteboard.syncStatus === 'syncing') return 'Syncing…'
+	if (whiteboard.syncStatus === 'unavailable') return 'The person who imported this whiteboard keeps it in sync'
+	return 'Synced'
 }

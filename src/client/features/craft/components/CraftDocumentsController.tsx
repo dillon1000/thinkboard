@@ -1,5 +1,5 @@
 import { apiRoutes, type Board } from '@agentboard/shared'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type Editor, type TLShapeId } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
@@ -14,16 +14,18 @@ import {
 import {
 	importCraftWhiteboard,
 	listImportedCraftWhiteboards,
-	saveCraftWhiteboard,
 } from '../whiteboards/craftWhiteboardCanvas'
+import { useCraftWhiteboardSync } from '../whiteboards/useCraftWhiteboardSync'
 import { CraftDocumentsDialog } from './CraftDocumentsDialog'
 import { CraftWhiteboardImportDialog } from './CraftWhiteboardImportDialog'
 
 export function CraftDocumentsController({
 	boardID,
+	currentUserID,
 	editor,
 }: {
 	boardID: string
+	currentUserID: string | null
 	editor: Editor | null
 }) {
 	const [openDialog, setOpenDialog] = useState<'documents' | 'whiteboards' | null>(null)
@@ -31,6 +33,18 @@ export function CraftDocumentsController({
 	const [boardTitle, setBoardTitle] = useState('Current board')
 	const [notice, setNotice] = useState<string | null>(null)
 	const handledImportRef = useRef<string | null>(null)
+	const noticeTimerRef = useRef<number | null>(null)
+	const showSyncIssue = useCallback((message: string) => {
+		if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current)
+		setNotice(message)
+		noticeTimerRef.current = window.setTimeout(() => setNotice(null), 6_000)
+	}, [])
+	const { states: whiteboardSyncStates, syncFrame } = useCraftWhiteboardSync({
+		boardID,
+		currentUserID,
+		editor,
+		onIssue: showSyncIssue,
+	})
 
 	useEffect(() => {
 		const openDocuments = (event: Event) => {
@@ -71,6 +85,10 @@ export function CraftDocumentsController({
 		})
 	}, [boardID, editor])
 
+	useEffect(() => () => {
+		if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current)
+	}, [])
+
 	return (
 		<>
 			{openDialog === 'documents' ? (
@@ -92,8 +110,21 @@ export function CraftDocumentsController({
 				<CraftWhiteboardImportDialog
 					boards={[{ id: boardID, title: boardTitle }]}
 					importedWhiteboards={editor
-						? listImportedCraftWhiteboards(editor).map(({ frameID, title }) => ({
+						? listImportedCraftWhiteboards(editor).map(({
+								connectionOwnerID,
 								frameID,
+								localRevision,
+								remoteRevision,
+								title,
+							}) => ({
+								frameID,
+								syncError: whiteboardSyncStates[frameID]?.error ?? null,
+								syncStatus: whiteboardSyncStates[frameID]?.status ??
+									(connectionOwnerID && connectionOwnerID !== currentUserID
+										? 'unavailable'
+										: localRevision && remoteRevision
+											? 'synced'
+											: 'syncing'),
 								title,
 							}))
 						: []}
@@ -109,9 +140,9 @@ export function CraftDocumentsController({
 						)
 						setOpenDialog(null)
 					}}
-					onSaveImported={async (frameID) => {
+					onSyncImported={async (frameID, resolution) => {
 						if (!editor) throw new Error('The board is still loading. Try again.')
-						await saveCraftWhiteboard(editor, boardID, frameID as TLShapeId)
+						await syncFrame(frameID as TLShapeId, resolution)
 					}}
 				/>
 			) : null}

@@ -1,3 +1,4 @@
+import { createCraftWhiteboardRevision } from '@agentboard/shared'
 import { describe, expect, it, vi } from 'vitest'
 import {
 	connectCraftAPI,
@@ -264,17 +265,19 @@ describe('Craft whiteboards', () => {
 				}],
 			}))
 
-		expect(await getCraftWhiteboard(
+		const whiteboard = await getCraftWhiteboard(
 			connection,
 			'document-1',
 			'whiteboard-1',
 			{ fetcher }
-		)).toMatchObject({
+		)
+		expect(whiteboard).toMatchObject({
 			documentID: 'document-1',
 			elements: [{ id: 'element-1', type: 'rectangle' }],
 			title: 'Cell map',
 			whiteboardBlockID: 'whiteboard-1',
 		})
+		expect(whiteboard.revision).toMatch(/^[a-f0-9]{64}$/)
 		expect(String(fetcher.mock.calls[1][0])).toBe(
 			'https://connect.craft.do/link/secret/api/v1/whiteboards/whiteboard-1/elements'
 		)
@@ -283,24 +286,56 @@ describe('Craft whiteboards', () => {
 	it('adds the replacement before it deletes the previous snapshot', async () => {
 		const fetcher = vi.fn<typeof fetch>()
 			.mockResolvedValueOnce(Response.json(documentBlocks))
+			.mockResolvedValueOnce(Response.json({
+				elements: [{ id: 'old-1', type: 'rectangle' }],
+			}))
 			.mockResolvedValueOnce(Response.json({ elements: [] }))
 			.mockResolvedValueOnce(Response.json({ deletedCount: 1 }))
+			.mockResolvedValueOnce(Response.json({
+				elements: [{ id: 'new-1', type: 'rectangle' }],
+			}))
 
-		await saveCraftWhiteboard(
+		const result = await saveCraftWhiteboard(
 			connection,
 			'document-1',
 			'whiteboard-1',
 			[{ id: 'new-1', type: 'rectangle' }],
 			['old-1'],
+			await createCraftWhiteboardRevision([
+				{ id: 'old-1', type: 'rectangle' },
+			]),
 			{ fetcher }
 		)
 
 		expect(fetcher.mock.calls.slice(1).map(([, init]) => init?.method)).toEqual([
+			undefined,
 			'POST',
 			'DELETE',
+			undefined,
 		])
-		expect(fetcher.mock.calls[2][1]?.body).toBe(JSON.stringify({
+		expect(fetcher.mock.calls[3][1]?.body).toBe(JSON.stringify({
 			elementIds: ['old-1'],
 		}))
+		expect(result).toMatchObject({ added: 1, deleted: 1 })
+		expect(result.revision).toMatch(/^[a-f0-9]{64}$/)
+	})
+
+	it('stops a save when Craft changed after the last sync', async () => {
+		const fetcher = vi.fn<typeof fetch>()
+			.mockResolvedValueOnce(Response.json(documentBlocks))
+			.mockResolvedValueOnce(Response.json({
+				elements: [{ id: 'remote-change', type: 'ellipse' }],
+			}))
+
+		await expect(saveCraftWhiteboard(
+			connection,
+			'document-1',
+			'whiteboard-1',
+			[{ id: 'local-change', type: 'rectangle' }],
+			['old-1'],
+			'a'.repeat(64),
+			{ fetcher }
+		)).rejects.toThrow('Choose which copy to keep')
+		expect(fetcher).toHaveBeenCalledTimes(2)
 	})
 })

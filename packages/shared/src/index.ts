@@ -18,6 +18,7 @@ export type {
 	PDFTextBlock,
 } from './documents'
 export {
+	CRAFT_WHITEBOARD_CONFLICT_MESSAGE,
 	CRAFT_DOCUMENT_SHAPE_TYPE,
 	MAX_CRAFT_APPEND_MARKDOWN_LENGTH,
 	MAX_CRAFT_BLOCK_UPDATES,
@@ -32,6 +33,7 @@ export {
 	craftDocumentShapeValidator,
 	craftShapeSchemas,
 	craftWhiteboardSaveInputSchema,
+	createCraftWhiteboardRevision,
 	getCraftDocumentCitationHref,
 	parseCraftDocumentCitationHref,
 } from './craft'

@@ -4,8 +4,13 @@ import type {
 	CraftWhiteboardCandidate,
 	CraftWhiteboardElement,
 	CraftWhiteboardImport,
+	CraftWhiteboardSaveOutput,
 } from '@agentboard/shared'
-import { MAX_CRAFT_WHITEBOARD_ELEMENTS } from '@agentboard/shared'
+import {
+	CRAFT_WHITEBOARD_CONFLICT_MESSAGE,
+	MAX_CRAFT_WHITEBOARD_ELEMENTS,
+	createCraftWhiteboardRevision,
+} from '@agentboard/shared'
 
 const CRAFT_HOSTNAME = 'connect.craft.do'
 const CRAFT_REQUEST_TIMEOUT_MS = 15_000
@@ -43,6 +48,13 @@ export interface CraftEditableTextBlock {
 
 interface CraftFetchOptions {
 	fetcher?: typeof fetch
+}
+
+export class CraftWhiteboardConflictError extends Error {
+	constructor() {
+		super(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
+		this.name = 'CraftWhiteboardConflictError'
+	}
 }
 
 export function normalizeCraftAPIURL(value: string) {
@@ -315,6 +327,7 @@ export async function getCraftWhiteboard(
 		assets: readRecord(record?.assets) ?? {},
 		documentID,
 		elements,
+		revision: await createCraftWhiteboardRevision(elements),
 		title: whiteboard.title,
 		whiteboardBlockID,
 	}
@@ -330,9 +343,18 @@ export async function saveCraftWhiteboard(
 	whiteboardBlockID: string,
 	elements: readonly CraftWhiteboardElement[],
 	elementIDsToDelete: readonly string[],
+	expectedRevision: string,
 	options: CraftFetchOptions = {}
-) {
+): Promise<CraftWhiteboardSaveOutput> {
 	await requireCraftWhiteboard(connection, documentID, whiteboardBlockID, options)
+	const currentElements = await getCraftWhiteboardElements(
+		connection,
+		whiteboardBlockID,
+		options
+	)
+	if (await createCraftWhiteboardRevision(currentElements) !== expectedRevision) {
+		throw new CraftWhiteboardConflictError()
+	}
 	if (elements.length) {
 		await requestCraftJSON(
 			connection,
@@ -345,9 +367,7 @@ export async function saveCraftWhiteboard(
 			options
 		)
 	}
-	if (!elementIDsToDelete.length) return
-
-	try {
+	if (elementIDsToDelete.length) try {
 		await deleteCraftWhiteboardElements(
 			connection,
 			whiteboardBlockID,
@@ -364,6 +384,17 @@ export async function saveCraftWhiteboard(
 			).catch(() => undefined)
 		}
 		throw error
+	}
+
+	const savedElements = await getCraftWhiteboardElements(
+		connection,
+		whiteboardBlockID,
+		options
+	)
+	return {
+		added: elements.length,
+		deleted: elementIDsToDelete.length,
+		revision: await createCraftWhiteboardRevision(savedElements),
 	}
 }
 
@@ -465,6 +496,20 @@ async function deleteCraftWhiteboardElements(
 		},
 		options
 	)
+}
+
+async function getCraftWhiteboardElements(
+	connection: CraftConnectionSecret,
+	whiteboardBlockID: string,
+	options: CraftFetchOptions
+) {
+	const data = await requestCraftJSON(
+		connection,
+		`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+		undefined,
+		options
+	)
+	return readCraftWhiteboardElements(readRecord(data)?.elements)
 }
 
 async function requestCraftJSON(
