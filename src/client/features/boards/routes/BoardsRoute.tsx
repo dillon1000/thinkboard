@@ -169,6 +169,9 @@ export function Component() {
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
+				</nav>
+				<div className="CraftWhiteboard-sidebarFooter">
 					<button
 						className="CraftWhiteboard-homeTrigger"
 						onClick={() => setIsCraftWhiteboardImportOpen(true)}
@@ -177,15 +180,14 @@ export function Component() {
 						<IconBrandCraft aria-hidden="true" size={16} stroke={1.7} />
 						Import Craft whiteboard
 					</button>
-					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
-				</nav>
-				<div className="Dashboard-user">
-					<div className="Dashboard-avatar" aria-hidden="true">{getInitial(session.data?.user.name)}</div>
-					<span>{session.data?.user.name}</span>
-					<ThemeToggle />
-					<button aria-label="Sign out" className="IconButton" onClick={() => void handleSignOut()} title="Sign out" type="button">
-						<IconLogout2 aria-hidden="true" size={16} stroke={1.8} />
-					</button>
+					<div className="Dashboard-user">
+						<div className="Dashboard-avatar" aria-hidden="true">{getInitial(session.data?.user.name)}</div>
+						<span>{session.data?.user.name}</span>
+						<ThemeToggle />
+						<button aria-label="Sign out" className="IconButton" onClick={() => void handleSignOut()} title="Sign out" type="button">
+							<IconLogout2 aria-hidden="true" size={16} stroke={1.8} />
+						</button>
+					</div>
 				</div>
 			</aside>
 			<button

@@ -82,7 +82,7 @@
 .CraftWhiteboard-header > button:active,
 .CraftWhiteboard-list button:active,
 .CraftWhiteboard-importedList button:active,
-.Dashboard-nav .CraftWhiteboard-homeTrigger:active {
+.CraftWhiteboard-homeTrigger:active {
 	scale: .96;
 }
 
@@ -332,7 +332,17 @@
 	animation: craft-whiteboard-notice-in 200ms var(--ease-out) backwards;
 }
 
-.Dashboard-nav .CraftWhiteboard-homeTrigger {
+.CraftWhiteboard-sidebarFooter {
+	display: grid;
+	gap: 4px;
+	margin-top: auto;
+}
+
+.CraftWhiteboard-sidebarFooter .Dashboard-user {
+	margin-top: 0;
+}
+
+.CraftWhiteboard-homeTrigger {
 	display: flex;
 	width: 100%;
 	min-height: 40px;
@@ -351,7 +361,7 @@
 	transition: background-color 140ms var(--ease-swift), scale 140ms var(--ease-swift);
 }
 
-.Dashboard-nav .CraftWhiteboard-homeTrigger svg {
+.CraftWhiteboard-homeTrigger svg {
 	flex: 0 0 auto;
 }
 
@@ -375,7 +385,7 @@
 	}
 
 	.CraftWhiteboard-importedList button:hover:not(:disabled),
-	.Dashboard-nav .CraftWhiteboard-homeTrigger:hover {
+	.CraftWhiteboard-homeTrigger:hover {
 		background: color-mix(in srgb, var(--accent-soft) 82%, var(--panel));
 	}
 }
@@ -423,7 +433,7 @@
 	.CraftWhiteboard-header > button,
 	.CraftWhiteboard-list button,
 	.CraftWhiteboard-importedList button,
-	.Dashboard-nav .CraftWhiteboard-homeTrigger {
+	.CraftWhiteboard-homeTrigger {
 		transition: none;
 	}
 
