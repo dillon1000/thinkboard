@@ -22,6 +22,7 @@ export {
 	MAX_CRAFT_APPEND_MARKDOWN_LENGTH,
 	MAX_CRAFT_BLOCK_UPDATES,
 	MAX_CRAFT_DOCUMENT_LINKS,
+	MAX_CRAFT_WHITEBOARD_ELEMENTS,
 	craftAPIRoutes,
 	craftConnectionInputSchema,
 	craftDocumentAppendInputSchema,
@@ -30,6 +31,7 @@ export {
 	craftDocumentShapeProps,
 	craftDocumentShapeValidator,
 	craftShapeSchemas,
+	craftWhiteboardSaveInputSchema,
 	getCraftDocumentCitationHref,
 	parseCraftDocumentCitationHref,
 } from './craft'
@@ -42,6 +44,10 @@ export type {
 	CraftDocumentLink,
 	CraftDocumentPreview,
 	CraftDocumentShapeProps,
+	CraftWhiteboardCandidate,
+	CraftWhiteboardElement,
+	CraftWhiteboardImport,
+	CraftWhiteboardSaveOutput,
 } from './craft'
 export {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,

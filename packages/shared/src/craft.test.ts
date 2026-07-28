@@ -4,6 +4,7 @@ import {
 	craftDocumentBlocksUpdateInputSchema,
 	craftDocumentShapeValidator,
 	craftShapeSchemas,
+	craftWhiteboardSaveInputSchema,
 } from './craft'
 
 describe('Craft document shape contracts', () => {
@@ -38,6 +39,17 @@ describe('Craft document shape contracts', () => {
 				{ id: 'block-1', markdown: 'First update' },
 				{ id: 'block-1', markdown: 'Second update' },
 			],
+		}).success).toBe(false)
+	})
+
+	it('accepts bounded whiteboard saves and rejects duplicate element IDs', () => {
+		expect(craftWhiteboardSaveInputSchema.safeParse({
+			elementIDsToDelete: ['old-element'],
+			elements: [{ id: 'new-element', type: 'rectangle', x: 0, y: 0 }],
+		}).success).toBe(true)
+		expect(craftWhiteboardSaveInputSchema.safeParse({
+			elementIDsToDelete: ['old-element', 'old-element'],
+			elements: [],
 		}).success).toBe(false)
 	})
 })

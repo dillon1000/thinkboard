@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
 	connectCraftAPI,
+	getCraftWhiteboard,
 	listCraftDocumentEditableBlocks,
 	listCraftDocumentCandidates,
+	listCraftDocumentWhiteboards,
 	normalizeCraftAPIURL,
 	retrieveLinkedCraftDocuments,
+	saveCraftWhiteboard,
 	updateCraftDocumentBlocks,
 } from './craft'
 
@@ -209,5 +212,95 @@ describe('Craft block editing', () => {
 			title: 'Study',
 		}])
 		expect(String(fetcher.mock.calls[0][0])).toContain('fetchBlocks=true')
+	})
+})
+
+describe('Craft whiteboards', () => {
+	const connection = {
+		apiURL: 'https://connect.craft.do/link/secret/api/v1',
+		connectedAt: new Date(0).toISOString(),
+		spaceID: 'space-1',
+		spaceName: 'Study',
+	}
+	const documentBlocks = {
+		id: 'document-1',
+		type: 'page',
+		content: [{
+			id: 'section-1',
+			type: 'page',
+			content: [{
+				id: 'whiteboard-1',
+				type: 'whiteboard',
+				title: 'Cell map',
+			}],
+		}],
+	}
+
+	it('discovers nested whiteboard blocks in one document', async () => {
+		const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(documentBlocks))
+
+		expect(await listCraftDocumentWhiteboards(
+			connection,
+			'document-1',
+			{ fetcher }
+		)).toEqual([{
+			documentID: 'document-1',
+			title: 'Cell map',
+			whiteboardBlockID: 'whiteboard-1',
+		}])
+	})
+
+	it('fetches Excalidraw content after it verifies the document boundary', async () => {
+		const fetcher = vi.fn<typeof fetch>()
+			.mockResolvedValueOnce(Response.json(documentBlocks))
+			.mockResolvedValueOnce(Response.json({
+				appState: { viewBackgroundColor: '#ffffff' },
+				assets: {},
+				elements: [{
+					id: 'element-1',
+					type: 'rectangle',
+					x: 10,
+					y: 20,
+				}],
+			}))
+
+		expect(await getCraftWhiteboard(
+			connection,
+			'document-1',
+			'whiteboard-1',
+			{ fetcher }
+		)).toMatchObject({
+			documentID: 'document-1',
+			elements: [{ id: 'element-1', type: 'rectangle' }],
+			title: 'Cell map',
+			whiteboardBlockID: 'whiteboard-1',
+		})
+		expect(String(fetcher.mock.calls[1][0])).toBe(
+			'https://connect.craft.do/link/secret/api/v1/whiteboards/whiteboard-1/elements'
+		)
+	})
+
+	it('adds the replacement before it deletes the previous snapshot', async () => {
+		const fetcher = vi.fn<typeof fetch>()
+			.mockResolvedValueOnce(Response.json(documentBlocks))
+			.mockResolvedValueOnce(Response.json({ elements: [] }))
+			.mockResolvedValueOnce(Response.json({ deletedCount: 1 }))
+
+		await saveCraftWhiteboard(
+			connection,
+			'document-1',
+			'whiteboard-1',
+			[{ id: 'new-1', type: 'rectangle' }],
+			['old-1'],
+			{ fetcher }
+		)
+
+		expect(fetcher.mock.calls.slice(1).map(([, init]) => init?.method)).toEqual([
+			'POST',
+			'DELETE',
+		])
+		expect(fetcher.mock.calls[2][1]?.body).toBe(JSON.stringify({
+			elementIds: ['old-1'],
+		}))
 	})
 })

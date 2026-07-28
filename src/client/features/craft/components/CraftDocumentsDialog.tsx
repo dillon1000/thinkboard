@@ -11,6 +11,7 @@ import {
 	IconCheck,
 	IconExternalLink,
 	IconFileDescription,
+	IconLayoutDashboard,
 	IconPlus,
 	IconSearch,
 	IconTrash,
@@ -32,6 +33,7 @@ interface CraftDocumentsDialogProps {
 	editor: Editor | null
 	initialLinkID: string | null
 	onClose: () => void
+	onOpenWhiteboards: () => void
 }
 
 export function CraftDocumentsDialog({
@@ -39,6 +41,7 @@ export function CraftDocumentsDialog({
 	editor,
 	initialLinkID,
 	onClose,
+	onOpenWhiteboards,
 }: CraftDocumentsDialogProps) {
 	const [documents, setDocuments] = useState<CraftDocumentLink[]>([])
 	const [candidates, setCandidates] = useState<CraftDocumentCandidate[]>([])
@@ -190,14 +193,20 @@ export function CraftDocumentsDialog({
 							<p>Give this board and its study partner access to live notes.</p>
 						</div>
 					</div>
-					<button
-						aria-label="Close Craft documents"
-						onClick={onClose}
-						ref={closeButtonRef}
-						type="button"
-					>
-						<IconX aria-hidden="true" size={18} />
-					</button>
+					<div className="CraftDocuments-headerActions">
+						<button onClick={onOpenWhiteboards} type="button">
+							<IconLayoutDashboard aria-hidden="true" size={16} />
+							Import whiteboard
+						</button>
+						<button
+							aria-label="Close Craft documents"
+							onClick={onClose}
+							ref={closeButtonRef}
+							type="button"
+						>
+							<IconX aria-hidden="true" size={18} />
+						</button>
+					</div>
 				</header>
 
 				<div className="CraftDocuments-layout">

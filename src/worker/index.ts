@@ -53,6 +53,9 @@ import {
 	handleCraftDocumentDelete,
 	handleCraftDocumentPreview,
 	handleCraftDocumentsList,
+	handleCraftWhiteboardGet,
+	handleCraftWhiteboardPut,
+	handleCraftWhiteboardsList,
 } from './routes/craft'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
@@ -99,6 +102,18 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get('/api/boards/:boardID/craft/candidates', authorizeBoardRequest(handleCraftCandidatesList))
 	.get('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentsList))
 	.post('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentCreate))
+	.get(
+		'/api/boards/:boardID/craft/whiteboards',
+		authorizeBoardRequest(handleCraftWhiteboardsList)
+	)
+	.get(
+		'/api/boards/:boardID/craft/whiteboards/:whiteboardBlockID',
+		authorizeBoardRequest(handleCraftWhiteboardGet)
+	)
+	.put(
+		'/api/boards/:boardID/craft/whiteboards/:whiteboardBlockID',
+		authorizeBoardRequest(handleCraftWhiteboardPut)
+	)
 	.get(
 		'/api/boards/:boardID/craft/documents/:linkID/preview',
 		authorizeBoardRequest(handleCraftDocumentPreview)

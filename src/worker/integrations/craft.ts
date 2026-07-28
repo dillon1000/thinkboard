@@ -1,7 +1,11 @@
 import type {
 	CraftDocumentBlockUpdate,
 	CraftDocumentCandidate,
+	CraftWhiteboardCandidate,
+	CraftWhiteboardElement,
+	CraftWhiteboardImport,
 } from '@agentboard/shared'
+import { MAX_CRAFT_WHITEBOARD_ELEMENTS } from '@agentboard/shared'
 
 const CRAFT_HOSTNAME = 'connect.craft.do'
 const CRAFT_REQUEST_TIMEOUT_MS = 15_000
@@ -250,6 +254,120 @@ export async function listCraftDocumentEditableBlocks(
 }
 
 /**
+ * Reads whiteboard blocks from one document. Craft has no space-wide whiteboard index, so the
+ * document boundary keeps discovery fast and makes the later element request easy to authorize.
+ */
+export async function listCraftDocumentWhiteboards(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	options: CraftFetchOptions = {}
+): Promise<CraftWhiteboardCandidate[]> {
+	const data = await getCraftDocumentBlocks(connection, documentID, options)
+	const whiteboards: CraftWhiteboardCandidate[] = []
+	const visit = (candidate: unknown) => {
+		if (Array.isArray(candidate)) {
+			for (const item of candidate) visit(item)
+			return
+		}
+		const record = readRecord(candidate)
+		if (!record) return
+		const whiteboardBlockID = readString(record, 'id')
+		if (readString(record, 'type') === 'whiteboard' && whiteboardBlockID) {
+			whiteboards.push({
+				documentID,
+				title: readWhiteboardTitle(record, whiteboards.length),
+				whiteboardBlockID,
+			})
+		}
+		visit(record.content)
+		visit(record.items)
+	}
+	visit(data)
+	return whiteboards
+}
+
+/**
+ * Fetches the Excalidraw payload only after the whiteboard is found inside the selected document.
+ * The returned JSON stays intact because tldraw's importer needs Craft's complete element fields.
+ */
+export async function getCraftWhiteboard(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	whiteboardBlockID: string,
+	options: CraftFetchOptions = {}
+): Promise<CraftWhiteboardImport> {
+	const whiteboard = await requireCraftWhiteboard(
+		connection,
+		documentID,
+		whiteboardBlockID,
+		options
+	)
+	const data = await requestCraftJSON(
+		connection,
+		`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+		undefined,
+		options
+	)
+	const record = readRecord(data)
+	const elements = readCraftWhiteboardElements(record?.elements)
+	return {
+		appState: readRecord(record?.appState) ?? {},
+		assets: readRecord(record?.assets) ?? {},
+		documentID,
+		elements,
+		title: whiteboard.title,
+		whiteboardBlockID,
+	}
+}
+
+/**
+ * Replaces the supported AgentBoard snapshot by adding the new elements first and deleting the
+ * old IDs second. If deletion fails, the rollback removes the new IDs so Craft keeps the old copy.
+ */
+export async function saveCraftWhiteboard(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	whiteboardBlockID: string,
+	elements: readonly CraftWhiteboardElement[],
+	elementIDsToDelete: readonly string[],
+	options: CraftFetchOptions = {}
+) {
+	await requireCraftWhiteboard(connection, documentID, whiteboardBlockID, options)
+	if (elements.length) {
+		await requestCraftJSON(
+			connection,
+			`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+			{
+				body: JSON.stringify({ elements }),
+				headers: { 'content-type': 'application/json' },
+				method: 'POST',
+			},
+			options
+		)
+	}
+	if (!elementIDsToDelete.length) return
+
+	try {
+		await deleteCraftWhiteboardElements(
+			connection,
+			whiteboardBlockID,
+			elementIDsToDelete,
+			options
+		)
+	} catch (error) {
+		if (elements.length) {
+			await deleteCraftWhiteboardElements(
+				connection,
+				whiteboardBlockID,
+				elements.map(({ id }) => id),
+				options
+			).catch(() => undefined)
+		}
+		throw error
+	}
+}
+
+/**
  * Searches each connection once, limited to the documents that board members explicitly linked.
  * A short full-document fallback keeps broad requests such as “summarize my notes” useful when
  * Craft's relevance search has no literal match.
@@ -306,6 +424,47 @@ export async function retrieveLinkedCraftDocuments(
 		}))
 	}))
 	return results.flat().slice(0, 8)
+}
+
+async function getCraftDocumentBlocks(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	options: CraftFetchOptions
+) {
+	const parameters = new URLSearchParams({ id: documentID })
+	return requestCraftJSON(connection, `blocks?${parameters}`, undefined, options)
+}
+
+async function requireCraftWhiteboard(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	whiteboardBlockID: string,
+	options: CraftFetchOptions
+) {
+	const whiteboards = await listCraftDocumentWhiteboards(connection, documentID, options)
+	const whiteboard = whiteboards.find((item) =>
+		item.whiteboardBlockID === whiteboardBlockID
+	)
+	if (!whiteboard) throw new Error('Craft whiteboard not found in the selected document.')
+	return whiteboard
+}
+
+async function deleteCraftWhiteboardElements(
+	connection: CraftConnectionSecret,
+	whiteboardBlockID: string,
+	elementIDs: readonly string[],
+	options: CraftFetchOptions
+) {
+	await requestCraftJSON(
+		connection,
+		`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+		{
+			body: JSON.stringify({ elementIds: elementIDs }),
+			headers: { 'content-type': 'application/json' },
+			method: 'DELETE',
+		},
+		options
+	)
 }
 
 async function requestCraftJSON(
@@ -428,6 +587,29 @@ function readCraftEditableTextBlocks(value: unknown) {
 	}
 	visit(value)
 	return blocks
+}
+
+function readCraftWhiteboardElements(value: unknown): CraftWhiteboardElement[] {
+	if (!Array.isArray(value)) throw new Error('Craft returned invalid whiteboard elements.')
+	if (value.length > MAX_CRAFT_WHITEBOARD_ELEMENTS) {
+		throw new Error(
+			`This Craft whiteboard has more than ${MAX_CRAFT_WHITEBOARD_ELEMENTS} elements.`
+		)
+	}
+	return value.flatMap((candidate): CraftWhiteboardElement[] => {
+		const record = readRecord(candidate)
+		const id = readString(record, 'id')
+		const type = readString(record, 'type')
+		return record && id && type ? [{ ...record, id, type }] : []
+	})
+}
+
+function readWhiteboardTitle(record: Record<string, unknown>, index: number) {
+	for (const key of ['title', 'name', 'markdown', 'text']) {
+		const value = readString(record, key)
+		if (value) return value.replace(/<[^>]+>/g, '').trim().slice(0, 500)
+	}
+	return `Whiteboard ${index + 1}`
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {

@@ -5,6 +5,8 @@ export const MAX_CRAFT_DOCUMENT_LINKS = 20
 export const MAX_CRAFT_APPEND_MARKDOWN_LENGTH = 20_000
 // Keeps one agent mutation small enough to review in the model trace and the Craft request body.
 export const MAX_CRAFT_BLOCK_UPDATES = 10
+// Bounds experimental whiteboard payloads before AgentBoard forwards them to Craft.
+export const MAX_CRAFT_WHITEBOARD_ELEMENTS = 1_000
 export const CRAFT_DOCUMENT_SHAPE_TYPE = 'agentboard-craft-document' as const
 
 export interface CraftDocumentShapeProps {
@@ -65,6 +67,39 @@ export const craftDocumentBlocksUpdateInputSchema = z.object({
 	}
 })
 
+export const craftWhiteboardSaveInputSchema = z.object({
+	elements: z.array(z.object({
+		id: z.string().trim().min(1).max(256),
+		type: z.string().trim().min(1).max(64),
+	}).catchall(z.json())).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
+	elementIDsToDelete: z.array(
+		z.string().trim().min(1).max(256)
+	).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
+}).superRefine(({ elements, elementIDsToDelete }, context) => {
+	if (!elements.length && !elementIDsToDelete.length) {
+		context.addIssue({
+			code: 'custom',
+			message: 'A whiteboard save must add, update, or delete an element.',
+		})
+	}
+	for (const [path, values] of [
+		['elements', elements.map(({ id }) => id)],
+		['elementIDsToDelete', elementIDsToDelete],
+	] as const) {
+		const uniqueValues = new Set<string>()
+		for (const [index, value] of values.entries()) {
+			if (uniqueValues.has(value)) {
+				context.addIssue({
+					code: 'custom',
+					message: 'Whiteboard element IDs must be unique.',
+					path: [path, index],
+				})
+			}
+			uniqueValues.add(value)
+		}
+	}
+})
+
 export interface CraftConnectionStatus {
 	connected: boolean
 	connectedAt: string | null
@@ -103,6 +138,29 @@ export interface CraftDocumentBlocksUpdateOutput {
 	updated: number
 }
 
+export interface CraftWhiteboardCandidate {
+	documentID: string
+	title: string
+	whiteboardBlockID: string
+}
+
+export type CraftWhiteboardElement =
+	z.infer<typeof craftWhiteboardSaveInputSchema>['elements'][number]
+
+export interface CraftWhiteboardImport {
+	appState: Record<string, unknown>
+	assets: Record<string, unknown>
+	documentID: string
+	elements: CraftWhiteboardElement[]
+	title: string
+	whiteboardBlockID: string
+}
+
+export interface CraftWhiteboardSaveOutput {
+	added: number
+	deleted: number
+}
+
 export const craftAPIRoutes = {
 	connection: '/api/integrations/craft',
 	boardDocuments: (boardID: string) =>
@@ -115,6 +173,10 @@ export const craftAPIRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/craft/documents/${encodeURIComponent(linkID)}`,
 	boardDocumentPreview: (boardID: string, linkID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/craft/documents/${encodeURIComponent(linkID)}/preview`,
+	boardWhiteboards: (boardID: string, documentID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/craft/whiteboards?documentID=${encodeURIComponent(documentID)}`,
+	boardWhiteboard: (boardID: string, documentID: string, whiteboardBlockID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/craft/whiteboards/${encodeURIComponent(whiteboardBlockID)}?documentID=${encodeURIComponent(documentID)}`,
 } as const
 
 export function getCraftDocumentCitationHref(linkID: string) {

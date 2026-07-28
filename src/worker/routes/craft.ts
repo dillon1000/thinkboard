@@ -4,9 +4,11 @@ import {
 	craftDocumentAppendInputSchema,
 	craftDocumentBlocksUpdateInputSchema,
 	craftDocumentLinkInputSchema,
+	craftWhiteboardSaveInputSchema,
 	type CraftConnectionStatus,
 	type CraftDocumentAppendOutput,
 	type CraftDocumentBlocksUpdateOutput,
+	type CraftWhiteboardSaveOutput,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
 import { requireSession } from '../auth/session'
@@ -24,12 +26,17 @@ import {
 	deleteCraftConnection,
 	getCraftConnection,
 	getCraftDocumentMarkdown,
+	getCraftWhiteboard,
 	listCraftDocumentCandidates,
+	listCraftDocumentWhiteboards,
 	saveCraftConnection,
+	saveCraftWhiteboard,
 	updateCraftDocumentBlocks,
 	verifyCraftDocument,
 } from '../integrations/craft'
 import type { AuthorizedBoardContext } from './documents'
+
+const MAX_CRAFT_WHITEBOARD_SAVE_BYTES = 2 * 1_024 * 1_024
 
 export async function handleCraftConnectionGet(request: IRequest, env: Env) {
 	const authentication = await requireSession(request, env)
@@ -199,6 +206,104 @@ export async function handleCraftDocumentPreview(
 	}
 }
 
+export async function handleCraftWhiteboardsList(
+	request: IRequest,
+	env: Env,
+	_context: ExecutionContext,
+	authorization: AuthorizedBoardContext
+) {
+	const documentID = readCraftDocumentID(request)
+	if (!documentID) {
+		return Response.json({ error: 'Choose a valid Craft document.' }, { status: 400 })
+	}
+	const connection = await getCraftConnection(env, authorization.userID)
+	if (!connection) {
+		return Response.json(
+			{ error: 'Connect Craft in Settings before importing a whiteboard.' },
+			{ status: 409 }
+		)
+	}
+	try {
+		return Response.json({
+			whiteboards: await listCraftDocumentWhiteboards(connection, documentID),
+		})
+	} catch (error) {
+		return craftErrorResponse(error)
+	}
+}
+
+export async function handleCraftWhiteboardGet(
+	request: IRequest,
+	env: Env,
+	_context: ExecutionContext,
+	authorization: AuthorizedBoardContext
+) {
+	const documentID = readCraftDocumentID(request)
+	if (!documentID) {
+		return Response.json({ error: 'Choose a valid Craft document.' }, { status: 400 })
+	}
+	const connection = await getCraftConnection(env, authorization.userID)
+	if (!connection) {
+		return Response.json(
+			{ error: 'Connect Craft in Settings before importing a whiteboard.' },
+			{ status: 409 }
+		)
+	}
+	try {
+		return Response.json(await getCraftWhiteboard(
+			connection,
+			documentID,
+			request.params.whiteboardBlockID
+		))
+	} catch (error) {
+		return craftErrorResponse(error)
+	}
+}
+
+/**
+ * Saves the current user's editable snapshot through their own Craft connection. The integration
+ * verifies the whiteboard's document before it sends any state-changing request to Craft.
+ */
+export async function handleCraftWhiteboardPut(
+	request: IRequest,
+	env: Env,
+	_context: ExecutionContext,
+	authorization: AuthorizedBoardContext
+) {
+	const documentID = readCraftDocumentID(request)
+	if (!documentID) {
+		return Response.json({ error: 'Choose a valid Craft document.' }, { status: 400 })
+	}
+	const input = await readBoundedJSON(request, MAX_CRAFT_WHITEBOARD_SAVE_BYTES)
+	if ('response' in input) return input.response
+	const parsed = craftWhiteboardSaveInputSchema.safeParse(input.value)
+	if (!parsed.success) {
+		return Response.json({ error: 'The Craft whiteboard changes are invalid.' }, { status: 400 })
+	}
+	const connection = await getCraftConnection(env, authorization.userID)
+	if (!connection) {
+		return Response.json(
+			{ error: 'Connect Craft in Settings before saving a whiteboard.' },
+			{ status: 409 }
+		)
+	}
+	try {
+		await saveCraftWhiteboard(
+			connection,
+			documentID,
+			request.params.whiteboardBlockID,
+			parsed.data.elements,
+			parsed.data.elementIDsToDelete
+		)
+		return Response.json({
+			added: parsed.data.elements.length,
+			deleted: parsed.data.elementIDsToDelete.length,
+		} satisfies CraftWhiteboardSaveOutput)
+	} catch (error) {
+		return craftErrorResponse(error)
+	}
+}
+
 /**
  * Applies an agent-requested append only through the current user's Craft connection. A linked
  * document owned by another board member remains readable, but their credential cannot be used
@@ -249,4 +354,59 @@ export async function updateCraftDocumentBlocksForUser(
 function craftErrorResponse(error: unknown, status = 502) {
 	const message = error instanceof Error ? error.message : 'Craft is unavailable right now.'
 	return Response.json({ error: message }, { status })
+}
+
+function readCraftDocumentID(request: IRequest) {
+	const documentID = new URL(request.url).searchParams.get('documentID')?.trim()
+	return documentID && documentID.length <= 256 ? documentID : null
+}
+
+/**
+ * Buffers only a fixed JSON body. Whiteboard saves need one atomic validation pass, while the
+ * byte ceiling keeps malformed nested JSON below the Worker's memory-sensitive request path.
+ */
+async function readBoundedJSON(
+	request: Request,
+	maximumBytes: number
+): Promise<{ value: unknown } | { response: Response }> {
+	const declaredLength = Number(request.headers.get('content-length'))
+	if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
+		return {
+			response: Response.json(
+				{ error: 'The Craft whiteboard changes are too large.' },
+				{ status: 413 }
+			),
+		}
+	}
+	if (!request.body) return { value: null }
+
+	const reader = request.body.getReader()
+	const decoder = new TextDecoder()
+	let bytesRead = 0
+	let text = ''
+	try {
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
+			bytesRead += value.byteLength
+			if (bytesRead > maximumBytes) {
+				await reader.cancel()
+				return {
+					response: Response.json(
+						{ error: 'The Craft whiteboard changes are too large.' },
+						{ status: 413 }
+					),
+				}
+			}
+			text += decoder.decode(value, { stream: true })
+		}
+		text += decoder.decode()
+		try {
+			return { value: JSON.parse(text) as unknown }
+		} catch {
+			return { value: null }
+		}
+	} finally {
+		reader.releaseLock()
+	}
 }

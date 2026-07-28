@@ -2,6 +2,7 @@ import type { Board, DueFlashcard, FlashcardReviewRating } from '@agentboard/sha
 import { apiRoutes, appRoutes } from '@agentboard/shared'
 import {
 	IconArchive,
+	IconBrandCraft,
 	IconCards,
 	IconChevronDown,
 	IconLayoutBoard,
@@ -19,6 +20,10 @@ import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
 import { ThemeToggle } from '../../theme/ThemeToggle'
+import {
+	CraftWhiteboardImportDialog,
+} from '../../craft/components/CraftWhiteboardImportDialog'
+import { addCraftWhiteboardImportParameters } from '../../craft/whiteboards/craftWhiteboardNavigation'
 
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
@@ -33,6 +38,7 @@ export function Component() {
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
 	const [isListOpen, setIsListOpen] = useState(true)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(readSidebarPreference)
+	const [isCraftWhiteboardImportOpen, setIsCraftWhiteboardImportOpen] = useState(false)
 	const composerInputRef = useRef<HTMLInputElement>(null)
 	const session = authClient.useSession()
 	const navigate = useNavigate()
@@ -163,6 +169,14 @@ export function Component() {
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<button
+						className="CraftWhiteboard-homeTrigger"
+						onClick={() => setIsCraftWhiteboardImportOpen(true)}
+						type="button"
+					>
+						<IconBrandCraft aria-hidden="true" size={16} stroke={1.7} />
+						Import Craft whiteboard
+					</button>
 					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
 				</nav>
 				<div className="Dashboard-user">
@@ -277,6 +291,18 @@ export function Component() {
 					</section>
 				</div>
 			</section>
+			{isCraftWhiteboardImportOpen ? (
+				<CraftWhiteboardImportDialog
+					boards={boards}
+					onClose={() => setIsCraftWhiteboardImportOpen(false)}
+					onImport={(request) => {
+						navigate(addCraftWhiteboardImportParameters(
+							appRoutes.board(request.boardID),
+							request
+						))
+					}}
+				/>
+			) : null}
 		</main>
 	)
 }
