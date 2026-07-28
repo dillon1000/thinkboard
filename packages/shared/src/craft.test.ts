@@ -46,12 +46,20 @@ describe('Craft document shape contracts', () => {
 	it('accepts bounded whiteboard saves and rejects duplicate element IDs', () => {
 		expect(craftWhiteboardSaveInputSchema.safeParse({
 			elementIDsToDelete: ['old-element'],
-			elements: [{ id: 'new-element', type: 'rectangle', x: 0, y: 0 }],
+			elementsToAdd: [{ id: 'new-element', type: 'rectangle', x: 0, y: 0 }],
+			elementsToUpdate: [{ id: 'kept-element', type: 'ellipse', x: 10, y: 20 }],
 			expectedRevision: 'a'.repeat(64),
 		}).success).toBe(true)
 		expect(craftWhiteboardSaveInputSchema.safeParse({
 			elementIDsToDelete: ['old-element', 'old-element'],
-			elements: [],
+			elementsToAdd: [],
+			elementsToUpdate: [],
+			expectedRevision: 'a'.repeat(64),
+		}).success).toBe(false)
+		expect(craftWhiteboardSaveInputSchema.safeParse({
+			elementIDsToDelete: ['same-element'],
+			elementsToAdd: [],
+			elementsToUpdate: [{ id: 'same-element', type: 'rectangle' }],
 			expectedRevision: 'a'.repeat(64),
 		}).success).toBe(false)
 	})

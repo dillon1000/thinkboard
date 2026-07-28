@@ -283,16 +283,23 @@ describe('Craft whiteboards', () => {
 		)
 	})
 
-	it('adds the replacement before it deletes the previous snapshot', async () => {
+	it('updates, adds, and deletes only the changed element IDs', async () => {
 		const fetcher = vi.fn<typeof fetch>()
 			.mockResolvedValueOnce(Response.json(documentBlocks))
 			.mockResolvedValueOnce(Response.json({
-				elements: [{ id: 'old-1', type: 'rectangle' }],
+				elements: [
+					{ id: 'old-1', type: 'rectangle' },
+					{ id: 'kept-1', type: 'ellipse' },
+				],
 			}))
+			.mockResolvedValueOnce(Response.json({ elements: [] }))
 			.mockResolvedValueOnce(Response.json({ elements: [] }))
 			.mockResolvedValueOnce(Response.json({ deletedCount: 1 }))
 			.mockResolvedValueOnce(Response.json({
-				elements: [{ id: 'new-1', type: 'rectangle' }],
+				elements: [
+					{ id: 'kept-1', type: 'ellipse', x: 20 },
+					{ id: 'new-1', type: 'rectangle' },
+				],
 			}))
 
 		const result = await saveCraftWhiteboard(
@@ -300,23 +307,26 @@ describe('Craft whiteboards', () => {
 			'document-1',
 			'whiteboard-1',
 			[{ id: 'new-1', type: 'rectangle' }],
+			[{ id: 'kept-1', type: 'ellipse', x: 20 }],
 			['old-1'],
 			await createCraftWhiteboardRevision([
 				{ id: 'old-1', type: 'rectangle' },
+				{ id: 'kept-1', type: 'ellipse' },
 			]),
 			{ fetcher }
 		)
 
 		expect(fetcher.mock.calls.slice(1).map(([, init]) => init?.method)).toEqual([
 			undefined,
+			'PUT',
 			'POST',
 			'DELETE',
 			undefined,
 		])
-		expect(fetcher.mock.calls[3][1]?.body).toBe(JSON.stringify({
+		expect(fetcher.mock.calls[4][1]?.body).toBe(JSON.stringify({
 			elementIds: ['old-1'],
 		}))
-		expect(result).toMatchObject({ added: 1, deleted: 1 })
+		expect(result).toMatchObject({ added: 1, deleted: 1, updated: 1 })
 		expect(result.revision).toMatch(/^[a-f0-9]{64}$/)
 	})
 
@@ -332,6 +342,7 @@ describe('Craft whiteboards', () => {
 			'document-1',
 			'whiteboard-1',
 			[{ id: 'local-change', type: 'rectangle' }],
+			[],
 			['old-1'],
 			'a'.repeat(64),
 			{ fetcher }

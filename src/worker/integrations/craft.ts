@@ -334,14 +334,15 @@ export async function getCraftWhiteboard(
 }
 
 /**
- * Replaces the supported AgentBoard snapshot by adding the new elements first and deleting the
- * old IDs second. If deletion fails, the rollback removes the new IDs so Craft keeps the old copy.
+ * Applies a revision-checked element diff. Existing IDs use Craft's update endpoint, new IDs use
+ * its add endpoint, and deletes run last so a failed request leaves the most source data in place.
  */
 export async function saveCraftWhiteboard(
 	connection: CraftConnectionSecret,
 	documentID: string,
 	whiteboardBlockID: string,
-	elements: readonly CraftWhiteboardElement[],
+	elementsToAdd: readonly CraftWhiteboardElement[],
+	elementsToUpdate: readonly CraftWhiteboardElement[],
 	elementIDsToDelete: readonly string[],
 	expectedRevision: string,
 	options: CraftFetchOptions = {}
@@ -355,12 +356,24 @@ export async function saveCraftWhiteboard(
 	if (await createCraftWhiteboardRevision(currentElements) !== expectedRevision) {
 		throw new CraftWhiteboardConflictError()
 	}
-	if (elements.length) {
+	if (elementsToUpdate.length) {
 		await requestCraftJSON(
 			connection,
 			`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
 			{
-				body: JSON.stringify({ elements }),
+				body: JSON.stringify({ elements: elementsToUpdate }),
+				headers: { 'content-type': 'application/json' },
+				method: 'PUT',
+			},
+			options
+		)
+	}
+	if (elementsToAdd.length) {
+		await requestCraftJSON(
+			connection,
+			`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+			{
+				body: JSON.stringify({ elements: elementsToAdd }),
 				headers: { 'content-type': 'application/json' },
 				method: 'POST',
 			},
@@ -375,11 +388,11 @@ export async function saveCraftWhiteboard(
 			options
 		)
 	} catch (error) {
-		if (elements.length) {
+		if (elementsToAdd.length) {
 			await deleteCraftWhiteboardElements(
 				connection,
 				whiteboardBlockID,
-				elements.map(({ id }) => id),
+				elementsToAdd.map(({ id }) => id),
 				options
 			).catch(() => undefined)
 		}
@@ -392,9 +405,10 @@ export async function saveCraftWhiteboard(
 		options
 	)
 	return {
-		added: elements.length,
+		added: elementsToAdd.length,
 		deleted: elementIDsToDelete.length,
 		revision: await createCraftWhiteboardRevision(savedElements),
+		updated: elementsToUpdate.length,
 	}
 }
 

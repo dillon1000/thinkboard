@@ -297,7 +297,8 @@ export async function handleCraftWhiteboardPut(
 			connection,
 			documentID,
 			request.params.whiteboardBlockID,
-			parsed.data.elements,
+			parsed.data.elementsToAdd,
+			parsed.data.elementsToUpdate,
 			parsed.data.elementIDsToDelete,
 			parsed.data.expectedRevision
 		)

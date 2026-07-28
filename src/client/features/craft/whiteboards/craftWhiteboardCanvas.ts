@@ -187,7 +187,7 @@ export async function saveCraftWhiteboard(
 	if (!elements.length && !metadata.sourceElementIDs.length) {
 		const revision = expectedRevision ?? metadata.remoteRevision
 		if (!revision) throw new Error(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
-		return { added: 0, deleted: 0, revision } satisfies CraftWhiteboardSaveOutput
+		return { added: 0, deleted: 0, revision, updated: 0 } satisfies CraftWhiteboardSaveOutput
 	}
 	const revision = expectedRevision ?? metadata.remoteRevision
 	if (!revision) throw new Error(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
@@ -201,7 +201,8 @@ export async function saveCraftWhiteboard(
 		{
 			body: JSON.stringify({
 				elementIDsToDelete: metadata.sourceElementIDs,
-				elements,
+				elementsToAdd: elements,
+				elementsToUpdate: [],
 				expectedRevision: revision,
 			}),
 			method: 'PUT',

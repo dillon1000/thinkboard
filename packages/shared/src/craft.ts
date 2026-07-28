@@ -69,24 +69,28 @@ export const craftDocumentBlocksUpdateInputSchema = z.object({
 	}
 })
 
+const craftWhiteboardElementSchema = z.object({
+	id: z.string().trim().min(1).max(256),
+	type: z.string().trim().min(1).max(64),
+}).catchall(z.json())
+
 export const craftWhiteboardSaveInputSchema = z.object({
-	elements: z.array(z.object({
-		id: z.string().trim().min(1).max(256),
-		type: z.string().trim().min(1).max(64),
-	}).catchall(z.json())).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
+	elementsToAdd: z.array(craftWhiteboardElementSchema).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
+	elementsToUpdate: z.array(craftWhiteboardElementSchema).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
 	elementIDsToDelete: z.array(
 		z.string().trim().min(1).max(256)
 	).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
 	expectedRevision: z.string().regex(/^[a-f0-9]{64}$/),
-}).superRefine(({ elements, elementIDsToDelete }, context) => {
-	if (!elements.length && !elementIDsToDelete.length) {
+}).superRefine(({ elementsToAdd, elementsToUpdate, elementIDsToDelete }, context) => {
+	if (!elementsToAdd.length && !elementsToUpdate.length && !elementIDsToDelete.length) {
 		context.addIssue({
 			code: 'custom',
 			message: 'A whiteboard save must add, update, or delete an element.',
 		})
 	}
 	for (const [path, values] of [
-		['elements', elements.map(({ id }) => id)],
+		['elementsToAdd', elementsToAdd.map(({ id }) => id)],
+		['elementsToUpdate', elementsToUpdate.map(({ id }) => id)],
 		['elementIDsToDelete', elementIDsToDelete],
 	] as const) {
 		const uniqueValues = new Set<string>()
@@ -100,6 +104,20 @@ export const craftWhiteboardSaveInputSchema = z.object({
 			}
 			uniqueValues.add(value)
 		}
+	}
+	const mutationIDs = [
+		...elementsToAdd.map(({ id }) => id),
+		...elementsToUpdate.map(({ id }) => id),
+		...elementIDsToDelete,
+	]
+	const duplicateMutationID = mutationIDs.find((id, index) =>
+		mutationIDs.indexOf(id) !== index
+	)
+	if (duplicateMutationID) {
+		context.addIssue({
+			code: 'custom',
+			message: 'An element cannot be added, updated, and deleted in one save.',
+		})
 	}
 })
 
@@ -148,7 +166,7 @@ export interface CraftWhiteboardCandidate {
 }
 
 export type CraftWhiteboardElement =
-	z.infer<typeof craftWhiteboardSaveInputSchema>['elements'][number]
+	z.infer<typeof craftWhiteboardElementSchema>
 
 export interface CraftWhiteboardImport {
 	appState: Record<string, unknown>
@@ -165,6 +183,7 @@ export interface CraftWhiteboardSaveOutput {
 	added: number
 	deleted: number
 	revision: string
+	updated: number
 }
 
 export const craftAPIRoutes = {
