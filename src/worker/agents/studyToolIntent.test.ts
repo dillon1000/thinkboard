@@ -62,4 +62,10 @@ describe('getRequestedStudyTool', () => {
 			{ role: 'user', parts: [{ type: 'text', text: 'Move this shape south and color it teal.' }] },
 		])).toBe('composeCanvas')
 	})
+
+	it('leaves Craft document edits in automatic tool mode', () => {
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Change the text in my Craft document.' }] },
+		])).toBeUndefined()
+	})
 })

@@ -3,6 +3,8 @@ import { z } from 'zod'
 
 export const MAX_CRAFT_DOCUMENT_LINKS = 20
 export const MAX_CRAFT_APPEND_MARKDOWN_LENGTH = 20_000
+// Keeps one agent mutation small enough to review in the model trace and the Craft request body.
+export const MAX_CRAFT_BLOCK_UPDATES = 10
 export const CRAFT_DOCUMENT_SHAPE_TYPE = 'agentboard-craft-document' as const
 
 export interface CraftDocumentShapeProps {
@@ -43,6 +45,26 @@ export const craftDocumentAppendInputSchema = z.object({
 	markdown: z.string().trim().min(1).max(MAX_CRAFT_APPEND_MARKDOWN_LENGTH),
 })
 
+export const craftDocumentBlocksUpdateInputSchema = z.object({
+	linkID: z.string().uuid(),
+	blocks: z.array(z.object({
+		id: z.string().trim().min(1).max(256),
+		markdown: z.string().min(1).max(MAX_CRAFT_APPEND_MARKDOWN_LENGTH),
+	})).min(1).max(MAX_CRAFT_BLOCK_UPDATES),
+}).superRefine(({ blocks }, context) => {
+	const blockIDs = new Set<string>()
+	for (const [index, block] of blocks.entries()) {
+		if (blockIDs.has(block.id)) {
+			context.addIssue({
+				code: 'custom',
+				message: 'Block IDs must be unique.',
+				path: ['blocks', index, 'id'],
+			})
+		}
+		blockIDs.add(block.id)
+	}
+})
+
 export interface CraftConnectionStatus {
 	connected: boolean
 	connectedAt: string | null
@@ -71,6 +93,14 @@ export interface CraftDocumentPreview {
 export interface CraftDocumentAppendOutput {
 	added: boolean
 	title: string
+}
+
+export type CraftDocumentBlockUpdate =
+	z.infer<typeof craftDocumentBlocksUpdateInputSchema>['blocks'][number]
+
+export interface CraftDocumentBlocksUpdateOutput {
+	title: string
+	updated: number
 }
 
 export const craftAPIRoutes = {

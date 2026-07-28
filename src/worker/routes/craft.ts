@@ -2,9 +2,11 @@ import {
 	MAX_CRAFT_DOCUMENT_LINKS,
 	craftConnectionInputSchema,
 	craftDocumentAppendInputSchema,
+	craftDocumentBlocksUpdateInputSchema,
 	craftDocumentLinkInputSchema,
 	type CraftConnectionStatus,
 	type CraftDocumentAppendOutput,
+	type CraftDocumentBlocksUpdateOutput,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
 import { requireSession } from '../auth/session'
@@ -24,6 +26,7 @@ import {
 	getCraftDocumentMarkdown,
 	listCraftDocumentCandidates,
 	saveCraftConnection,
+	updateCraftDocumentBlocks,
 	verifyCraftDocument,
 } from '../integrations/craft'
 import type { AuthorizedBoardContext } from './documents'
@@ -218,6 +221,29 @@ export async function appendCraftDocumentForUser(
 	if (!connection) throw new Error('Connect Craft in Settings before changing documents.')
 	await appendCraftDocumentMarkdown(connection, row.documentID, parsed.markdown)
 	return { added: true, title: row.title }
+}
+
+/**
+ * Applies agent-requested text changes with the same ownership boundary as append operations.
+ * The integration client also confirms that each block belongs to this linked document.
+ */
+export async function updateCraftDocumentBlocksForUser(
+	env: Env,
+	database: Database,
+	boardID: string,
+	userID: string,
+	input: unknown
+): Promise<CraftDocumentBlocksUpdateOutput> {
+	const parsed = craftDocumentBlocksUpdateInputSchema.parse(input)
+	const row = await getCraftDocumentLinkRow(database, boardID, parsed.linkID)
+	if (!row) throw new Error('That Craft document is not linked to this board.')
+	if (row.connectionOwnerID !== userID) {
+		throw new Error('Only the person who linked this Craft document can change it.')
+	}
+	const connection = await getCraftConnection(env, userID)
+	if (!connection) throw new Error('Connect Craft in Settings before changing documents.')
+	await updateCraftDocumentBlocks(connection, row.documentID, parsed.blocks)
+	return { title: row.title, updated: parsed.blocks.length }
 }
 
 function craftErrorResponse(error: unknown, status = 502) {

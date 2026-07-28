@@ -1,9 +1,14 @@
-import type { CraftDocumentCandidate } from '@agentboard/shared'
+import type {
+	CraftDocumentBlockUpdate,
+	CraftDocumentCandidate,
+} from '@agentboard/shared'
 
 const CRAFT_HOSTNAME = 'connect.craft.do'
 const CRAFT_REQUEST_TIMEOUT_MS = 15_000
 const MAX_CRAFT_JSON_BYTES = 2 * 1_024 * 1_024
 const MAX_CRAFT_MARKDOWN_BYTES = 512 * 1_024
+// Search context needs enough nearby blocks for precise edits without copying a full large document.
+const MAX_CRAFT_CONTEXT_BLOCKS = 20
 
 export interface CraftConnectionSecret {
 	apiURL: string
@@ -20,9 +25,16 @@ export interface LinkedCraftDocument {
 }
 
 export interface CraftDocumentContext {
+	blocks: CraftEditableTextBlock[]
 	linkID: string
 	markdown: string
 	title: string
+}
+
+/** A text block that the model can cite by ID in an explicit update request. */
+export interface CraftEditableTextBlock {
+	id: string
+	markdown: string
 }
 
 interface CraftFetchOptions {
@@ -193,6 +205,51 @@ export async function appendCraftDocumentMarkdown(
 }
 
 /**
+ * Updates text blocks only after a fresh document fetch proves that every supplied ID belongs to
+ * the linked document. Craft API connections cover a full space, so this check scopes mutations
+ * to the document that the board member selected.
+ */
+export async function updateCraftDocumentBlocks(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	blocks: readonly CraftDocumentBlockUpdate[],
+	options: CraftFetchOptions = {}
+) {
+	const editableBlocks = await listCraftDocumentEditableBlocks(
+		connection,
+		documentID,
+		options
+	)
+	const editableBlockIDs = new Set(editableBlocks.map(({ id }) => id))
+	const invalidBlock = blocks.find(({ id }) => !editableBlockIDs.has(id))
+	if (invalidBlock) {
+		throw new Error('A Craft block is not editable in the linked document. Read the document again.')
+	}
+
+	await requestCraftJSON(connection, 'blocks', {
+		body: JSON.stringify({ blocks }),
+		headers: { 'content-type': 'application/json' },
+		method: 'PUT',
+	}, options)
+}
+
+/** Fetches the document tree and returns text blocks with IDs that Craft accepts for updates. */
+export async function listCraftDocumentEditableBlocks(
+	connection: CraftConnectionSecret,
+	documentID: string,
+	options: CraftFetchOptions = {}
+) {
+	const parameters = new URLSearchParams({ id: documentID })
+	const data = await requestCraftJSON(
+		connection,
+		`blocks?${parameters}`,
+		undefined,
+		options
+	)
+	return readCraftEditableTextBlocks(data)
+}
+
+/**
  * Searches each connection once, limited to the documents that board members explicitly linked.
  * A short full-document fallback keeps broad requests such as “summarize my notes” useful when
  * Craft's relevance search has no literal match.
@@ -210,6 +267,7 @@ export async function retrieveLinkedCraftDocuments(
 
 		const searchURL = new URL('documents/search', `${connection.apiURL}/`)
 		searchURL.searchParams.set('include', query.trim().slice(0, 500) || ' ')
+		searchURL.searchParams.set('fetchBlocks', 'true')
 		for (const link of ownerLinks) searchURL.searchParams.append('documentIds', link.documentID)
 		const relativeURL = `${searchURL.pathname.split('/api/v1/')[1]}${searchURL.search}`
 		const searchData = await requestCraftJSON(
@@ -224,20 +282,28 @@ export async function retrieveLinkedCraftDocuments(
 			const markdown = readString(record, 'markdown')
 			const link = ownerLinks.find((candidate) => candidate.documentID === documentID)
 			return link && markdown
-				? [{ linkID: link.id, markdown: markdown.slice(0, 8_000), title: link.title }]
+				? [{
+						blocks: readCraftEditableTextBlocks(record?.blocks).slice(0, MAX_CRAFT_CONTEXT_BLOCKS),
+						linkID: link.id,
+						markdown: markdown.slice(0, 8_000),
+						title: link.title,
+					}]
 				: []
 		})
 		if (matches.length) return matches
 
-		return Promise.all(ownerLinks.slice(0, 3).map(async (link) => ({
-			linkID: link.id,
-			markdown: (await getCraftDocumentMarkdown(
-				connection,
-				link.documentID,
-				options
-			)).slice(0, 12_000),
-			title: link.title,
-		})))
+		return Promise.all(ownerLinks.slice(0, 3).map(async (link) => {
+			const [markdown, blocks] = await Promise.all([
+				getCraftDocumentMarkdown(connection, link.documentID, options),
+				listCraftDocumentEditableBlocks(connection, link.documentID, options),
+			])
+			return {
+				blocks: blocks.slice(0, MAX_CRAFT_CONTEXT_BLOCKS),
+				linkID: link.id,
+				markdown: markdown.slice(0, 12_000),
+				title: link.title,
+			}
+		}))
 	}))
 	return results.flat().slice(0, 8)
 }
@@ -345,6 +411,25 @@ function readItems(value: unknown) {
 	return Array.isArray(items) ? items : []
 }
 
+function readCraftEditableTextBlocks(value: unknown) {
+	const blocks: CraftEditableTextBlock[] = []
+	const visit = (candidate: unknown) => {
+		if (Array.isArray(candidate)) {
+			for (const item of candidate) visit(item)
+			return
+		}
+		const record = readRecord(candidate)
+		if (!record) return
+		const id = readString(record, 'id')
+		const type = readString(record, 'type')
+		const markdown = readStringValue(record, 'markdown')
+		if (id && type === 'text' && markdown !== null) blocks.push({ id, markdown })
+		visit(record.content)
+	}
+	visit(value)
+	return blocks
+}
+
 function readRecord(value: unknown): Record<string, unknown> | null {
 	return value && typeof value === 'object' && !Array.isArray(value)
 		? value as Record<string, unknown>
@@ -354,4 +439,9 @@ function readRecord(value: unknown): Record<string, unknown> | null {
 function readString(value: Record<string, unknown> | null, key: string): string | null {
 	const field = value?.[key]
 	return typeof field === 'string' && field.trim() ? field : null
+}
+
+function readStringValue(value: Record<string, unknown> | null, key: string): string | null {
+	const field = value?.[key]
+	return typeof field === 'string' ? field : null
 }

@@ -32,7 +32,12 @@ export function attachCraftDocumentContext(
 		: userMessage.content
 	const sources = results.map((result, index) => [
 		`Source ${index + 1}: [${result.title}](${getCraftDocumentCitationHref(result.linkID)})`,
-		`Linked document ID for appendCraftDocument: ${result.linkID}`,
+		`Linked document ID for Craft tools: ${result.linkID}`,
+		result.blocks.length
+			? `Editable text blocks for updateCraftDocumentBlocks:\n${result.blocks.map((block) =>
+					`- ${block.id}: ${block.markdown.slice(0, 600)}`
+				).join('\n')}`
+			: 'No editable text block IDs were returned for this result.',
 		result.markdown,
 	].join('\n')).join('\n\n')
 	const nextMessages = [...messages]

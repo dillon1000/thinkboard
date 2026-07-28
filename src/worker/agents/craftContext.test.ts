@@ -5,7 +5,12 @@ describe('attachCraftDocumentContext', () => {
 	it('adds a cited linked document to the latest user message', () => {
 		const result = attachCraftDocumentContext(
 			[{ role: 'user', content: 'Summarize the unit' }],
-			[{ linkID: 'link-1', markdown: '# Forces', title: 'Physics notes' }]
+			[{
+				blocks: [{ id: 'block-1', markdown: 'Force equals mass times acceleration.' }],
+				linkID: 'link-1',
+				markdown: '# Forces',
+				title: 'Physics notes',
+			}]
 		)
 
 		expect(result[0]).toMatchObject({
@@ -18,5 +23,6 @@ describe('attachCraftDocumentContext', () => {
 				},
 			],
 		})
+		expect(JSON.stringify(result[0])).toContain('block-1')
 	})
 })

@@ -20,10 +20,12 @@ export type {
 export {
 	CRAFT_DOCUMENT_SHAPE_TYPE,
 	MAX_CRAFT_APPEND_MARKDOWN_LENGTH,
+	MAX_CRAFT_BLOCK_UPDATES,
 	MAX_CRAFT_DOCUMENT_LINKS,
 	craftAPIRoutes,
 	craftConnectionInputSchema,
 	craftDocumentAppendInputSchema,
+	craftDocumentBlocksUpdateInputSchema,
 	craftDocumentLinkInputSchema,
 	craftDocumentShapeProps,
 	craftDocumentShapeValidator,
@@ -34,6 +36,8 @@ export {
 export type {
 	CraftConnectionStatus,
 	CraftDocumentAppendOutput,
+	CraftDocumentBlockUpdate,
+	CraftDocumentBlocksUpdateOutput,
 	CraftDocumentCandidate,
 	CraftDocumentLink,
 	CraftDocumentPreview,

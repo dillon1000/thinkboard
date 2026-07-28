@@ -48,7 +48,10 @@ export function getRequestedStudyTool(
 	if (/\b(?:add|create|make|leave|put|place|write|propose)\b[\s\S]{0,80}\b(?:(?:review|correction|feedback)\s+note|correction)\b/i.test(text)) {
 		return 'addReviewNote'
 	}
-	if (/\b(?:add|arrange|build|change|color|connect|create|delete|diagram|draw|flowchart|frame|group|label|lay\s*out|make|move|place|remove|resize|restyle|shape|style)\b[\s\S]{0,120}\b(?:arrows?|board|boxes?|canvas|circles?|connectors?|diagram|ellipses?|frames?|groups?|lines?|map|notes?|rectangles?|shapes?|text)\b/i.test(text)) {
+	if (
+		!/\bcraft\b/i.test(text) &&
+		/\b(?:add|arrange|build|change|color|connect|create|delete|diagram|draw|flowchart|frame|group|label|lay\s*out|make|move|place|remove|resize|restyle|shape|style)\b[\s\S]{0,120}\b(?:arrows?|board|boxes?|canvas|circles?|connectors?|diagram|ellipses?|frames?|groups?|lines?|map|notes?|rectangles?|shapes?|text)\b/i.test(text)
+	) {
 		return 'composeCanvas'
 	}
 	return undefined
