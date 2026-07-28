@@ -180,7 +180,7 @@ export function CraftWhiteboardImportDialog({
 						<span><IconBrandCraft aria-hidden="true" size={20} stroke={1.8} /></span>
 						<div>
 							<h2 id="craft-whiteboard-title">Import a Craft whiteboard</h2>
-							<p>Bring shapes into AgentBoard and keep common shapes in sync with Craft.</p>
+							<p>Import Craft tools as editable AgentBoard shapes and keep them in sync.</p>
 						</div>
 					</div>
 					<button
@@ -348,7 +348,7 @@ export function CraftWhiteboardImportDialog({
 				</div>
 
 				<footer className="CraftWhiteboard-footer">
-					<p>Craft’s whiteboard API is experimental. Images and unsupported Craft-only elements remain unchanged when AgentBoard syncs.</p>
+					<p>Craft’s whiteboard API is experimental. AgentBoard syncs supported native tools by element ID and leaves future Craft-only types unchanged.</p>
 					{error ? (
 						<p className="CraftWhiteboard-error" role="alert">
 							{error} {error.includes('Connect Craft')

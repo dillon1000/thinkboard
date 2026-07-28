@@ -309,10 +309,14 @@ describe('Craft whiteboards', () => {
 			[{ id: 'new-1', type: 'rectangle' }],
 			[{ id: 'kept-1', type: 'ellipse', x: 20 }],
 			['old-1'],
-			await createCraftWhiteboardRevision([
-				{ id: 'old-1', type: 'rectangle' },
-				{ id: 'kept-1', type: 'ellipse' },
-			]),
+			await createCraftWhiteboardRevision({
+				appState: {},
+				assets: {},
+				elements: [
+					{ id: 'old-1', type: 'rectangle' },
+					{ id: 'kept-1', type: 'ellipse' },
+				],
+			}),
 			{ fetcher }
 		)
 
@@ -348,5 +352,47 @@ describe('Craft whiteboards', () => {
 			{ fetcher }
 		)).rejects.toThrow('Choose which copy to keep')
 		expect(fetcher).toHaveBeenCalledTimes(2)
+	})
+
+	it('restores added and updated elements when a later delete fails', async () => {
+		const currentScene = {
+			appState: {},
+			assets: {},
+			elements: [
+				{ id: 'old-1', type: 'rectangle' },
+				{ id: 'kept-1', text: 'Before', type: 'text' },
+			],
+		}
+		const fetcher = vi.fn<typeof fetch>()
+			.mockResolvedValueOnce(Response.json(documentBlocks))
+			.mockResolvedValueOnce(Response.json(currentScene))
+			.mockResolvedValueOnce(Response.json({ elements: [] }))
+			.mockResolvedValueOnce(Response.json({ elements: [] }))
+			.mockResolvedValueOnce(new Response('Delete failed', { status: 500 }))
+			.mockResolvedValueOnce(Response.json({ deletedCount: 1 }))
+			.mockResolvedValueOnce(Response.json({ elements: [] }))
+
+		await expect(saveCraftWhiteboard(
+			connection,
+			'document-1',
+			'whiteboard-1',
+			[{ id: 'new-1', type: 'ellipse' }],
+			[{ id: 'kept-1', text: 'After', type: 'text' }],
+			['old-1'],
+			await createCraftWhiteboardRevision(currentScene),
+			{ fetcher }
+		)).rejects.toThrow('Craft is unavailable right now.')
+
+		expect(fetcher.mock.calls.slice(1).map(([, init]) => init?.method)).toEqual([
+			undefined,
+			'PUT',
+			'POST',
+			'DELETE',
+			'DELETE',
+			'PUT',
+		])
+		expect(fetcher.mock.calls[6][1]?.body).toBe(JSON.stringify({
+			elements: [{ id: 'kept-1', text: 'Before', type: 'text' }],
+		}))
 	})
 })

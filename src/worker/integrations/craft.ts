@@ -320,14 +320,13 @@ export async function getCraftWhiteboard(
 		undefined,
 		options
 	)
-	const record = readRecord(data)
-	const elements = readCraftWhiteboardElements(record?.elements)
+	const scene = readCraftWhiteboardScene(data)
 	return {
-		appState: readRecord(record?.appState) ?? {},
-		assets: readRecord(record?.assets) ?? {},
+		appState: scene.appState,
+		assets: scene.assets,
 		documentID,
-		elements,
-		revision: await createCraftWhiteboardRevision(elements),
+		elements: scene.elements,
+		revision: await createCraftWhiteboardRevision(scene),
 		title: whiteboard.title,
 		whiteboardBlockID,
 	}
@@ -335,7 +334,7 @@ export async function getCraftWhiteboard(
 
 /**
  * Applies a revision-checked element diff. Existing IDs use Craft's update endpoint, new IDs use
- * its add endpoint, and deletes run last so a failed request leaves the most source data in place.
+ * its add endpoint, and a failed later request restores the updated and added records it can undo.
  */
 export async function saveCraftWhiteboard(
 	connection: CraftConnectionSecret,
@@ -348,47 +347,57 @@ export async function saveCraftWhiteboard(
 	options: CraftFetchOptions = {}
 ): Promise<CraftWhiteboardSaveOutput> {
 	await requireCraftWhiteboard(connection, documentID, whiteboardBlockID, options)
-	const currentElements = await getCraftWhiteboardElements(
+	const currentScene = await getCraftWhiteboardScene(
 		connection,
 		whiteboardBlockID,
 		options
 	)
-	if (await createCraftWhiteboardRevision(currentElements) !== expectedRevision) {
+	if (await createCraftWhiteboardRevision(currentScene) !== expectedRevision) {
 		throw new CraftWhiteboardConflictError()
 	}
-	if (elementsToUpdate.length) {
-		await requestCraftJSON(
-			connection,
-			`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
-			{
-				body: JSON.stringify({ elements: elementsToUpdate }),
-				headers: { 'content-type': 'application/json' },
-				method: 'PUT',
-			},
-			options
-		)
+	const currentByID = new Map(currentScene.elements.map((element) => [element.id, element]))
+	if (elementsToUpdate.some(({ id }) => !currentByID.has(id))) {
+		throw new Error('Craft cannot update a whiteboard element that no longer exists.')
 	}
-	if (elementsToAdd.length) {
-		await requestCraftJSON(
-			connection,
-			`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
-			{
-				body: JSON.stringify({ elements: elementsToAdd }),
-				headers: { 'content-type': 'application/json' },
-				method: 'POST',
-			},
-			options
-		)
+	if (elementsToAdd.some(({ id }) => currentByID.has(id))) {
+		throw new Error('Craft cannot add a whiteboard element ID that already exists.')
 	}
-	if (elementIDsToDelete.length) try {
-		await deleteCraftWhiteboardElements(
-			connection,
-			whiteboardBlockID,
-			elementIDsToDelete,
-			options
-		)
-	} catch (error) {
+
+	let added = false
+	let updated = false
+	try {
+		if (elementsToUpdate.length) {
+			await putCraftWhiteboardElements(
+				connection,
+				whiteboardBlockID,
+				elementsToUpdate,
+				options
+			)
+			updated = true
+		}
 		if (elementsToAdd.length) {
+			await requestCraftJSON(
+				connection,
+				`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+				{
+					body: JSON.stringify({ elements: elementsToAdd }),
+					headers: { 'content-type': 'application/json' },
+					method: 'POST',
+				},
+				options
+			)
+			added = true
+		}
+		if (elementIDsToDelete.length) {
+			await deleteCraftWhiteboardElements(
+				connection,
+				whiteboardBlockID,
+				elementIDsToDelete,
+				options
+			)
+		}
+	} catch (error) {
+		if (added) {
 			await deleteCraftWhiteboardElements(
 				connection,
 				whiteboardBlockID,
@@ -396,10 +405,22 @@ export async function saveCraftWhiteboard(
 				options
 			).catch(() => undefined)
 		}
+		if (updated) {
+			const priorElements = elementsToUpdate.flatMap(({ id }) => {
+				const prior = currentByID.get(id)
+				return prior ? [prior] : []
+			})
+			await putCraftWhiteboardElements(
+				connection,
+				whiteboardBlockID,
+				priorElements,
+				options
+			).catch(() => undefined)
+		}
 		throw error
 	}
 
-	const savedElements = await getCraftWhiteboardElements(
+	const savedScene = await getCraftWhiteboardScene(
 		connection,
 		whiteboardBlockID,
 		options
@@ -407,7 +428,7 @@ export async function saveCraftWhiteboard(
 	return {
 		added: elementsToAdd.length,
 		deleted: elementIDsToDelete.length,
-		revision: await createCraftWhiteboardRevision(savedElements),
+		revision: await createCraftWhiteboardRevision(savedScene),
 		updated: elementsToUpdate.length,
 	}
 }
@@ -512,7 +533,25 @@ async function deleteCraftWhiteboardElements(
 	)
 }
 
-async function getCraftWhiteboardElements(
+async function putCraftWhiteboardElements(
+	connection: CraftConnectionSecret,
+	whiteboardBlockID: string,
+	elements: readonly CraftWhiteboardElement[],
+	options: CraftFetchOptions
+) {
+	await requestCraftJSON(
+		connection,
+		`whiteboards/${encodeURIComponent(whiteboardBlockID)}/elements`,
+		{
+			body: JSON.stringify({ elements }),
+			headers: { 'content-type': 'application/json' },
+			method: 'PUT',
+		},
+		options
+	)
+}
+
+async function getCraftWhiteboardScene(
 	connection: CraftConnectionSecret,
 	whiteboardBlockID: string,
 	options: CraftFetchOptions
@@ -523,7 +562,7 @@ async function getCraftWhiteboardElements(
 		undefined,
 		options
 	)
-	return readCraftWhiteboardElements(readRecord(data)?.elements)
+	return readCraftWhiteboardScene(data)
 }
 
 async function requestCraftJSON(
@@ -661,6 +700,15 @@ function readCraftWhiteboardElements(value: unknown): CraftWhiteboardElement[] {
 		const type = readString(record, 'type')
 		return record && id && type ? [{ ...record, id, type }] : []
 	})
+}
+
+function readCraftWhiteboardScene(value: unknown) {
+	const record = readRecord(value)
+	return {
+		appState: readRecord(record?.appState) ?? {},
+		assets: readRecord(record?.assets) ?? {},
+		elements: readCraftWhiteboardElements(record?.elements),
+	}
 }
 
 function readWhiteboardTitle(record: Record<string, unknown>, index: number) {
