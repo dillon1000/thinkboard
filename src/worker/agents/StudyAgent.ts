@@ -88,6 +88,10 @@ import {
 	appendCraftDocumentForUser,
 	updateCraftDocumentBlocksForUser,
 } from '../routes/craft'
+import {
+	getStudyChatClientError,
+	getStudyChatErrorLog,
+} from './studyChatError'
 
 const MAX_PERSISTED_MESSAGES = 100
 const proposalOutputSchema = z.object({ applied: z.boolean() })
@@ -450,6 +454,9 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 				: undefined,
 			stopWhen: stepCountIs(15),
 			abortSignal: generation.signal,
+			onError: ({ error }) => {
+				console.error('Study chat generation failed', getStudyChatErrorLog(error))
+			},
 		})
 
 		return result.toUIMessageStreamResponse<StudyUIMessage>({
@@ -468,8 +475,7 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 				}
 			},
 			onError: (error) => {
-				console.error('Study chat generation failed', error)
-				return 'The study partner could not finish that response.'
+				return getStudyChatClientError(error)
 			},
 			onFinish: ({ messages: completedMessages }) => {
 				if (!isInline) this.persistMessages(completedMessages)

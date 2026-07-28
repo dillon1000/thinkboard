@@ -693,7 +693,7 @@ function StudyConversationChat({
 							) : null}
 							{chat.error ? (
 								<div className="StudyChatError" role="alert">
-									<span>Something went wrong while answering.</span>
+									<span>{chat.error.message}</span>
 									<button onClick={() => void chat.regenerate()} type="button"><IconRefresh aria-hidden="true" size={13} /> Try again</button>
 								</div>
 							) : null}

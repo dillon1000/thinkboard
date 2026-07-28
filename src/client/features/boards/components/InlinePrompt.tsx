@@ -249,7 +249,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 
 			{error ? <p className="InlinePrompt-error" role="alert">{error}</p> : null}
 			{chat.error && !error ? (
-				<p className="InlinePrompt-error" role="alert">The agent could not finish that.</p>
+				<p className="InlinePrompt-error" role="alert">{chat.error.message}</p>
 			) : null}
 		</div>
 	)
