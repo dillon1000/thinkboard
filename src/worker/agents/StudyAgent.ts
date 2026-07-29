@@ -19,6 +19,7 @@ import {
 	spotifyAgentPlayOutputSchema,
 	studyModelModeSchema,
 	studyReasoningEffortSchema,
+	studyPackProposalSchema,
 	studyModeSchema,
 	walkthroughProposalSchema,
 	type ConceptMapProposal,
@@ -35,6 +36,7 @@ import {
 	type SpotifyAgentPlayInput,
 	type SpotifyAgentPlayOutput,
 	type StudyMessageMetadata,
+	type StudyPackProposal,
 	type WalkthroughProposal,
 } from '@agentboard/shared'
 import { DurableObject } from 'cloudflare:workers'
@@ -140,6 +142,11 @@ const proposalTools = {
 		inputSchema: practiceSetProposalSchema,
 		outputSchema: proposalOutputSchema,
 	}),
+	createStudyPack: tool({
+		description: 'Create one cited study pack from current PDF material. The pack contains one concept map, two to six flashcards, and one to three quizzes, with exact source document and page references. The browser asks once before adding the full pack.',
+		inputSchema: studyPackProposalSchema,
+		outputSchema: proposalOutputSchema,
+	}),
 	composeCanvas: tool({
 		description: 'Create or edit a native tldraw composition with relative layout, rich text in shapes, bound arrows, frames, groups, named colors, equations, and layer order. The browser resolves geometry and asks the student before applying it.',
 		inputSchema: canvasPlanInputSchema,
@@ -189,6 +196,7 @@ type StudyTools = {
 	createWalkthrough: { input: WalkthroughProposal; output: { applied: boolean } }
 	createConceptMap: { input: ConceptMapProposal; output: { applied: boolean } }
 	createPracticeSet: { input: PracticeSetProposal; output: { applied: boolean } }
+	createStudyPack: { input: StudyPackProposal; output: { applied: boolean } }
 	composeCanvas: { input: CanvasPlanInput; output: { applied: boolean } }
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
@@ -456,6 +464,7 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 - Use named tldraw colors or agent-blue, agent-purple, agent-teal, agent-amber, agent-coral, and agent-pink. Use enough contrast for labels.
 - Set baseDocumentClock to the current canvas document clock when one is available. Do not edit or delete locked shapes. Only change existing shapes when the student requests that change.
 - Use createPracticeSet when the student asks for multiple similar problems; use createQuiz for one.
+- Use createStudyPack when the student asks for a study pack from PDF material. Copy document IDs, titles, and page numbers exactly from supplied document citations, include only sources that support the pack, and keep the pack within its bounded schema.
 - Use writeEquation when the student wants a formula, a result, or a derivation on the board itself; give one equation per line, in reading order, and keep the surrounding explanation in chat.
 - Use playSpotify only when the student explicitly asks to start or change music. Never change playback because of an inferred mood, study topic, or preference.
 - Use appendCraftDocument only when the student explicitly asks to add or write content in a linked Craft document. This changes an external document immediately, so never infer permission from a request to summarize, review, or reference it.

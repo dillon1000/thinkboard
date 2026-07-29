@@ -12,6 +12,7 @@ const STUDY_TOOL_TYPES = new Set([
 	'tool-createWalkthrough',
 	'tool-createConceptMap',
 	'tool-createPracticeSet',
+	'tool-createStudyPack',
 	'tool-composeCanvas',
 	'tool-recordMistake',
 	'tool-saveMemory',

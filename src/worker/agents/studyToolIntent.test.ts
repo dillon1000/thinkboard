@@ -35,6 +35,9 @@ describe('getRequestedStudyTool', () => {
 
 	it('routes richer study artifact requests', () => {
 		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Create a cited study pack from this PDF.' }] },
+		])).toBe('createStudyPack')
+		expect(getRequestedStudyTool([
 			{ role: 'user', parts: [{ type: 'text', text: 'Make me three more practice problems like this.' }] },
 		])).toBe('createPracticeSet')
 		expect(getRequestedStudyTool([

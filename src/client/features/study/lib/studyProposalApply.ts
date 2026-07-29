@@ -15,6 +15,7 @@ import {
 	normalizeEquationLatex,
 	practiceSetProposalSchema,
 	reviewProposalSchema,
+	studyPackProposalSchema,
 	walkthroughProposalSchema,
 	type CanvasAnchor,
 } from '@agentboard/shared'
@@ -39,6 +40,7 @@ export const STUDY_TOOL_NAMES = [
 	'createConceptMap',
 	'createFlashcards',
 	'createPracticeSet',
+	'createStudyPack',
 	'createQuiz',
 	'createWalkthrough',
 	'composeCanvas',
@@ -227,6 +229,115 @@ export function applyProposal(
 		}))
 		editor.createShapes(shapes)
 		return finish(shapeIDs)
+	}
+
+	if (toolName === 'createStudyPack') {
+		const proposal = place(studyPackProposalSchema.parse(input))
+		const frameID = createShapeId()
+		const conceptMapID = createShapeId()
+		const cardIDs = proposal.cards.map(() => createShapeId())
+		const quizIDs = proposal.quizzes.map(() => createShapeId())
+		const padding = 28
+		const gap = 24
+		const cardWidth = 300
+		const cardHeight = 190
+		const quizWidth = 370
+		const quizHeight = 350
+		const conceptWidth = 580
+		const conceptHeight = 410
+		const cardColumns = Math.min(3, proposal.cards.length)
+		const quizColumns = Math.min(2, proposal.quizzes.length)
+		const cardRows = Math.ceil(proposal.cards.length / cardColumns)
+		const quizRows = Math.ceil(proposal.quizzes.length / quizColumns)
+		const contentWidth = Math.max(
+			conceptWidth,
+			cardColumns * cardWidth + Math.max(0, cardColumns - 1) * gap,
+			quizColumns * quizWidth + Math.max(0, quizColumns - 1) * gap
+		)
+		const cardsY = padding + conceptHeight + gap
+		const quizzesY = cardsY + cardRows * cardHeight + Math.max(0, cardRows - 1) * gap + gap
+		const frameHeight = quizzesY + quizRows * quizHeight + Math.max(0, quizRows - 1) * gap + padding
+		const sourceMeta = {
+			agentboard: {
+				createdBy: 'study-agent',
+				proposalType: 'study-pack',
+				sources: proposal.sources,
+			},
+		}
+
+		editor.markHistoryStoppingPoint(`study pack:${proposal.title}`)
+		editor.run(() => {
+			editor.createShape({
+				id: frameID,
+				type: 'frame',
+				x: proposal.x,
+				y: proposal.y,
+				props: {
+					h: frameHeight,
+					name: `Study pack · ${proposal.title}`,
+					w: contentWidth + padding * 2,
+				},
+			})
+			editor.createShape<ConceptMapShape>({
+				id: conceptMapID,
+				parentId: frameID,
+				type: CONCEPT_MAP_SHAPE_TYPE,
+				x: padding,
+				y: padding,
+				meta: sourceMeta,
+				props: {
+					w: conceptWidth,
+					h: conceptHeight,
+					title: proposal.conceptMap.title,
+					nodes: proposal.conceptMap.nodes,
+					edges: proposal.conceptMap.edges,
+					schemaVersion: 1,
+				},
+			})
+			editor.createShapes<FlashcardShape>(proposal.cards.map((card, index) => ({
+				id: cardIDs[index],
+				parentId: frameID,
+				type: FLASHCARD_SHAPE_TYPE,
+				x: padding + (index % cardColumns) * (cardWidth + gap),
+				y: cardsY + Math.floor(index / cardColumns) * (cardHeight + gap),
+				meta: sourceMeta,
+				props: {
+					w: cardWidth,
+					h: cardHeight,
+					front: card.front,
+					back: card.back,
+					revealed: false,
+					schemaVersion: 1,
+				},
+			})))
+			editor.createShapes<QuizShape>(proposal.quizzes.map((quiz, index) => ({
+				id: quizIDs[index],
+				parentId: frameID,
+				type: QUIZ_SHAPE_TYPE,
+				x: padding + (index % quizColumns) * (quizWidth + gap),
+				y: quizzesY + Math.floor(index / quizColumns) * (quizHeight + gap),
+				meta: sourceMeta,
+				props: {
+					w: quizWidth,
+					h: quizHeight,
+					question: quiz.question,
+					options: quiz.options,
+					correctIndex: quiz.correctIndex,
+					explanation: quiz.explanation,
+					selectedIndex: -1,
+					showResult: false,
+					schemaVersion: 1,
+				},
+			})))
+		})
+		const shapeIDs = [conceptMapID, ...cardIDs, ...quizIDs]
+		return {
+			...finish(shapeIDs),
+			flashcards: proposal.cards.map((card, index) => ({
+				...card,
+				shapeID: cardIDs[index],
+			})),
+		}
 	}
 
 	if (toolName === 'writeEquation') {

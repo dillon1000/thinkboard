@@ -9,6 +9,7 @@ import {
 	reviewProposalSchema,
 	normalizeEquationLatex,
 	studyShapeSchemas,
+	studyPackProposalSchema,
 	walkthroughProposalSchema,
 } from './studyShapes'
 
@@ -110,6 +111,37 @@ describe('study shape contracts', () => {
 			x: 40,
 			y: 60,
 			lines: ['ax^2 + bx + c = 0', 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}'],
+		}).success).toBe(true)
+	})
+
+	it('accepts a bounded study pack with exact PDF sources', () => {
+		expect(studyPackProposalSchema.safeParse({
+			x: 40,
+			y: 60,
+			title: 'Cell energy',
+			sources: [{
+				documentID: 'biology-notes',
+				documentTitle: 'Biology notes',
+				pageNumber: 12,
+			}],
+			cards: [
+				{ front: 'What does ATP carry?', back: 'Usable chemical energy.' },
+				{ front: 'Where is ATP produced?', back: 'Mostly in mitochondria.' },
+			],
+			quizzes: [{
+				question: 'Which organelle produces most ATP?',
+				options: ['Nucleus', 'Mitochondrion'],
+				correctIndex: 1,
+				explanation: 'Cellular respiration occurs in mitochondria.',
+			}],
+			conceptMap: {
+				title: 'Energy flow',
+				nodes: [
+					{ id: 'glucose', label: 'Glucose', x: 0.2, y: 0.5 },
+					{ id: 'atp', label: 'ATP', x: 0.8, y: 0.5 },
+				],
+				edges: [{ from: 'glucose', to: 'atp', label: 'is converted into' }],
+			},
 		}).success).toBe(true)
 	})
 

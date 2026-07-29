@@ -4,6 +4,7 @@ export type StudyToolName =
 	| 'createFlashcards'
 	| 'createPracticeSet'
 	| 'createQuiz'
+	| 'createStudyPack'
 	| 'createWalkthrough'
 	| 'composeCanvas'
 	| 'recordMistake'
@@ -22,9 +23,12 @@ export function getRequestedStudyTool(
 	if (latestMessage?.role !== 'user') return undefined
 	const text = latestMessage.parts
 		.filter((part) => part.type === 'text' && typeof part.text === 'string')
-		.map((part) => part.text)
-		.join('\n')
+			.map((part) => part.text)
+			.join('\n')
 
+	if (/\b(?:make|create|generate|build)\b[\s\S]{0,100}\b(?:cited\s+)?study\s+pack\b/i.test(text)) {
+		return 'createStudyPack'
+	}
 	if (/\b(?:make|create|generate|turn|convert|build)\b[\s\S]{0,80}\bflashcards?\b/i.test(text)) {
 		return 'createFlashcards'
 	}

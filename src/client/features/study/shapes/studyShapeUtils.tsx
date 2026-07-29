@@ -18,9 +18,17 @@ import {
 	type WalkthroughShapeProps,
 	pdfPageShapeMigrations,
 	pdfPageShapeProps,
+	pdfSourceReferenceSchema,
 	type PDFPageShapeProps,
+	type PDFSourceReference,
 } from '@agentboard/shared'
-import { IconCards, IconDownload, IconMessageCircleCheck, IconQuestionMark } from '@tabler/icons-react'
+import {
+	IconCards,
+	IconDownload,
+	IconFileText,
+	IconMessageCircleCheck,
+	IconQuestionMark,
+} from '@tabler/icons-react'
 import { useLayoutEffect, useRef } from 'react'
 import { useParams } from 'react-router'
 import { Streamdown } from 'streamdown'
@@ -32,6 +40,7 @@ import {
 } from 'tldraw'
 import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
 import { studyMarkdownPlugins } from '../lib/studyMath'
+import { focusPDFCitation } from '../lib/pdfCitation'
 
 declare module '@tldraw/tlschema' {
 	interface TLGlobalShapePropsMap {
@@ -139,23 +148,26 @@ function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 				<span>{shape.props.revealed ? 'Answer' : 'Question'}</span>
 				<IconCards aria-hidden="true" size={15} stroke={1.8} />
 			</div>
-			<button
-				className="Flashcard-face"
-				onClick={() => {
-					editor.updateShape<FlashcardShape>({
-						id: shape.id,
-						type: FLASHCARD_SHAPE_TYPE,
-						props: { revealed: !shape.props.revealed },
-					})
-				}}
-				{...canvasInteractionHandlers}
-				type="button"
-			>
-				<div className="Flashcard-inner" ref={fitRef}>
-					<StudyMath className="Flashcard-copy">{content}</StudyMath>
-					<small>{shape.props.revealed ? 'Tap to see the question' : 'Tap to reveal'}</small>
-				</div>
-			</button>
+			<div className="Flashcard-face" ref={fitRef}>
+				<button
+					className="Flashcard-flip"
+					onClick={() => {
+						editor.updateShape<FlashcardShape>({
+							id: shape.id,
+							type: FLASHCARD_SHAPE_TYPE,
+							props: { revealed: !shape.props.revealed },
+						})
+					}}
+					{...canvasInteractionHandlers}
+					type="button"
+				>
+					<div className="Flashcard-inner">
+						<StudyMath className="Flashcard-copy">{content}</StudyMath>
+						<small>{shape.props.revealed ? 'Tap to see the question' : 'Tap to reveal'}</small>
+					</div>
+				</button>
+				<StudySources shape={shape} />
+			</div>
 		</HTMLContainer>
 	)
 }
@@ -237,7 +249,7 @@ function QuizComponent({ shape }: { shape: QuizShape }) {
 							)
 						})}
 					</div>
-					{shape.props.showResult ? (
+						{shape.props.showResult ? (
 						<div className={isCorrect ? 'Quiz-result is-correct' : 'Quiz-result'}>
 							<strong>{isCorrect ? 'That’s right.' : 'Not quite yet.'}</strong>
 							<StudyMath className="Quiz-explanation">{shape.props.explanation}</StudyMath>
@@ -249,8 +261,9 @@ function QuizComponent({ shape }: { shape: QuizShape }) {
 								Try again
 							</button>
 						</div>
-					) : null}
-				</div>
+						) : null}
+						<StudySources shape={shape} />
+					</div>
 			</div>
 		</HTMLContainer>
 	)
@@ -462,14 +475,46 @@ function ConceptMapComponent({ shape }: { shape: ConceptMapShape }) {
 					})}
 				</svg>
 				{shape.props.nodes.map((node) => <div className="ConceptMap-node" key={node.id} style={{ left: `${node.x * 100}%`, top: `${node.y * 100}%` }}><StudyMath className="ConceptMap-nodeLabel">{node.label}</StudyMath></div>)}
-				{shape.props.edges.filter(({ label }) => label).map((edge, index) => {
+					{shape.props.edges.filter(({ label }) => label).map((edge, index) => {
 					const from = nodeByID.get(edge.from)
 					const to = nodeByID.get(edge.to)
 					return from && to ? <small className="ConceptMap-edgeLabel" key={`${edge.from}-${edge.to}-label-${index}`} style={{ left: `${((from.x + to.x) / 2) * 100}%`, top: `${((from.y + to.y) / 2) * 100}%` }}>{edge.label}</small> : null
-				})}
-			</div>
+					})}
+					<StudySources overlay shape={shape} />
+				</div>
 		</HTMLContainer>
 	)
+}
+
+function StudySources({ overlay = false, shape }: { overlay?: boolean; shape: TLShape }) {
+	const editor = useEditor()
+	const sources = readStudySources(shape)
+	if (!sources.length) return null
+	return (
+		<div className={`StudySources${overlay ? ' StudySources--overlay' : ''}`}>
+			{sources.slice(0, 3).map((source) => (
+				<button
+					key={`${source.documentID}:${source.pageNumber}`}
+					onClick={() => focusPDFCitation(editor, source)}
+					{...canvasInteractionHandlers}
+					title={`Show ${source.documentTitle}, page ${source.pageNumber}`}
+					type="button"
+				>
+					<IconFileText aria-hidden="true" size={11} stroke={1.8} />
+					<span>{source.documentTitle}</span>
+					<small>p. {source.pageNumber}</small>
+				</button>
+			))}
+			{sources.length > 3 ? <span>+{sources.length - 3}</span> : null}
+		</div>
+	)
+}
+
+function readStudySources(shape: TLShape): PDFSourceReference[] {
+	const agentboard = Reflect.get(shape.meta, 'agentboard')
+	if (!agentboard || typeof agentboard !== 'object') return []
+	const parsed = pdfSourceReferenceSchema.array().safeParse(Reflect.get(agentboard, 'sources'))
+	return parsed.success ? parsed.data : []
 }
 
 function getBoxIndicator(width: number, height: number) {

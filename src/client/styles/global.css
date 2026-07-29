@@ -1132,13 +1132,14 @@ img { max-width: 100%; }
 .StudyShape-heading svg { opacity: .7; }
 .StudyShape--flashcard { background: #fafaff; }
 .StudyShape--flashcard .StudyShape-heading { background: #edf1fa; color: #4a5899; }
-.Flashcard-face { display: flex; min-height: 0; align-items: center; justify-content: center; border: 0; background: transparent; padding: 0; color: #37352f; text-align: center; pointer-events: all; }
+.Flashcard-face { display: flex; min-height: 0; flex-direction: column; align-items: center; justify-content: center; padding: 10px 16px; color: #37352f; text-align: center; }
+.Flashcard-flip { width: 100%; border: 0; background: transparent; padding: 0; color: inherit; font: inherit; pointer-events: all; }
 .Flashcard-inner { display: flex; width: 100%; flex-direction: column; align-items: center; padding: 15px 21px; }
 .Flashcard-copy { max-width: 100%; font-size: clamp(15px, 2.2em, 20px); font-weight: 550; line-height: 1.3; letter-spacing: -.015em; }
 .Flashcard-copy > :first-child, .Quiz-question > :first-child, .Quiz-optionText > :first-child, .Quiz-explanation > :first-child, .Review-title > :first-child, .Review-body > :first-child, .Walkthrough-title > :first-child, .Walkthrough-prompt > :first-child, .Walkthrough-explanation > :first-child, .ConceptMap-title > :first-child, .ConceptMap-nodeLabel > :first-child { margin-top: 0; }
 .Flashcard-copy > :last-child, .Quiz-question > :last-child, .Quiz-optionText > :last-child, .Quiz-explanation > :last-child, .Review-title > :last-child, .Review-body > :last-child, .Walkthrough-title > :last-child, .Walkthrough-prompt > :last-child, .Walkthrough-explanation > :last-child, .ConceptMap-title > :last-child, .ConceptMap-nodeLabel > :last-child { margin-bottom: 0; }
 .Flashcard-copy .katex-display, .Quiz-content .katex-display, .Review-content .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
-.Flashcard-face small { margin-top: 13px; color: #91908c; font-size: 10px; font-weight: 550; }
+.Flashcard-inner > small { margin-top: 13px; color: #91908c; font-size: 10px; font-weight: 550; }
 .StudyShape--quiz { background: #fff; }
 .StudyShape--quiz .StudyShape-heading { background: #f1f1ef; color: #6a6965; }
 .Quiz-content { min-height: 0; }
@@ -1180,6 +1181,12 @@ img { max-width: 100%; }
 .ConceptMap-title { position: absolute; z-index: 3; top: 8px; left: 10px; font-size: 12px; font-weight: 650; }
 .ConceptMap-content svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .ConceptMap-content line { stroke: #98a9b8; stroke-width: .6; vector-effect: non-scaling-stroke; }
+.StudySources { display: flex; max-width: 100%; align-items: center; gap: 4px; margin-top: 9px; }
+.StudySources > button { display: inline-flex; min-width: 0; max-width: 150px; height: 22px; align-items: center; gap: 3px; border: 1px solid rgb(55 53 47 / 10%); border-radius: 5px; background: rgb(55 53 47 / 4%); padding: 0 6px; color: #6a6965; font: inherit; font-size: 9px; }
+.StudySources > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.StudySources > button small { flex: 0 0 auto; color: #8a8985; font-size: inherit; }
+.StudySources > span { color: #8a8985; font-size: 9px; }
+.StudySources--overlay { position: absolute; z-index: 2; right: 8px; bottom: 8px; left: 8px; width: fit-content; max-width: calc(100% - 16px); margin: 0; border-radius: 6px; background: rgb(255 255 255 / 88%); padding: 4px; box-shadow: 0 1px 4px rgb(15 15 15 / 10%); backdrop-filter: blur(6px); }
 .ConceptMap-node { position: absolute; z-index: 2; max-width: 125px; border-radius: 7px; background: #e7f1fb; padding: 6px 8px; color: #244d6b; box-shadow: 0 1px 4px rgba(30, 70, 100, .15); font-size: 11px; font-weight: 600; text-align: center; translate: -50% -50%; }
 .ConceptMap-edgeLabel { position: absolute; z-index: 1; max-width: 90px; background: rgba(255, 255, 255, .9); padding: 1px 3px; color: #71808b; font-size: 8.5px; text-align: center; translate: -50% -50%; }
 

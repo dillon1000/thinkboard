@@ -10,6 +10,12 @@ export const WALKTHROUGH_SHAPE_TYPE = 'agentboard-walkthrough' as const
 export const MATH_SHAPE_TYPE = 'agentboard-math' as const
 export const PDF_PAGE_SHAPE_TYPE = 'pdf-page' as const
 
+export const pdfSourceReferenceSchema = z.object({
+	documentID: z.string().trim().min(1).max(120),
+	documentTitle: z.string().trim().min(1).max(240),
+	pageNumber: z.number().int().min(1).max(10_000),
+})
+
 export interface FlashcardShapeProps {
 	w: number
 	h: number
@@ -220,8 +226,7 @@ export const walkthroughProposalSchema = z.object({
 	})).min(2).max(8),
 })
 
-export const conceptMapProposalSchema = z.object({
-	...proposalPositionSchema,
+const conceptMapContentShape = {
 	title: z.string().trim().min(1).max(120),
 	nodes: z.array(z.object({
 		id: z.string().trim().min(1).max(40).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
@@ -234,6 +239,11 @@ export const conceptMapProposalSchema = z.object({
 		to: z.string().trim().min(1).max(40),
 		label: z.string().trim().max(80).default(''),
 	})).min(1).max(20),
+}
+
+export const conceptMapProposalSchema = z.object({
+	...proposalPositionSchema,
+	...conceptMapContentShape,
 }).superRefine((proposal, context) => {
 	const nodeIDs = new Set(proposal.nodes.map(({ id }) => id))
 	for (const [index, edge] of proposal.edges.entries()) {
@@ -296,9 +306,44 @@ export const practiceSetProposalSchema = z.object({
 	}
 })
 
+/**
+ * One bounded, cited bundle keeps generated study material reviewable in a single approval. Every
+ * item shares the same source list so the canvas can take the student back to the supporting pages.
+ */
+export const studyPackProposalSchema = z.object({
+	...proposalPositionSchema,
+	title: z.string().trim().min(1).max(120),
+	sources: z.array(pdfSourceReferenceSchema).min(1).max(8),
+	cards: flashcardProposalSchema.shape.cards,
+	quizzes: z.array(z.object(quizContentShape)).min(1).max(3),
+	conceptMap: z.object(conceptMapContentShape),
+}).superRefine((proposal, context) => {
+	for (const [index, quiz] of proposal.quizzes.entries()) {
+		if (quiz.correctIndex >= quiz.options.length) {
+			context.addIssue({
+				code: 'custom',
+				message: 'The correct answer must reference an available option',
+				path: ['quizzes', index, 'correctIndex'],
+			})
+		}
+	}
+	const nodeIDs = new Set(proposal.conceptMap.nodes.map(({ id }) => id))
+	for (const [index, edge] of proposal.conceptMap.edges.entries()) {
+		if (!nodeIDs.has(edge.from) || !nodeIDs.has(edge.to)) {
+			context.addIssue({
+				code: 'custom',
+				message: 'Every edge must reference available nodes',
+				path: ['conceptMap', 'edges', index],
+			})
+		}
+	}
+})
+
 export type ReviewProposal = z.infer<typeof reviewProposalSchema>
 export type FlashcardProposal = z.infer<typeof flashcardProposalSchema>
 export type QuizProposal = z.infer<typeof quizProposalSchema>
+export type PDFSourceReference = z.infer<typeof pdfSourceReferenceSchema>
+export type StudyPackProposal = z.infer<typeof studyPackProposalSchema>
 export type WalkthroughProposal = z.infer<typeof walkthroughProposalSchema>
 export type ConceptMapProposal = z.infer<typeof conceptMapProposalSchema>
 export type PracticeSetProposal = z.infer<typeof practiceSetProposalSchema>

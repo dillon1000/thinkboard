@@ -24,6 +24,7 @@ import {
 	type StudyModelMode,
 	type StudyMode,
 	type StudyReasoningEffort,
+	type StudyPackProposal,
 	type WalkthroughProposal,
 } from '@agentboard/shared'
 import { useChat, type UseChatHelpers } from '@ai-sdk/react'
@@ -393,6 +394,7 @@ type StudyTools = {
 	createWalkthrough: { input: WalkthroughProposal; output: { applied: boolean } }
 	createConceptMap: { input: ConceptMapProposal; output: { applied: boolean } }
 	createPracticeSet: { input: PracticeSetProposal; output: { applied: boolean } }
+	createStudyPack: { input: StudyPackProposal; output: { applied: boolean } }
 	composeCanvas: { input: CanvasPlanInput; output: { applied: boolean } }
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
@@ -1164,6 +1166,9 @@ function addProposalOutput(
 	if (toolName === 'createPracticeSet') {
 		return addToolOutput({ tool: 'createPracticeSet', toolCallId: toolCallID, output })
 	}
+	if (toolName === 'createStudyPack') {
+		return addToolOutput({ tool: 'createStudyPack', toolCallId: toolCallID, output })
+	}
 	if (toolName === 'writeEquation') {
 		return addToolOutput({ tool: 'writeEquation', toolCallId: toolCallID, output })
 	}
@@ -1202,6 +1207,7 @@ function addProposalError(
 	if (toolName === 'createWalkthrough') return addToolOutput({ tool: 'createWalkthrough', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'createConceptMap') return addToolOutput({ tool: 'createConceptMap', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'createPracticeSet') return addToolOutput({ tool: 'createPracticeSet', toolCallId: toolCallID, state: 'output-error', errorText })
+	if (toolName === 'createStudyPack') return addToolOutput({ tool: 'createStudyPack', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'writeEquation') return addToolOutput({ tool: 'writeEquation', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'composeCanvas') return addToolOutput({ tool: 'composeCanvas', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'saveMemory') return addToolOutput({ tool: 'saveMemory', toolCallId: toolCallID, state: 'output-error', errorText })

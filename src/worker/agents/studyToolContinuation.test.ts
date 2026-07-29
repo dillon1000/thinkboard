@@ -42,6 +42,15 @@ describe('getStudyToolContinuation', () => {
 		])).toBe('applied')
 	})
 
+	it('recognizes an applied cited study pack', () => {
+		expect(getStudyToolContinuation([
+			{
+				role: 'assistant',
+				parts: [{ type: 'tool-createStudyPack', state: 'output-available', output: { applied: true } }],
+			},
+		])).toBe('applied')
+	})
+
 	it('ignores an ordinary assistant response', () => {
 		expect(getStudyToolContinuation([
 			{ role: 'assistant', parts: [{ type: 'text' }] },

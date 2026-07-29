@@ -8,6 +8,7 @@ import {
 	mistakeProposalSchema,
 	practiceSetProposalSchema,
 	reviewProposalSchema,
+	studyPackProposalSchema,
 	walkthroughProposalSchema,
 } from '@agentboard/shared'
 
@@ -19,6 +20,7 @@ export function proposalShortLabel(toolName: string) {
 	if (toolName === 'createWalkthrough') return 'Worked example'
 	if (toolName === 'createConceptMap') return 'Concept map'
 	if (toolName === 'createPracticeSet') return 'Practice set'
+	if (toolName === 'createStudyPack') return 'Cited study pack'
 	if (toolName === 'writeEquation') return 'Equation'
 	if (toolName === 'composeCanvas') return 'Canvas composition'
 	if (toolName === 'recordMistake') return 'Mistake record'
@@ -113,6 +115,25 @@ export function getProposalPreview(toolName: string, input: unknown): ProposalPr
 			}
 		}
 	}
+	if (toolName === 'createStudyPack') {
+		const proposal = studyPackProposalSchema.safeParse(input)
+		if (proposal.success) {
+			return {
+				description,
+				details: [
+					{ label: 'Pack', value: proposal.data.title },
+					{ label: 'Flashcards', value: String(proposal.data.cards.length) },
+					{ label: 'Quizzes', value: String(proposal.data.quizzes.length) },
+					{
+						label: 'Sources',
+						value: proposal.data.sources
+							.map((source) => `${source.documentTitle}, p. ${source.pageNumber}`)
+							.join(' · '),
+					},
+				],
+			}
+		}
+	}
 	if (toolName === 'writeEquation') {
 		const proposal = equationProposalSchema.safeParse(input)
 		if (proposal.success) {
@@ -198,6 +219,12 @@ export function summarizeProposal(toolName: string, input: unknown) {
 	if (toolName === 'createPracticeSet') {
 		const proposal = practiceSetProposalSchema.safeParse(input)
 		return proposal.success ? `${proposal.data.quizzes.length} new interactive practice problems.` : 'Preparing practice problems…'
+	}
+	if (toolName === 'createStudyPack') {
+		const proposal = studyPackProposalSchema.safeParse(input)
+		return proposal.success
+			? `${proposal.data.cards.length} flashcards, ${proposal.data.quizzes.length} quizzes, and one concept map with ${proposal.data.sources.length} cited sources.`
+			: 'Preparing a cited study pack…'
 	}
 	if (toolName === 'writeEquation') {
 		const proposal = equationProposalSchema.safeParse(input)

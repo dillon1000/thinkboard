@@ -8,6 +8,7 @@ import {
 	flashcardProposalSchema,
 	mistakeProposalSchema,
 	practiceSetProposalSchema,
+	studyPackProposalSchema,
 	quizProposalSchema,
 	reviewProposalSchema,
 	walkthroughProposalSchema,
@@ -19,6 +20,7 @@ export type SupportedProposalName =
 	| 'createFlashcards'
 	| 'createPracticeSet'
 	| 'createQuiz'
+	| 'createStudyPack'
 	| 'createWalkthrough'
 	| 'composeCanvas'
 	| 'recordMistake'
@@ -42,6 +44,7 @@ const proposalNames: readonly SupportedProposalName[] = [
 	'createWalkthrough',
 	'createConceptMap',
 	'createPracticeSet',
+	'createStudyPack',
 	'composeCanvas',
 	'writeEquation',
 	'recordMistake',
@@ -88,6 +91,9 @@ function parseProposalValue(value: unknown): LeakedProposal | null {
 		return { input, toolName }
 	}
 	if (toolName === 'createPracticeSet' && practiceSetProposalSchema.safeParse(input).success) {
+		return { input, toolName }
+	}
+	if (toolName === 'createStudyPack' && studyPackProposalSchema.safeParse(input).success) {
 		return { input, toolName }
 	}
 	if (toolName === 'writeEquation' && equationProposalSchema.safeParse(input).success) {

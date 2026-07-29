@@ -7,6 +7,7 @@ import {
 	IconFileTypePdf,
 	IconFocusCentered,
 	IconRefresh,
+	IconSparkles,
 	IconTrash,
 	IconX,
 } from '@tabler/icons-react'
@@ -26,6 +27,7 @@ interface PDFDocumentLibraryProps {
 	boardID: string
 	editor: Editor | null
 	onClose: () => void
+	onCreateStudyPack: (document: DocumentSummary) => void
 	onDocumentsChanged: () => void
 }
 
@@ -33,6 +35,7 @@ export function PDFDocumentLibrary({
 	boardID,
 	editor,
 	onClose,
+	onCreateStudyPack,
 	onDocumentsChanged,
 }: PDFDocumentLibraryProps) {
 	const [documents, setDocuments] = useState<DocumentSummary[]>([])
@@ -163,6 +166,11 @@ export function PDFDocumentLibrary({
 									</small>
 								</div>
 								<div className="PDFLibrary-actions">
+									{document.status === 'ready' ? (
+										<button onClick={() => onCreateStudyPack(document)} type="button">
+											<IconSparkles aria-hidden="true" size={15} /> Study pack
+										</button>
+									) : null}
 									{document.status === 'failed' ? (
 										<button disabled={pending} onClick={() => void retry(document)} type="button">
 											<IconRefresh aria-hidden="true" size={15} /> Retry

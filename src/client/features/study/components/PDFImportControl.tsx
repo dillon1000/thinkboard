@@ -23,8 +23,10 @@ import {
 	type PDFImportFailure,
 } from '../lib/pdfImportError'
 import { useZenMode } from '../../boards/lib/ZenModeProvider'
+import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
 import { openCraftDocuments } from '../../craft/craftPreviewEvent'
 import { PDFDocumentLibrary } from './PDFDocumentLibrary'
+import { requestZenChatPrompt } from '../lib/zenChatPrompt'
 
 interface PDFImportControlProps {
 	boardID: string
@@ -39,6 +41,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const [isLibraryOpen, setIsLibraryOpen] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const zen = useZenMode()
+	const chrome = useBoardChrome()
 
 	/* Zen hides this button, so the radial menu's PDF petal opens the file picker through here. */
 	useEffect(() => {
@@ -166,6 +169,13 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 						boardID={boardID}
 						editor={editor}
 						onClose={() => setIsLibraryOpen(false)}
+						onCreateStudyPack={(document) => {
+							requestZenChatPrompt(
+								`Create a cited study pack from “${document.title}”. Use only this PDF as the source and include exact page citations.`
+							)
+							chrome.setStudyOpen(true)
+							setIsLibraryOpen(false)
+						}}
 						onDocumentsChanged={() => void refreshDocuments()}
 					/>
 				) : null}
