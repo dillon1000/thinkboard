@@ -118,6 +118,7 @@ export function Component() {
 	const [profileError, setProfileError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 	const [isAddingMemory, setIsAddingMemory] = useState(false)
+	const [isMemoryFormOpen, setIsMemoryFormOpen] = useState(false)
 	const [isSavingProfile, setIsSavingProfile] = useState(false)
 	const [profileSaved, setProfileSaved] = useState(false)
 	const [pendingRemoveKey, setPendingRemoveKey] = useState<string | null>(null)
@@ -161,6 +162,7 @@ export function Component() {
 			})
 			await loadMemories()
 			setNewMemory(emptyMemory)
+			setIsMemoryFormOpen(false)
 		} catch (error) {
 			setMemoryError(error instanceof Error ? error.message : 'Unable to add memory')
 		} finally {
@@ -223,17 +225,12 @@ export function Component() {
 		<WorkspaceShell activePage="memory" skipTargetID="memory-content" title="Agent">
 			<div className="MemoryPage" id="memory-content">
 				<header className="MemoryHeading">
-					<div className="MemoryHeading-copy">
+					<div>
 						<p className="MemoryEyebrow">Agent controls</p>
 						<h1>What your agent knows</h1>
 						<p>Set its voice, give it context, and choose what reaches each prompt.</p>
 					</div>
-					{!isLoading && !loadError ? (
-						<div className="MemoryHeading-metric">
-							<strong>{memories.length}</strong>
-							<span>{memories.length === 1 ? 'saved memory' : 'saved memories'}</span>
-						</div>
-					) : null}
+					{!isLoading && !loadError ? <span>{memories.length} memories</span> : null}
 				</header>
 
 				{loadError ? (
@@ -273,8 +270,7 @@ export function Component() {
 									promptLocation="<personality>"
 									title="Agent voice"
 								>
-									<fieldset className="PersonalityList">
-										<legend className="ScreenReaderOnly">Choose an agent personality</legend>
+									<fieldset aria-label="Agent personality" className="PersonalityList">
 										{personalities.map((personality) => (
 											<label data-selected={profile.personality === personality.id} key={personality.id}>
 												<input
@@ -387,19 +383,20 @@ export function Component() {
 									</div>
 								</PromptSection>
 
-								<div
-									className="AgentProfileSave"
-									data-floating={hasProfileChanges || isSavingProfile || profileSaved || Boolean(profileError)}
-								>
-									<div aria-live="polite">
-										{profileError ? <span className="AgentProfileSave-error">{profileError}</span> : null}
-										{profileSaved ? <span className="AgentProfileSave-success"><IconCheck size={14} /> Saved</span> : null}
-										{hasProfileChanges && !profileError ? <span>Unsaved changes</span> : null}
+								{hasProfileChanges || isSavingProfile || profileError ? (
+									<div className="AgentProfileSave">
+										<div aria-live="polite">
+											{profileError ? <span className="AgentProfileSave-error">{profileError}</span> : null}
+											{hasProfileChanges && !profileError ? <span>Unsaved changes</span> : null}
+										</div>
+										<button className="MemoryPrimaryButton" disabled={!hasProfileChanges || isSavingProfile} type="submit">
+											{isSavingProfile ? 'Saving…' : 'Save agent settings'}
+										</button>
 									</div>
-									<button className="MemoryPrimaryButton" disabled={!hasProfileChanges || isSavingProfile} type="submit">
-										{isSavingProfile ? 'Saving…' : 'Save agent settings'}
-									</button>
-								</div>
+								) : null}
+								<span aria-live="polite" className="MemorySaveAnnouncement">
+									{profileSaved ? 'Agent settings saved.' : ''}
+								</span>
 							</form>
 
 							<section aria-labelledby="saved-memories-heading" className="MemoryRecords" id="agent-memory">
@@ -409,68 +406,76 @@ export function Component() {
 										<h2 id="saved-memories-heading">Individual memories</h2>
 										<p>Add a fact yourself, or approve one that the agent proposes in chat.</p>
 									</div>
+									<button
+										aria-controls="memory-add-form"
+										aria-expanded={isMemoryFormOpen}
+										className="MemoryAddToggle"
+										onClick={() => setIsMemoryFormOpen((current) => !current)}
+										type="button"
+									>
+										<IconPlus aria-hidden="true" size={15} stroke={2} />
+										{isMemoryFormOpen ? 'Close' : 'Add a memory'}
+									</button>
 								</div>
 
-								<form className="MemoryAddForm" onSubmit={(event) => void addMemory(event)}>
-									<div className="MemoryAddForm-heading">
-										<IconPlus aria-hidden="true" size={16} stroke={2} />
-										<strong>Add a memory</strong>
-									</div>
-									<div className="MemoryAddForm-grid">
-										<label>
-											<span>Label</span>
-											<input
-												maxLength={120}
-												onChange={(event) => setNewMemory((current) => ({ ...current, title: event.target.value }))}
-												placeholder="Current course"
+								{isMemoryFormOpen ? (
+									<form className="MemoryAddForm" id="memory-add-form" onSubmit={(event) => void addMemory(event)}>
+										<div className="MemoryAddForm-grid">
+											<label>
+												<span>Label</span>
+												<input
+													maxLength={120}
+													onChange={(event) => setNewMemory((current) => ({ ...current, title: event.target.value }))}
+													placeholder="Current course"
+													required
+													value={newMemory.title}
+												/>
+											</label>
+											<label>
+												<span>Topic</span>
+												<input
+													maxLength={100}
+													onChange={(event) => setNewMemory((current) => ({ ...current, topic: event.target.value }))}
+													placeholder="Chemistry"
+													required
+													value={newMemory.topic}
+												/>
+											</label>
+											<label>
+												<span>Type</span>
+												<select
+													onChange={(event) => setNewMemory((current) => ({
+														...current,
+														kind: event.target.value as AgentMemoryKind,
+													}))}
+													value={newMemory.kind}
+												>
+													{(Object.entries(memoryKindLabels) as Array<[AgentMemoryKind, string]>).map(([value, label]) => (
+														<option key={value} value={value}>{label}</option>
+													))}
+												</select>
+											</label>
+										</div>
+										<label className="MemoryAddForm-content">
+											<span>What should the agent remember?</span>
+											<textarea
+												maxLength={800}
+												onChange={(event) => setNewMemory((current) => ({ ...current, content: event.target.value }))}
+												placeholder="I am reviewing reaction mechanisms for an exam in August."
 												required
-												value={newMemory.title}
+												rows={3}
+												value={newMemory.content}
 											/>
+											<small>{newMemory.content.length}/800</small>
 										</label>
-										<label>
-											<span>Topic</span>
-											<input
-												maxLength={100}
-												onChange={(event) => setNewMemory((current) => ({ ...current, topic: event.target.value }))}
-												placeholder="Chemistry"
-												required
-												value={newMemory.topic}
-											/>
-										</label>
-										<label>
-											<span>Type</span>
-											<select
-												onChange={(event) => setNewMemory((current) => ({
-													...current,
-													kind: event.target.value as AgentMemoryKind,
-												}))}
-												value={newMemory.kind}
-											>
-												{(Object.entries(memoryKindLabels) as Array<[AgentMemoryKind, string]>).map(([value, label]) => (
-													<option key={value} value={value}>{label}</option>
-												))}
-											</select>
-										</label>
-									</div>
-									<label className="MemoryAddForm-content">
-										<span>What should the agent remember?</span>
-										<textarea
-											maxLength={800}
-											onChange={(event) => setNewMemory((current) => ({ ...current, content: event.target.value }))}
-											placeholder="I am reviewing reaction mechanisms for an exam in August."
-											required
-											rows={3}
-											value={newMemory.content}
-										/>
-										<small>{newMemory.content.length}/800</small>
-									</label>
-									<div className="MemoryAddForm-footer">
-										<span>Do not store passwords, financial details, health information, or private identifiers.</span>
-										<button className="MemoryPrimaryButton" disabled={isAddingMemory} type="submit">
-											{isAddingMemory ? 'Adding…' : 'Add memory'}
-										</button>
-									</div>
-								</form>
+										<div className="MemoryAddForm-footer">
+											<span>Do not store passwords, financial details, health information, or private identifiers.</span>
+											<button className="MemoryPrimaryButton" disabled={isAddingMemory} type="submit">
+												{isAddingMemory ? 'Adding…' : 'Add memory'}
+											</button>
+										</div>
+									</form>
+								) : null}
 
 								{memoryError ? <p className="MemoryInlineError" role="alert">{memoryError}</p> : null}
 

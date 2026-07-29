@@ -5,111 +5,42 @@
 }
 
 .MemoryHeading {
-	position: relative;
 	display: flex;
-	min-height: 184px;
-	overflow: hidden;
 	align-items: end;
 	justify-content: space-between;
-	gap: 32px;
-	border-radius: 18px;
-	background: var(--sidebar);
-	padding: clamp(24px, 4vw, 38px);
-	box-shadow: var(--shadow-border);
-	isolation: isolate;
-	animation: rise-in 360ms var(--ease-out) backwards;
-}
-
-/* The blueprint grid ties the page header to the prompt blocks assembled below it. */
-.MemoryHeading::before {
-	position: absolute;
-	z-index: -1;
-	inset: 0 0 0 45%;
-	background-image:
-		linear-gradient(var(--line) 1px, transparent 1px),
-		linear-gradient(90deg, var(--line) 1px, transparent 1px);
-	background-size: 22px 22px;
-	content: '';
-	mask-image: linear-gradient(90deg, transparent, #000 28%);
-}
-
-.MemoryHeading::after {
-	position: absolute;
-	z-index: -1;
-	top: 24px;
-	right: 28px;
-	width: 86px;
-	height: 86px;
-	border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-	border-radius: 50%;
-	box-shadow:
-		0 0 0 12px color-mix(in srgb, var(--accent) 5%, transparent),
-		0 0 0 25px color-mix(in srgb, var(--accent) 3%, transparent);
-	content: '';
-}
-
-.MemoryHeading-copy {
-	max-width: 650px;
+	gap: 24px;
+	border-bottom: 1px solid var(--line-strong);
+	padding-bottom: 24px;
 }
 
 .MemoryEyebrow {
-	display: inline-flex;
-	align-items: center;
-	gap: 7px;
-	margin: 0 0 12px;
-	color: var(--accent-text);
-	font: 650 10.5px/1 var(--font-mono);
-	letter-spacing: .08em;
+	margin: 0 0 8px;
+	color: var(--faint);
+	font: 650 10.5px/1 var(--font-sans);
+	letter-spacing: .09em;
 	text-transform: uppercase;
-}
-
-.MemoryEyebrow::before {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--accent);
-	box-shadow: 0 0 0 4px var(--accent-soft);
-	content: '';
 }
 
 .MemoryHeading h1 {
 	margin: 0;
-	font-size: clamp(31px, 4vw, 44px);
-	font-weight: 720;
-	letter-spacing: -.045em;
-	line-height: 1.02;
+	font-size: clamp(27px, 4vw, 36px);
+	font-weight: 700;
+	letter-spacing: -.04em;
 }
 
-.MemoryHeading-copy > p:last-child {
+.MemoryHeading div > p:last-child {
 	max-width: 560px;
-	margin: 12px 0 0;
+	margin: 8px 0 0;
 	color: var(--muted);
-	font-size: 14px;
-	line-height: 1.55;
+	font-size: 13.5px;
+	line-height: 1.5;
 }
 
-.MemoryHeading-metric {
-	position: relative;
-	display: grid;
-	min-width: 120px;
-	align-content: center;
-	align-self: stretch;
-	justify-items: end;
-	padding: 30px 4px 0;
-}
-
-.MemoryHeading-metric strong {
-	font: 680 clamp(32px, 4vw, 48px)/.95 var(--font-mono);
-	letter-spacing: -.06em;
-}
-
-.MemoryHeading-metric span {
-	margin-top: 8px;
+.MemoryHeading > span {
+	padding-bottom: 3px;
 	color: var(--faint);
-	font-size: 10.5px;
-	font-weight: 600;
-	letter-spacing: .04em;
-	text-transform: uppercase;
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
 
@@ -253,6 +184,7 @@
 
 .PromptSectionHeading {
 	display: flex;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 20px;
 	margin-bottom: 18px;
@@ -511,6 +443,9 @@
 }
 
 .AgentProfileSave {
+	position: sticky;
+	z-index: 3;
+	bottom: 14px;
 	display: flex;
 	min-height: 58px;
 	align-items: center;
@@ -523,27 +458,26 @@
 	backdrop-filter: blur(16px) saturate(150%);
 }
 
-.AgentProfileSave[data-floating='true'] {
-	position: sticky;
-	z-index: 3;
-	bottom: 14px;
-}
-
 .AgentProfileSave > div {
 	color: var(--faint);
 	font-size: 10.5px;
 }
 
-.AgentProfileSave-success {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	color: var(--success);
-}
-
 .AgentProfileSave-error,
 .MemoryInlineError {
 	color: var(--danger);
+}
+
+.MemorySaveAnnouncement {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
 }
 
 .MemoryPrimaryButton {
@@ -566,6 +500,31 @@
 	margin-top: 28px;
 }
 
+.MemoryAddToggle {
+	display: inline-flex;
+	min-height: 32px;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 6px;
+	border: 0;
+	border-radius: 7px;
+	background: var(--sidebar);
+	padding: 0 10px;
+	color: var(--muted);
+	box-shadow: inset 0 0 0 1px var(--line);
+	font-size: 11px;
+	font-weight: 620;
+	transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift);
+}
+
+.MemoryAddToggle svg {
+	transition: rotate 140ms var(--ease-swift);
+}
+
+.MemoryAddToggle[aria-expanded='true'] svg {
+	rotate: 45deg;
+}
+
 .MemoryAddForm {
 	display: grid;
 	gap: 14px;
@@ -573,17 +532,6 @@
 	background: var(--sidebar);
 	padding: 16px;
 	box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.MemoryAddForm-heading {
-	display: flex;
-	align-items: center;
-	gap: 7px;
-	font-size: 12.5px;
-}
-
-.MemoryAddForm-heading > svg {
-	color: var(--accent);
 }
 
 .MemoryAddForm-grid {
@@ -814,8 +762,13 @@
 
 	.MemoryRemove:hover,
 	.MemoryRemoveConfirm button:not(:disabled):hover,
-	.MemoryError button:hover {
+	.MemoryError button:hover,
+	.MemoryAddToggle:hover {
 		color: var(--ink);
+	}
+
+	.MemoryAddToggle:hover {
+		background: var(--surface-hover);
 	}
 
 	.MemoryPrimaryButton:not(:disabled):hover {
@@ -871,43 +824,11 @@
 	}
 
 	.MemoryHeading {
-		min-height: 180px;
 		align-items: start;
-		flex-direction: column;
-		gap: 24px;
-		border-radius: 14px;
-		padding: 22px;
-	}
-
-	.MemoryHeading::before {
-		left: 20%;
-	}
-
-	.MemoryHeading::after {
-		top: auto;
-		right: 18px;
-		bottom: 18px;
-		width: 58px;
-		height: 58px;
 	}
 
 	.MemoryHeading h1 {
-		font-size: 29px;
-	}
-
-	.MemoryHeading-metric {
-		min-width: auto;
-		align-self: auto;
-		justify-items: start;
-		padding: 0;
-	}
-
-	.MemoryHeading-metric strong {
 		font-size: 25px;
-	}
-
-	.MemoryHeading-metric span {
-		margin-top: 5px;
 	}
 
 	.AgentControlIndex nav {
@@ -952,6 +873,10 @@
 	.AgentProfileSave {
 		bottom: 8px;
 		padding: 12px;
+	}
+
+	.PromptSectionHeading {
+		align-items: start;
 	}
 
 	.MemoryPrimaryButton {
