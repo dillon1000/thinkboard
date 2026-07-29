@@ -22,3 +22,4 @@ OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
 # OAUTH_PROVIDER_NAME=Passport
 # OAUTH_SCOPES=openid,email,profile,offline_access
 # LOCK_IN_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct
+# CONVERSATION_TITLE_MODEL=@cf/meta/llama-4-scout-17b-16e-instruct

@@ -197,20 +197,26 @@ export {
 	studyReasoningEffortSchema,
 } from './studyChat'
 export type {
+	StudyMessageContextChip,
 	StudyMessageMetadata,
 	StudyModelMode,
 	StudyReasoningEffort,
 } from './studyChat'
 export {
+	agentMemoryKeySchema,
+	agentMemoryKindSchema,
+	agentMemoryProposalSchema,
 	flashcardReviewRatingSchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
 	studyModeSchema,
 } from './studyLearning'
 export type {
+	AgentMemory,
+	AgentMemoryKind,
+	AgentMemoryProposal,
 	DueFlashcard,
 	FlashcardReviewRating,
-	MistakePattern,
 	MistakeProposal,
 	StudyMistake,
 	StudyMode,

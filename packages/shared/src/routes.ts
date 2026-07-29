@@ -5,6 +5,7 @@ export const apiRoutePatterns = {
 	boardLockInReview: '/api/boards/:boardID/lock-in/review',
 	boardFlashcards: '/api/boards/:boardID/flashcards',
 	boardMistakes: '/api/boards/:boardID/mistakes',
+	boardMemories: '/api/boards/:boardID/memories',
 	boardDocuments: '/api/boards/:boardID/documents',
 	boardDocument: '/api/boards/:boardID/documents/:documentID',
 	boardDocumentComplete: '/api/boards/:boardID/documents/:documentID/complete',
@@ -17,9 +18,11 @@ export const apiRoutePatterns = {
 	studyReviews: '/api/study/reviews',
 	studyReview: '/api/study/reviews/:reviewID',
 	studyMemory: '/api/study/memory',
+	studyMemoryItem: '/api/study/memory/:memoryKey',
 	studyConversations: '/api/boards/:boardID/conversations',
 	studyConversation: '/api/boards/:boardID/conversations/:conversationID',
 	studyConversationMessages: '/api/boards/:boardID/conversations/:conversationID/messages',
+	studyConversationTitle: '/api/boards/:boardID/conversations/:conversationID/title',
 	asset: '/api/boards/:boardID/assets/:assetID',
 	bookmarkPreview: '/api/unfurl',
 	config: '/api/config',
@@ -47,6 +50,8 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/flashcards`,
 	boardMistakes: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/mistakes`,
+	boardMemories: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/memories`,
 	boardDocuments: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/documents`,
 	boardDocument: (boardID: string, documentID: string) =>
@@ -64,12 +69,16 @@ export const apiRoutes = {
 	studyReviews: '/api/study/reviews',
 	studyReview: (reviewID: string) => `/api/study/reviews/${encodeURIComponent(reviewID)}`,
 	studyMemory: '/api/study/memory',
+	studyMemoryItem: (memoryKey: string) =>
+		`/api/study/memory/${encodeURIComponent(memoryKey)}`,
 	studyConversations: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/conversations`,
 	studyConversation: (boardID: string, conversationID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/conversations/${encodeURIComponent(conversationID)}`,
 	studyConversationMessages: (boardID: string, conversationID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/conversations/${encodeURIComponent(conversationID)}/messages`,
+	studyConversationTitle: (boardID: string, conversationID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/conversations/${encodeURIComponent(conversationID)}/title`,
 	boardSocket: (boardID: string) => `/api/connect/${encodeURIComponent(boardID)}`,
 	asset: (boardID: string, assetID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/assets/${encodeURIComponent(assetID)}`,

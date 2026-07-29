@@ -46,9 +46,15 @@ describe('route builders', () => {
 		expect(apiRoutes.boardMistakes('biology/week 1')).toBe(
 			'/api/boards/biology%2Fweek%201/mistakes'
 		)
+		expect(apiRoutes.boardMemories('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/memories'
+		)
 		expect(apiRoutes.studyReviews).toBe('/api/study/reviews')
 		expect(apiRoutes.studyReview('review one')).toBe('/api/study/reviews/review%20one')
 		expect(apiRoutes.studyMemory).toBe('/api/study/memory')
+		expect(apiRoutes.studyMemoryItem('preferred pace')).toBe(
+			'/api/study/memory/preferred%20pace'
+		)
 		expect(appRoutes.memory).toBe('/memory')
 	})
 

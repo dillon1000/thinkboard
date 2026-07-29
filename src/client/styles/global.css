@@ -381,15 +381,18 @@ img { max-width: 100%; }
 
 /* ---------- Board page ---------- */
 
-.BoardShell { --study-panel-width: clamp(320px, 30vw, 380px); --chrome-top-inset: 52px; --chrome-side-inset: 0px; position: fixed; inset: 0; display: flex; height: 100dvh; flex-direction: column; overflow: hidden; background: var(--canvas); color: var(--ink); }
+.BoardShell { --study-panel-width: clamp(320px, 30vw, 380px); --chrome-side-inset: 0px; position: fixed; inset: 0; display: flex; height: 100dvh; flex-direction: column; overflow: hidden; background: var(--canvas); color: var(--ink); }
 /* One motion token drives the pane and everything that yields to it, so they travel as a single gesture. */
 .BoardShell { --panel-motion: 140ms var(--ease-exit); }
 .BoardShell[data-study-open='true'] { --chrome-side-inset: calc(var(--study-panel-width) + var(--chrome-inset)); --panel-motion: 200ms var(--ease-enter); }
 .BoardShell-workspace { position: relative; display: flex; min-height: 0; flex: 1; }
 .BoardShell-content { position: relative; z-index: 0; min-width: 0; min-height: 0; flex: 1; overflow: hidden; background: var(--canvas); isolation: isolate; }
 
-/* The canvas runs edge to edge; tldraw's own controls step aside for our floating chrome. */
-.BoardShell .tlui-layout__top { padding-top: var(--chrome-top-inset); padding-right: var(--chrome-side-inset); transition: padding var(--panel-motion); }
+/* The canvas runs edge to edge. tldraw's top row is emptied of everything but the ribbon, which
+   is handed the full width; the centre and right zones have nothing left to hold. */
+.BoardShell .tlui-layout__top { display: block; padding: 0 var(--chrome-side-inset) 0 0; transition: padding var(--panel-motion); }
+.BoardShell .tlui-layout__top__left { display: block; width: 100%; }
+.BoardShell .tlui-layout__top__center, .BoardShell .tlui-layout__top__right { display: none; }
 .BoardShell .tlui-layout__bottom { padding-right: var(--chrome-side-inset); transition: padding var(--panel-motion); }
 
 /* ---------- tldraw chrome ---------- */
@@ -437,36 +440,94 @@ img { max-width: 100%; }
 .BoardShell .tlui-button { border-radius: 8px; font-weight: 500; }
 .BoardShell .tlui-button[data-isactive='true'] { color: var(--ink); }
 
-/* ---------- Canvas islands ---------- */
+/* ---------- Canvas menu bar ---------- */
 
-/* Three islands carry the whole canvas: document actions top left, tools bottom centre,
-   zoom bottom left. Same material and density as the board header they sit under. */
-.CanvasIsland { display: inline-flex; align-items: center; gap: 2px; border-radius: var(--chrome-radius); background: var(--chrome); padding: 4px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: all; }
-.CanvasIsland-divider { width: 1px; height: 17px; flex: 0 0 auto; margin: 0 3px; background: var(--line); }
-.CanvasIsland-button { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
-/* Accent-soft marks the live tool: findable at a glance without weighing down the rail. */
-.CanvasIsland-button[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); }
-.CanvasIsland-button:disabled { color: var(--faint); opacity: .45; }
+/* Everything that used to float over the board — tldraw's menus, tools, pickers and zoom, plus
+   the timer, PDF import, theme switch and study toggle — is folded into one compact menubar
+   along the top. It stays a single row and only as wide as its contents, so the player floats
+   beside it and the canvas keeps the rest of the width. Each trigger drops its own menu. */
+.CanvasTopDock { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; margin: max(var(--chrome-inset), env(safe-area-inset-top)) max(var(--chrome-inset), env(safe-area-inset-right)) 0 max(var(--chrome-inset), env(safe-area-inset-left)); pointer-events: none; }
+.CanvasTopDock-quick { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; margin-left: auto; border-radius: var(--chrome-radius); background: var(--chrome); padding: 4px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: auto; }
 
-.CanvasMenuStack { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-left: max(var(--chrome-inset), env(safe-area-inset-left)); pointer-events: none; }
-.CanvasTimer { gap: 1px; margin-left: 34px; }
-.CanvasTimer-readout { display: flex; min-width: 67px; height: 28px; align-items: center; gap: 6px; padding: 0 6px; color: var(--muted); font-size: 12px; font-weight: 580; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
-.CanvasTimer-readout > svg { flex: 0 0 auto; color: var(--faint); }
-/* "Back to content" is the one tldraw helper we keep; it becomes a small island of its own. */
+.Ribbon { display: flex; min-width: 0; align-items: center; gap: 2px; border-radius: var(--chrome-radius); background: var(--chrome); padding: 4px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: all; }
+.Ribbon-divider { width: 1px; height: 17px; flex: 0 0 auto; margin: 0 3px; background: var(--line); }
+.Ribbon-crumbs { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 2px; font-size: 13.5px; }
+.Ribbon-crumbs a { border-radius: 4px; padding: 3px 6px; color: var(--muted); text-decoration: none; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.Ribbon-crumbs > svg { flex: 0 0 auto; color: var(--faint); }
+.Ribbon-title { min-width: 0; max-width: 18ch; overflow: hidden; padding: 3px 6px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.Ribbon-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin: 0 6px 0 4px; color: var(--faint); font-size: 12px; }
+.Ribbon-status::before { width: 6px; height: 6px; border-radius: 50%; background: var(--success); content: ''; }
+.Ribbon-status--offline { color: var(--danger); }
+.Ribbon-status--offline::before { background: var(--danger); animation: pulse-dot 1.6s ease-in-out infinite; }
+.Ribbon-studyToggle { display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; padding: 0 8px; color: var(--muted); font-size: 13px; font-weight: 500; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.Ribbon-studyToggle > svg { animation: icon-in 200ms var(--ease-swift); }
+.Ribbon-studyToggle[aria-expanded='true'] { background: var(--surface-hover); color: var(--ink); }
+
+/* The named triggers are text, so the bar reads as a menu bar; the quick pickers are icons. */
+.Ribbon-menuTrigger { flex: 0 0 auto; border: 0; border-radius: 7px; background: transparent; padding: 6px 9px; color: var(--muted); font-size: 12.5px; font-weight: 550; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.Ribbon-menuTrigger[data-active='true'] { background: var(--surface-active); color: var(--ink); }
+.Ribbon-menuTrigger--icon { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; }
+
+/* Quick access, Word-style: the tools and pickers worth reaching without opening a menu. */
+.Ribbon-tools { display: flex; align-items: center; gap: 2px; }
+.Ribbon-tool { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+/* Accent-soft marks the live tool: findable at a glance without weighing down the strip. */
+.Ribbon-tool[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); }
+/* The swatch is the readout as well as the trigger: it always shows the colour in hand. */
+.Ribbon-swatch { display: block; width: 17px; height: 17px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .22), 0 1px 2px rgba(15, 15, 15, .14); }
+:root[data-theme='dark'] .Ribbon-swatch { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28), 0 1px 2px rgba(0, 0, 0, .3); }
+
+/* tldraw's own dropdowns — board menu, pages, arrange, zoom — sized to the bar's rhythm. */
+.Ribbon-slot { display: flex; align-items: center; gap: 2px; padding: 0; }
+.Ribbon-slot .tlui-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; border-radius: 7px; color: var(--muted); }
+.Ribbon-slot .tlui-page-menu__trigger { width: auto; max-width: 132px; padding: 0 8px; font-size: 13px; white-space: nowrap; }
+.Ribbon-slot .tlui-icon { width: 16px; height: 16px; }
+.Ribbon-slot--wide { width: 100%; }
+.Ribbon-slot--wide .tlui-button { width: 100%; min-width: 0; height: 30px; justify-content: flex-start; padding: 0 8px; }
+.Ribbon-slot--zoom .tlui-zoom-menu__button { width: auto; min-width: 56px; padding: 0 8px; font-size: 12px; font-weight: 550; font-variant-numeric: tabular-nums; }
+/* "Back to content" is the one tldraw helper we keep; it floats free of the bar. */
 .BoardShell .tlui-helper-buttons .tlui-button { width: auto; min-width: 0; padding: 0 10px; border-radius: 8px; background: var(--chrome); box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); }
-/* tldraw's own board and page menus keep their behaviour, sized to this island's rhythm. */
-.CanvasIsland .tlui-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; border-radius: 7px; color: var(--muted); }
-.CanvasIsland .tlui-page-menu__trigger { width: auto; max-width: 132px; padding: 0 8px; font-size: 13px; }
-.CanvasIsland .tlui-icon { width: 16px; height: 16px; }
-/* tldraw's toolbar wrapper is structural here — it carries the roving focus its buttons need. */
-.CanvasIsland .tlui-toolbar { display: flex; align-items: center; gap: 2px; padding: 0; }
 
-.CanvasBottomDock { display: flex; max-width: calc(100vw - 2 * var(--chrome-inset)); align-items: flex-end; gap: 6px; margin-bottom: max(var(--chrome-inset), env(safe-area-inset-bottom)); pointer-events: none; }
-.CanvasRail { min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.CanvasRail::-webkit-scrollbar { display: none; }
-.CanvasRail-group { display: flex; align-items: center; gap: 2px; }
+/* ---------- Menu bar dropdowns ---------- */
 
-/* Spotify Connect lives beside the tool rail and controls the user's active Spotify device. */
+.RibbonMenu { display: grid; width: 216px; gap: 10px; padding: 8px; }
+.RibbonMenu-section { display: grid; gap: 4px; }
+.RibbonMenu-section + .RibbonMenu-section { border-top: 1px solid var(--line); padding-top: 9px; }
+.RibbonMenu-sectionLabel { margin: 0 0 1px 3px; color: var(--faint); font-size: 9.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
+.RibbonMenu-hint { margin: 0; padding: 6px 4px; color: var(--faint); font-size: 12px; line-height: 1.45; }
+.RibbonMenu-item { display: flex; width: 100%; min-height: 30px; align-items: center; gap: 9px; border: 0; border-radius: 7px; background: transparent; padding: 0 8px; color: var(--ink); font-size: 12.5px; font-weight: 500; text-align: left; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.RibbonMenu-itemIcon { display: grid; flex: 0 0 auto; place-items: center; color: var(--muted); }
+.RibbonMenu-item[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); }
+.RibbonMenu-item[data-active='true'] .RibbonMenu-itemIcon { color: inherit; }
+.RibbonMenu-item[data-danger='true'], .RibbonMenu-item[data-danger='true'] .RibbonMenu-itemIcon { color: var(--danger); }
+.RibbonMenu-item:disabled { color: var(--faint); opacity: .5; }
+.RibbonMenu-item:disabled .RibbonMenu-itemIcon { color: inherit; }
+.RibbonMenu-row { display: flex; align-items: center; gap: 3px; }
+.RibbonMenu-step { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.RibbonMenu-map { overflow: hidden; border-radius: 7px; background: var(--surface); }
+.RibbonMenu-map .tlui-minimap { height: 84px; min-height: 0; padding: 0; }
+/* Tools stay a grid: eleven named tools plus the overflow would be a very long list of rows. */
+.RibbonMenu-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; }
+.RibbonMenu-grid .Ribbon-tool { width: 100%; }
+
+/* tldraw's style pickers, given this menu's density. */
+.RibbonMenu .tlui-grid { grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 0; }
+.RibbonMenu .tlui-row { gap: 3px; padding: 0; }
+.RibbonMenu .tlui-row > * { flex: 1 1 0; }
+.RibbonMenu .tlui-button__tool { width: auto; min-width: 0; height: 30px; }
+.RibbonMenu .tlui-button__tool::after { inset: 3px; border-radius: 6px; }
+.RibbonMenu .tlui-slider__container { padding: 12px 4px 4px; }
+
+/* The board timer sits in the Board menu's Session section, beneath Lock In. */
+.CanvasTimer { display: flex; align-items: center; gap: 1px; }
+.CanvasTimer-readout { display: flex; min-width: 67px; height: 30px; flex: 1; align-items: center; gap: 6px; padding: 0 8px; color: var(--muted); font-size: 12.5px; font-weight: 580; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.CanvasTimer-readout > svg { flex: 0 0 auto; color: var(--faint); }
+.CanvasTimer-button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.CanvasTimer-button[data-active='true'] { background: var(--accent-soft); color: var(--accent-text); }
+.CanvasTimer-button:disabled { color: var(--faint); opacity: .45; }
+
+
+/* Spotify Connect floats beside the menu bar and controls the user's active Spotify device. */
 .SpotifyPlayer { position: relative; display: grid; width: 270px; height: 36px; flex: 0 0 auto; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 7px; border-radius: var(--chrome-radius); background: var(--chrome); padding: 4px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: all; }
 .SpotifyPlayer[data-loading='true'] { opacity: .74; }
 .SpotifyPlayer--setup { display: grid; width: 36px; grid-template-columns: 1fr; padding: 4px; }
@@ -485,15 +546,65 @@ img { max-width: 100%; }
 .SpotifyPlayer-controls button { display: grid; width: 24px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: transparent; padding: 0; color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), opacity 140ms var(--ease-swift); }
 .SpotifyPlayer-controls button:disabled { opacity: .34; }
 .SpotifyPlayer-controls .SpotifyPlayer-play { color: var(--ink); }
-.SpotifyPlayer-notice { position: absolute; right: 0; bottom: calc(100% + 7px); display: flex; width: min(270px, calc(100vw - 16px)); align-items: flex-start; gap: 6px; border-radius: 7px; background: var(--panel); padding: 8px 9px; color: var(--danger); box-shadow: var(--shadow-pop); font-size: 10.5px; line-height: 1.35; animation: pop-in 160ms var(--ease-swift) backwards; }
+.SpotifyPlayer-notice { position: absolute; right: 0; top: calc(100% + 7px); display: flex; width: min(270px, calc(100vw - 16px)); align-items: flex-start; gap: 6px; border-radius: 7px; background: var(--panel); padding: 8px 9px; color: var(--danger); box-shadow: var(--shadow-pop); font-size: 10.5px; line-height: 1.35; animation: pop-in 160ms var(--ease-swift) backwards; }
 .SpotifyPlayer-notice svg { flex: 0 0 auto; margin-top: 1px; }
 
-.CanvasZoom { position: absolute; bottom: max(var(--chrome-inset), env(safe-area-inset-bottom)); left: max(var(--chrome-inset), env(safe-area-inset-left)); flex-direction: column; align-items: stretch; gap: 4px; }
-.CanvasZoom-controls { display: flex; align-items: center; gap: 2px; }
-.CanvasZoom-map { overflow: hidden; width: 208px; border-radius: 7px; background: var(--surface); animation: pop-in 160ms var(--ease-swift) backwards; }
-.CanvasZoom .tlui-minimap { height: 92px; min-height: 0; padding: 0; }
-/* tldraw's zoom menu trigger becomes the readout between the two steppers. */
-.CanvasZoom .tlui-zoom-menu__button { min-width: 46px; width: auto; padding: 0 6px; font-size: 11.5px; font-weight: 550; font-variant-numeric: tabular-nums; }
+/* ---------- Dockable chrome ---------- */
+
+/* The ribbon can tuck against the top edge behind a chevron tab. The wrapper is transparent
+   to layout and pointer events; only the ribbon body and the handle are interactive. */
+.Dockable { position: relative; pointer-events: none; }
+.Dockable-body { pointer-events: auto; transition: translate 300ms var(--ease-enter); }
+.Dockable[data-docked='true'] .Dockable-body { pointer-events: none; }
+.Dockable-handle { position: absolute; z-index: 3; display: grid; place-items: center; border: 0; border-radius: 7px; background: var(--chrome); color: var(--muted); box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); opacity: 0; pointer-events: auto; transition: opacity 140ms var(--ease-swift), background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.Dockable-handle > svg { transition: rotate 220ms var(--ease-swift); }
+.Dockable-handle:hover { color: var(--ink); }
+/* The hide-tab surfaces on hover of the island; once docked it stays as the reveal tab. */
+.Dockable:hover .Dockable-handle, .Dockable:focus-within .Dockable-handle, .Dockable[data-docked='true'] .Dockable-handle { opacity: 1; }
+.Dockable[data-edge='left'] .Dockable-handle, .Dockable[data-edge='right'] .Dockable-handle { top: 50%; width: 15px; height: 34px; translate: 0 -50%; }
+.Dockable[data-edge='top'] .Dockable-handle, .Dockable[data-edge='bottom'] .Dockable-handle { left: 50%; width: 34px; height: 15px; translate: -50% 0; }
+.Dockable[data-edge='right'] .Dockable-handle { right: -7px; }
+.Dockable[data-edge='left'] .Dockable-handle { left: -7px; }
+.Dockable[data-edge='top'] .Dockable-handle { top: -7px; }
+.Dockable[data-edge='bottom'] .Dockable-handle { bottom: -7px; }
+/* The chevron points outward to hide, inward to reveal. */
+.Dockable[data-edge='right'] .Dockable-handle > svg { rotate: 0deg; }
+.Dockable[data-edge='right'][data-docked='true'] .Dockable-handle > svg { rotate: 180deg; }
+.Dockable[data-edge='left'] .Dockable-handle > svg { rotate: 180deg; }
+.Dockable[data-edge='left'][data-docked='true'] .Dockable-handle > svg { rotate: 0deg; }
+.Dockable[data-edge='top'] .Dockable-handle > svg { rotate: -90deg; }
+.Dockable[data-edge='top'][data-docked='true'] .Dockable-handle > svg { rotate: 90deg; }
+.Dockable[data-edge='bottom'] .Dockable-handle > svg { rotate: 90deg; }
+.Dockable[data-edge='bottom'][data-docked='true'] .Dockable-handle > svg { rotate: -90deg; }
+/* Docked slides the body fully past its edge; peek eases it back a sliver on tab hover. */
+.Dockable[data-edge='right'][data-docked='true'] .Dockable-body { translate: calc(100% + var(--chrome-inset) + 8px) 0; }
+.Dockable[data-edge='right'][data-peek='true'] .Dockable-body { translate: calc(100% + var(--chrome-inset) + 8px - 56px) 0; }
+.Dockable[data-edge='left'][data-docked='true'] .Dockable-body { translate: calc(-100% - var(--chrome-inset) - 8px) 0; }
+.Dockable[data-edge='left'][data-peek='true'] .Dockable-body { translate: calc(-100% - var(--chrome-inset) - 8px + 56px) 0; }
+.Dockable[data-edge='bottom'][data-docked='true'] .Dockable-body { translate: 0 calc(100% + var(--chrome-inset) + 8px); }
+.Dockable[data-edge='bottom'][data-peek='true'] .Dockable-body { translate: 0 calc(100% + var(--chrome-inset) + 8px - 42px); }
+.Dockable[data-edge='top'][data-docked='true'] .Dockable-body { translate: 0 calc(-100% - var(--chrome-inset) - 8px); }
+.Dockable[data-edge='top'][data-peek='true'] .Dockable-body { translate: 0 calc(-100% - var(--chrome-inset) - 8px + 42px); }
+/* The bar gives up its breadcrumb width before the row wraps, so it stays one line for longer. */
+.Dockable--ribbon, .Dockable--ribbon .Dockable-body { min-width: 0; }
+/* Its tab hangs under the bar and rides up to the edge once the bar is tucked away. */
+.Dockable--ribbon .Dockable-handle { top: auto; bottom: -9px; }
+.Dockable--ribbon[data-docked='true'] .Dockable-handle { top: max(var(--chrome-inset), env(safe-area-inset-top)); bottom: auto; }
+@media (prefers-reduced-motion: reduce) {
+	.Dockable-body, .Dockable-handle > svg { transition: none; }
+}
+
+/* ---------- Zen Mode ---------- */
+
+/* Zen clears the canvas of every control. The ribbon now holds all of them and lives inside
+   tldraw's UI layer, so hiding that layer is enough: it fades out and, once faded, drops out of
+   the tab order; the reverse is instant so it fades straight back. */
+.BoardShell .tlui-layout { transition: opacity 240ms var(--ease-swift), visibility 0s; }
+.BoardShell[data-zen='true'] .tlui-layout {
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 240ms var(--ease-swift), visibility 0s linear 240ms;
+}
 
 /* Each radial action is a separate petal, so every gap stays equal. A hovered petal adds only its
    local control fan; undo, redo, duplicate, and user bindings remain lighter satellite actions. */
@@ -618,45 +729,6 @@ img { max-width: 100%; }
 	.ZenMenuLayer-scrim, .ZenMenu-stage, .ZenMenu-fanButton { animation: none; }
 }
 
-/* ---------- Canvas style panel ---------- */
-
-/* tldraw's pickers, given named sections and our density. */
-.CanvasStylePanel { width: 176px; max-height: 100%; overflow-y: auto; margin-right: max(var(--chrome-inset), env(safe-area-inset-right)); border-radius: var(--chrome-radius); background: var(--chrome); padding: 6px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: all; scrollbar-width: none; }
-.CanvasStylePanel::-webkit-scrollbar { display: none; }
-/* Inside the mobile popover the panel is already on a surface of its own. */
-.CanvasStylePanel[data-mobile='true'] { width: 168px; margin: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
-.CanvasStyleSection + .CanvasStyleSection { margin-top: 7px; border-top: 1px solid var(--line); padding-top: 7px; }
-.CanvasStyleSection-label { margin: 1px 0 5px 4px; color: var(--faint); font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
-.CanvasStylePanel .tlui-grid { grid-template-columns: repeat(4, 1fr); padding: 0; }
-.CanvasStylePanel .tlui-row { padding: 0; }
-.CanvasStylePanel .tlui-row > * { flex: 1 1 0; }
-.CanvasStylePanel .tlui-button__tool { width: auto; min-width: 0; height: 32px; }
-.CanvasStylePanel .tlui-button__tool::after { inset: 2px; border-radius: 7px; }
-.CanvasStylePanel .tlui-slider__container { padding: 8px 4px 2px; }
-
-/* ---------- Canvas tool overflow ---------- */
-
-.CanvasOverflow { display: grid; width: 216px; grid-template-columns: repeat(6, 1fr); gap: 1px; padding: 4px; }
-.CanvasOverflow .CanvasIsland-button { width: 100%; }
-
-/* Header: two islands resting on the canvas, with board visible between and around them. */
-.BoardShell-header { position: absolute; z-index: 5; inset: env(safe-area-inset-top) max(var(--chrome-inset), env(safe-area-inset-right)) auto max(var(--chrome-inset), env(safe-area-inset-left)); display: flex; align-items: flex-start; gap: 6px; padding-top: var(--chrome-inset); pointer-events: none; }
-.BoardShell-headerGroup { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 2px; border-radius: var(--chrome-radius); background: var(--chrome); padding: 4px; box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: auto; }
-.BoardShell-headerGroup--actions { flex: 0 0 auto; margin-left: auto; }
-/* Concentric with the island: 11px outer radius less its 4px padding. */
-.BoardShell-headerGroup .ThemeToggle { border-radius: 7px; }
-.BoardShell-crumbs { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 2px; font-size: 13.5px; }
-.BoardShell-crumbs a { border-radius: 4px; padding: 3px 6px; color: var(--muted); text-decoration: none; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
-.BoardShell-crumbs > svg { flex: 0 0 auto; color: var(--faint); }
-.BoardShell-title { min-width: 0; overflow: hidden; padding: 3px 6px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
-.BoardShell-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin: 0 6px 0 2px; color: var(--faint); font-size: 12px; }
-.BoardShell-status::before { width: 6px; height: 6px; border-radius: 50%; background: var(--success); content: ''; }
-.BoardShell-status--offline { color: var(--danger); }
-.BoardShell-status--offline::before { background: var(--danger); animation: pulse-dot 1.6s ease-in-out infinite; }
-.BoardShell-copy, .BoardShell-studyToggle, .BoardShell-lockIn { display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; padding: 0 8px; color: var(--muted); font-size: 13px; font-weight: 500; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
-.BoardShell-copy > svg, .BoardShell-studyToggle > svg, .BoardShell-lockIn > svg { animation: icon-in 200ms var(--ease-swift); }
-.BoardShell-studyToggle[aria-expanded='true'] { background: var(--surface-hover); color: var(--ink); }
-
 /* ---------- Lock In ---------- */
 
 .LockInTimer { display: flex; height: 28px; flex: 0 0 auto; align-items: center; gap: 7px; margin-right: 2px; border-right: 1px solid var(--line); padding: 0 6px 0 4px; animation: pop-in 180ms var(--ease-swift) backwards; }
@@ -721,7 +793,7 @@ img { max-width: 100%; }
 .LockInPanel-kicker > span { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
 .LockInPanel-kicker > span i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 12%, transparent); }
 .LockInPanel-kicker > strong { color: var(--ink); font: 650 12px/1 var(--font-mono); letter-spacing: -.02em; }
-.LockInPanel-hero h3 { margin: 18px 0 0; font-size: 20px; font-weight: 680; line-height: 1.25; letter-spacing: -.025em; }
+.LockInPanel-hero h3 { margin: 18px 0 0; font-size: 22px; font-weight: 690; line-height: 1.2; letter-spacing: -.03em; }
 .LockInPanel-finish { margin-top: 15px; border-left: 2px solid var(--accent); padding: 1px 0 1px 11px; }
 .LockInPanel-finish span { color: var(--faint); font-size: 9.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
 .LockInPanel-finish p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
@@ -730,14 +802,15 @@ img { max-width: 100%; }
 .LockInPanel-coachSection { padding: 16px; border-bottom: 1px solid var(--line); }
 .LockInPanel-coachSection > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .LockInPanel-coachSection > header > div { display: flex; min-width: 0; align-items: center; gap: 9px; }
-.LockInPanel-coachSection > header > div > span { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 9px; background: var(--accent); color: #fff; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent); }
+/* The review coach is the AI in Lock In, so it wears the study assistant's spark. */
+.LockInPanel-coachSection > header > div > span { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border-radius: 10px; background: var(--spark); color: #fff; box-shadow: 0 5px 14px var(--spark-soft), inset 0 0 0 1px rgba(255, 255, 255, .16); }
 .LockInPanel-coachSection > header > div > span.is-reviewing { animation: coach-scan 1.6s ease-in-out infinite; }
 .LockInPanel-coachSection > header > div > div { display: grid; min-width: 0; gap: 1px; }
 .LockInPanel-coachSection > header strong { font-size: 12.5px; font-weight: 650; }
 .LockInPanel-coachSection > header small { overflow: hidden; color: var(--faint); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
 .LockInPanel-coachSection > header button { display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 5px; border: 0; border-radius: 7px; background: var(--surface-hover); padding: 0 8px; color: var(--muted); font-size: 10.5px; font-weight: 570; box-shadow: inset 0 0 0 1px var(--line); }
 .LockInPanel-coachSection > header button:disabled { opacity: .42; }
-.LockInPanel-coach { position: relative; overflow: hidden; border-radius: 11px; background: var(--surface-hover); padding: 13px 13px 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.LockInPanel-coach { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface-hover); padding: 14px 14px 15px; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .LockInPanel-coach::before { position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--accent); content: ''; }
 .LockInPanel-coach[data-state='on-track']::before { background: var(--success); }
 .LockInPanel-coach[data-state='drifting']::before, .LockInPanel-coach[data-state='stalled']::before { background: var(--warning); }
@@ -750,7 +823,7 @@ img { max-width: 100%; }
 .LockInPanel-coach p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .LockInPanel-coach > small { display: block; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 9px; color: var(--faint); font-size: 10.5px; line-height: 1.45; }
 .LockInPanel-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 14px 16px; }
-.LockInPanel-details > div { display: grid; min-width: 0; min-height: 62px; grid-template-columns: 20px minmax(0, 1fr); align-content: center; gap: 8px; border-radius: 9px; background: var(--surface-hover); padding: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.LockInPanel-details > div { display: grid; min-width: 0; min-height: 62px; grid-template-columns: 20px minmax(0, 1fr); align-content: center; gap: 8px; border-radius: 10px; background: var(--surface-hover); padding: 11px; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .LockInPanel-details > div > svg { margin-top: 1px; color: var(--muted); }
 .LockInPanel-details > div:last-child > svg { color: #1db954; }
 .LockInPanel-details > div > span { display: grid; min-width: 0; gap: 2px; }
@@ -815,18 +888,22 @@ img { max-width: 100%; }
 .BoardShell-studyScrim { display: none; }
 /* The pane hangs below the action island rather than sliding under it. */
 .BoardShell-study { position: absolute; z-index: 4; inset: 0 0 0 auto; width: calc(var(--study-panel-width) + max(var(--chrome-inset), env(safe-area-inset-right))); padding: max(var(--chrome-inset), env(safe-area-inset-top)) max(var(--chrome-inset), env(safe-area-inset-right)) max(var(--chrome-inset), env(safe-area-inset-bottom)) 0; pointer-events: none; }
-.BoardShell-studyInner { position: relative; display: flex; width: var(--study-panel-width); max-width: 100vw; height: 100%; flex-direction: column; overflow: hidden; border-radius: var(--chrome-radius); background: var(--chrome); box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: auto; transition: opacity 110ms var(--ease-swift), translate var(--panel-motion); }
+.BoardShell-studyInner { position: relative; display: flex; width: var(--study-panel-width); max-width: 100vw; height: 100%; flex-direction: column; overflow: hidden; border-radius: 15px; background: var(--pane); box-shadow: inset 0 0 0 1px var(--pane-edge), var(--shadow-pop); pointer-events: auto; transition: opacity 110ms var(--ease-swift), translate var(--panel-motion); }
+/* A single top-lit spark wash, so the pane reads as its own high-contrast material. */
+.BoardShell-studyInner::before { position: absolute; z-index: 0; inset: 0 0 auto; height: 120px; background: radial-gradient(120% 100% at 50% -24%, var(--spark-soft), transparent 66%); opacity: .45; pointer-events: none; content: ''; }
+.BoardShell-studyInner > * { position: relative; z-index: 1; }
 .BoardShell-study[data-open='false'] .BoardShell-studyInner { opacity: 0; pointer-events: none; translate: calc(var(--study-panel-width) + var(--chrome-inset) * 2) 0; }
 .BoardShell-studyClose { position: absolute; z-index: 2; top: 7px; right: 7px; }
 
 /* ---------- Study panel ---------- */
 
 .StudyPanel { display: grid; width: 100%; height: 100%; min-height: 0; flex: 1; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
-.StudyPanel-header { display: flex; min-height: 42px; align-items: center; gap: 7px; padding: 4px 42px 4px 12px; border-bottom: 1px solid var(--line); }
-.StudyPanel-mark { flex: 0 0 auto; color: var(--accent); }
-.StudyPanel h2 { margin: 0; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.StudyPanel-conversation { min-width: 0; overflow: hidden; color: var(--faint); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.StudyPanel-conversation::before { padding-right: 7px; content: '·'; }
+.StudyPanel-header { display: flex; min-height: 52px; align-items: center; gap: 10px; padding: 0 8px 0 15px; border-bottom: 1px solid var(--line); }
+.StudyPanel-mark { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: var(--spark); color: #fff; box-shadow: 0 4px 12px var(--spark-soft), inset 0 0 0 1px rgba(255, 255, 255, .18); }
+:root[data-theme='dark'] .StudyPanel-header[data-lock-in='true'] .StudyPanel-mark, .StudyPanel-header[data-lock-in='true'] .StudyPanel-mark { background: var(--accent); box-shadow: 0 4px 12px var(--accent-soft), inset 0 0 0 1px rgba(255, 255, 255, .16); }
+.StudyPanel-headtext { display: grid; min-width: 0; gap: 1px; }
+.StudyPanel h2 { margin: 0; font-size: 13.5px; font-weight: 640; letter-spacing: -.01em; white-space: nowrap; }
+.StudyPanel-conversation { min-width: 0; overflow: hidden; color: var(--faint); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .StudyPanel-actions { display: flex; flex: 0 0 auto; gap: 2px; margin-left: auto; }
 .StudyPanel-actions button:disabled { opacity: .35; }
 .StudyPanel-main { position: relative; min-height: 0; }
@@ -851,24 +928,41 @@ img { max-width: 100%; }
 .StudyMessageScroller::after { bottom: 0; background: linear-gradient(transparent, var(--chrome)); }
 .StudyMessageScroller[data-scrollable~='start']::before, .StudyMessageScroller[data-scrollable~='end']::after { opacity: 1; }
 .StudyPanel-messages { display: flex; min-width: 0; min-height: 0; flex: 1; flex-direction: column; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-.StudyPanel-messageContent { display: flex; min-height: 100%; flex-direction: column; padding: 12px; }
+.StudyPanel-messageContent { display: flex; min-height: 100%; flex-direction: column; padding: 18px 16px 10px; }
 .StudyMessageScroller-jump { position: absolute; z-index: 3; right: 12px; bottom: 10px; display: inline-flex; min-height: 28px; align-items: center; gap: 5px; border: 0; border-radius: 999px; background: var(--ink); padding: 0 10px; color: var(--canvas); box-shadow: 0 4px 14px rgba(15, 15, 15, .18); font-size: 11.5px; font-weight: 550; transition: opacity 160ms var(--ease-swift), translate 160ms var(--ease-swift); }
 .StudyMessageScroller-jump[inert] { opacity: 0; pointer-events: none; translate: 0 5px; }
-.StudyWelcome { padding: 16px 2px; }
+.StudyWelcome { padding: 6px 2px 12px; }
 .StudyWelcome > * { animation: rise-in 320ms var(--ease-out) backwards; }
 .StudyWelcome > h3 { animation-delay: 40ms; }
 .StudyWelcome > p:not(.Eyebrow) { animation-delay: 80ms; }
 .StudyWelcome > .StudyPrompts { animation-delay: 130ms; }
-.StudyWelcome h3 { margin: 0 0 8px; font-size: 18px; font-weight: 650; line-height: 1.2; letter-spacing: -.02em; }
+.StudyWelcome .Eyebrow { margin-bottom: 11px; color: var(--spark-text); letter-spacing: .12em; }
+.StudyWelcome h3 { margin: 0 0 10px; font-size: 21px; font-weight: 680; line-height: 1.16; letter-spacing: -.025em; }
 .StudyWelcome > p:not(.Eyebrow) { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
-.StudyPrompts { display: grid; gap: 6px; margin-top: 16px; }
-.StudyPrompts button { display: flex; min-height: 34px; align-items: center; gap: 8px; border: 0; border-radius: 6px; background: var(--panel); padding: 0 10px; color: var(--ink); box-shadow: var(--shadow-border); font-size: 12.5px; font-weight: 500; text-align: left; transition: box-shadow 140ms var(--ease-swift), background-color 140ms var(--ease-swift); }
-.StudyPrompts button > svg { color: var(--accent); }
-.ChatMessage { position: relative; margin-bottom: 14px; }
-.ChatMessage--assistant { margin-bottom: 32px; }
-.ChatMessage > p { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
-.ChatMessage--user { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.ChatMessage--user > p { max-width: 88%; border-radius: 10px 10px 3px 10px; background: var(--surface-hover); padding: 7px 11px; box-shadow: inset 0 0 0 1px var(--line); }
+.StudyPrompts { display: grid; gap: 7px; margin-top: 18px; }
+.StudyPrompts button { display: flex; min-height: 44px; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-hover); padding: 0 12px; color: var(--ink); font-size: 12.5px; font-weight: 520; text-align: left; transition: border-color 140ms var(--ease-swift), background-color 140ms var(--ease-swift), transform 100ms var(--ease-swift); }
+.StudyPrompts button:hover { border-color: var(--line-strong); background: var(--surface); }
+.StudyPrompts button > svg { display: grid; box-sizing: content-box; width: 15px; height: 15px; flex: 0 0 auto; padding: 5.5px; border-radius: 8px; background: var(--spark-soft); color: var(--spark-text); }
+.ChatMessage { position: relative; margin-bottom: 18px; }
+.ChatMessage--assistant { margin-bottom: 30px; }
+.ChatMessage > p { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; }
+.ChatMessage--user { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-top: 16px; }
+.ChatMessage--user > p { max-width: 86%; border-radius: 14px 14px 5px 14px; background: var(--user-bubble); padding: 9px 13px; color: var(--user-ink); font-size: 13px; line-height: 1.5; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05); }
+:root[data-theme='light'] .ChatMessage--user > p { box-shadow: none; }
+/* Assistant messages lead with a spark orb + name, so a turn reads at a glance. */
+.ChatMessage-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.ChatMessage-orb { position: relative; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(from 210deg, var(--spark-a), var(--spark-b), var(--spark-a)); box-shadow: 0 0 0 1px var(--pane-edge), 0 4px 12px var(--spark-soft); }
+.ChatMessage-orb::after { position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .9), transparent 60%); opacity: .5; content: ''; }
+.ChatMessage-head strong { color: var(--ink); font-size: 12px; font-weight: 640; letter-spacing: .01em; }
+/* Context that rode along with a message, pinned above the bubble like Cursor's chips. */
+.MsgChips { display: flex; max-width: 90%; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.ContextChip { display: inline-flex; max-width: 172px; align-items: center; gap: 6px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); padding: 4px 8px 4px 6px; color: var(--muted); font-size: 11px; font-weight: 520; }
+.ContextChip > svg { flex: 0 0 auto; color: var(--spark-text); }
+.ContextChip > img { width: 18px; height: 18px; flex: 0 0 auto; border-radius: 4px; object-fit: cover; outline: 1px solid var(--pane-edge); outline-offset: -1px; }
+.ContextChip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ContextChip-meta { flex: 0 0 auto; color: var(--faint); font-variant-numeric: tabular-nums; }
+.ContextChip > button { display: grid; width: 16px; height: 16px; flex: 0 0 auto; place-items: center; margin-left: 1px; border: 0; border-radius: 5px; background: transparent; color: var(--faint); transition: background-color 120ms var(--ease-swift), color 120ms var(--ease-swift); }
+.ContextChip > button:hover { background: var(--surface-active); color: var(--ink); }
 .ChatMessage-actions { position: absolute; bottom: -28px; left: -4px; display: flex; gap: 8px; opacity: 1; transform-origin: left center; transition: opacity 180ms var(--ease-swift), filter 180ms var(--ease-swift), scale 180ms var(--ease-swift); }
 .ChatMessage-actions button { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), scale 100ms var(--ease-swift); }
 .ChatMessage-actions button::after { position: absolute; inset: -4px; content: ''; }
@@ -895,13 +989,11 @@ img { max-width: 100%; }
 .ChatMarkdown .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 3px 0; }
 
 .BoardCanvas { position: relative; width: 100%; height: 100%; min-height: 0; }
-.PDFImportControl { position: absolute; z-index: 50; right: calc(14px + var(--chrome-side-inset, 0px)); bottom: 14px; display: flex; max-width: min(340px, calc(100% - 28px)); flex-direction: column; align-items: flex-end; gap: 7px; pointer-events: none; transition: right var(--panel-motion); }
+/* The import button rides in the ribbon's Import group; its notices float clear of the bar. */
+.PDFImportControl { display: contents; }
 .PDFImportControl > input { display: none; }
-.PDFImportButton, .PDFImportNotice { pointer-events: auto; box-shadow: 0 6px 20px rgb(0 0 0 / 12%); }
-.PDFImportButton { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); padding: 0 12px; color: var(--ink); font: 600 12px/1 var(--font-sans); }
-.PDFImportButton:hover:not(:disabled) { background: var(--surface-hover); }
-.PDFImportButton:disabled { opacity: .58; }
-.PDFImportNotice { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 9px 10px; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.PDFImportNotices { position: fixed; z-index: 50; right: calc(14px + var(--chrome-side-inset, 0px)); bottom: 14px; display: flex; width: min(340px, calc(100vw - 28px)); flex-direction: column; align-items: flex-end; gap: 7px; transition: right var(--panel-motion); }
+.PDFImportNotice { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 9px 10px; color: var(--muted); box-shadow: 0 6px 20px rgb(0 0 0 / 12%); font-size: 11.5px; line-height: 1.35; }
 .PDFImportNotice button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-weight: 600; }
 .PDFErrorModalBackdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; background: rgb(15 15 15 / 28%); padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); pointer-events: auto; backdrop-filter: blur(10px); animation: pop-in 160ms var(--ease-swift) backwards; }
 .PDFErrorModal { display: grid; width: min(560px, 100%); max-height: calc(100dvh - max(40px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 80px rgb(15 15 15 / 24%), var(--shadow-border); pointer-events: auto; }
@@ -934,28 +1026,31 @@ img { max-width: 100%; }
 .PDFPageDownload { position: absolute; z-index: 3; top: 10px; right: 10px; display: inline-flex; min-height: 30px; align-items: center; gap: 6px; border-radius: 7px; background: rgb(255 255 255 / 94%); padding: 0 9px; color: #37352f; box-shadow: 0 1px 5px rgb(15 15 15 / 18%); font: 600 11px/1 var(--font-sans); opacity: .88; pointer-events: auto; text-decoration: none; transition: background-color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift), opacity 140ms var(--ease-swift); }
 .PDFPageDownload:hover { background: #fff; box-shadow: 0 2px 8px rgb(15 15 15 / 22%); opacity: 1; }
 .PDFPageDownload:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; opacity: 1; }
-.ReasoningTrail { margin: 2px 0 8px; }
-.ReasoningTrail-toggle { display: inline-flex; min-height: 24px; align-items: center; gap: 4px; border: 0; border-radius: 5px; background: transparent; padding: 0 6px 0 3px; color: var(--faint); font-size: 11.5px; font-weight: 550; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
-.ReasoningTrail-toggle:hover { background: var(--surface); color: var(--muted); }
-.ReasoningTrail-toggle > svg { flex: 0 0 auto; transition: transform 160ms var(--ease-swift); }
+.ReasoningTrail { margin: 0 0 12px; }
+.ReasoningTrail-toggle { display: inline-flex; min-height: 28px; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-hover); padding: 0 10px 0 8px; color: var(--muted); font-size: 11.5px; font-weight: 550; transition: border-color 140ms var(--ease-swift), background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.ReasoningTrail-toggle:hover { border-color: var(--line-strong); background: var(--surface); color: var(--ink); }
+.ReasoningTrail-toggle > svg { flex: 0 0 auto; color: var(--faint); transition: transform 160ms var(--ease-swift); }
 .ReasoningTrail-toggle.is-expanded > svg { transform: rotate(90deg); }
-.ReasoningTrail-body { max-height: 260px; overflow-y: auto; margin: 3px 0 0 8px; border-left: 2px solid var(--line); padding: 2px 0 2px 10px; color: var(--muted); font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; animation: pop-in 180ms var(--ease-swift) backwards; }
-.ProposalCall { overflow: hidden; margin-top: 7px; border-radius: 8px; background: var(--sidebar); box-shadow: var(--shadow-border); animation: pop-in 180ms var(--ease-swift) backwards; }
-.ProposalCall-row { display: flex; min-height: 44px; align-items: center; gap: 2px; padding: 2px; }
-.ProposalCall-toggle { display: flex; min-width: 0; min-height: 40px; flex: 1 1 auto; align-items: center; gap: 6px; overflow: hidden; border: 0; border-radius: 6px; background: transparent; padding: 0 7px 0 6px; color: var(--muted); text-align: left; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.ReasoningTrail-body { max-height: 260px; overflow-y: auto; margin: 8px 0 0 6px; border-left: 2px solid var(--spark-soft); padding: 2px 0 2px 12px; color: var(--muted); font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; animation: pop-in 180ms var(--ease-swift) backwards; }
+.ProposalCall { overflow: hidden; margin-top: 10px; border-radius: 12px; background: var(--surface-hover); box-shadow: inset 0 0 0 1px var(--line-strong); animation: pop-in 180ms var(--ease-swift) backwards; }
+.ProposalCall-row { display: flex; min-height: 48px; align-items: center; gap: 4px; padding: 6px 6px 6px 5px; }
+.ProposalCall-toggle { display: flex; min-width: 0; min-height: 40px; flex: 1 1 auto; align-items: center; gap: 9px; overflow: hidden; border: 0; border-radius: 9px; background: transparent; padding: 0 6px; color: var(--muted); text-align: left; transition: background-color 140ms var(--ease-swift); }
+.ProposalCall-toggle:hover:not(:disabled) { background: var(--surface); }
 .ProposalCall-toggle:disabled { cursor: default; }
-.ProposalCall-toggle > svg:first-child { flex: 0 0 auto; color: var(--faint); transition: transform 160ms var(--ease-swift); }
-.ProposalCall-toggle > svg:first-child.is-expanded { transform: rotate(90deg); }
-.ProposalCall-icon { flex: 0 0 auto; color: var(--accent); }
-.ProposalCall-label { flex: 0 0 auto; color: var(--ink); font-size: 12px; font-weight: 620; white-space: nowrap; }
-.ProposalCall-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; }
-.ProposalCall-action { display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), opacity 140ms var(--ease-swift), transform 140ms var(--ease-swift); }
-.ProposalCall-action--accept { background: var(--accent-soft); color: var(--accent-text); }
+.ProposalCall-icon { display: grid; box-sizing: content-box; width: 16px; height: 16px; flex: 0 0 auto; place-items: center; padding: 7px; border-radius: 9px; background: var(--spark); color: #fff; box-shadow: 0 3px 10px var(--spark-soft); transition: transform 160ms var(--ease-swift); }
+.ProposalCall-label { display: grid; min-width: 0; gap: 1px; }
+.ProposalCall-label > strong { overflow: hidden; color: var(--ink); font-size: 12.5px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+.ProposalCall-label > small { overflow: hidden; color: var(--faint); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.ProposalCall-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+.ProposalCall-action { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 9px; background: var(--surface); color: var(--muted); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), opacity 140ms var(--ease-swift), transform 140ms var(--ease-swift); }
+.ProposalCall-action--accept { background: var(--spark); color: #fff; box-shadow: 0 4px 12px var(--spark-soft); }
 .ProposalCall-action:disabled { opacity: .42; }
-.ProposalCall-state { flex: 0 0 auto; padding: 0 8px; color: var(--faint); font-size: 11px; font-weight: 550; }
-.ProposalCall--accepted .ProposalCall-icon, .ProposalCall--accepted .ProposalCall-state { color: var(--success); }
-.ProposalCall--error .ProposalCall-icon, .ProposalCall--error .ProposalCall-state { color: var(--danger); }
-.ProposalCall-preview { padding: 2px 12px 12px 46px; color: var(--muted); animation: pop-in 150ms var(--ease-swift) backwards; }
+.ProposalCall-state { flex: 0 0 auto; padding: 0 10px; color: var(--faint); font-size: 11px; font-weight: 550; }
+.ProposalCall--accepted .ProposalCall-icon { background: var(--success); box-shadow: none; }
+.ProposalCall--accepted .ProposalCall-state { color: var(--success); }
+.ProposalCall--error .ProposalCall-icon { background: var(--danger); box-shadow: none; }
+.ProposalCall--error .ProposalCall-state { color: var(--danger); }
+.ProposalCall-preview { padding: 0 14px 13px 52px; color: var(--muted); animation: pop-in 150ms var(--ease-swift) backwards; }
 .ProposalCall-preview > p { margin: 0 0 9px; font-size: 11.5px; line-height: 1.5; }
 .ProposalCall-preview dl { display: grid; gap: 7px; margin: 0; }
 .ProposalCall-preview dl > div { display: grid; grid-template-columns: minmax(54px, auto) minmax(0, 1fr); gap: 9px; }
@@ -1117,7 +1212,7 @@ img { max-width: 100%; }
 	.Dashboard-nav a:hover, .Dashboard-user:hover { background: var(--surface-hover); color: var(--ink); }
 	.BoardRow:hover { background: var(--surface-hover); }
 	.BoardRow-actions button:hover { background: var(--surface-active); }
-	.BoardShell-copy:hover, .BoardShell-studyClose:hover, .BoardShell-crumbs a:hover, .BoardShell-studyToggle:hover, .BoardShell-lockIn:hover { background: var(--surface-hover); color: var(--ink); }
+	.BoardShell-studyClose:hover, .Ribbon-crumbs a:hover { background: var(--surface-hover); color: var(--ink); }
 	.LockInTimer button:hover, .LockInSetup-header > button:hover, .LockInPanel-secondary:hover { background: var(--surface-hover); color: var(--ink); }
 	.LockInTimer .LockInTimer-end:hover { background: var(--danger-soft); color: var(--danger); }
 	.LockInSetup-submit:hover:not(:disabled) { background: var(--accent-hover); }
@@ -1132,8 +1227,10 @@ img { max-width: 100%; }
 	.ModelSelector:hover, .ReasoningSelector:hover, .SocraticToggle:hover, .StudyComposer .StudyComposer-attachment:hover:not(:disabled), .StudyAttachments button:hover, .ProposalCall-toggle:hover:not(:disabled), .ProposalCall-action--reject:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
 	.ProposalCall-action--accept:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-text); }
 	.BoardShell .tlui-button:not(:disabled, [data-disabled]):hover { color: var(--ink); }
-	.CanvasIsland-button:not(:disabled):hover, .CanvasZoom-level:hover { background: var(--surface-hover); color: var(--ink); }
-	.CanvasIsland-button[data-active='true']:hover { background: var(--accent-soft); color: var(--accent-text); }
+	.Ribbon-menuTrigger:hover, .Ribbon-studyToggle:hover, .RibbonMenu-item:not(:disabled):hover, .Ribbon-tool:hover, .RibbonMenu-step:hover, .CanvasTimer-button:not(:disabled):hover { background: var(--surface-hover); color: var(--ink); }
+	.RibbonMenu-item:not(:disabled):hover .RibbonMenu-itemIcon { color: inherit; }
+	.RibbonMenu-item[data-active='true']:hover, .Ribbon-tool[data-active='true']:hover, .CanvasTimer-button[data-active='true']:hover { background: var(--accent-soft); color: var(--accent-text); }
+	.RibbonMenu-item[data-danger='true']:not(:disabled):hover, .RibbonMenu-item[data-danger='true']:not(:disabled):hover .RibbonMenu-itemIcon { background: var(--danger-soft); color: var(--danger); }
 	.SpotifyPlayer-controls button:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
 	.SpotifyPlayer--setup a:hover { filter: brightness(.96); }
 	.Button--spotify:hover:not(:disabled) { background: #20e768; }
@@ -1151,8 +1248,8 @@ img { max-width: 100%; }
 :root[data-theme='dark'] .AuthSetup p { color: #a99568; }
 
 @media (max-width: 1024px) {
-	.BoardShell-copy span { display: none; }
-	.BoardShell-status { margin-right: 4px; font-size: 0; }
+	.Ribbon-status { margin-right: 2px; font-size: 0; }
+	.Ribbon-title { max-width: 18ch; }
 	.LockInTimer-progress { width: 34px; }
 	/* The pane becomes a drawer over the canvas, so tldraw keeps the full width. */
 	.BoardShell, .BoardShell[data-study-open='true'] { --study-panel-width: min(420px, 92vw); --chrome-side-inset: 0px; }
@@ -1178,7 +1275,7 @@ img { max-width: 100%; }
 	.NewBoard input, .StudyComposer textarea { font-size: 16px; }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 640px) {
 	.SpotifyPlayer:not(.SpotifyPlayer--setup) { width: 66px; grid-template-columns: 28px 28px; gap: 2px; }
 	.SpotifyPlayer-copy { display: none; }
 	.SpotifyPlayer-controls button:not(.SpotifyPlayer-play) { display: none; }
@@ -1193,8 +1290,9 @@ img { max-width: 100%; }
 	.BoardShell-study { z-index: 6; width: 100vw; padding: 0; }
 	.BoardShell-studyInner { border-radius: 0; background: var(--panel); box-shadow: none; }
 	.BoardShell-studyScrim { display: none; }
-	.BoardShell-crumbs a, .BoardShell-crumbs > svg { display: none; }
-	.BoardShell-title { padding-left: 4px; }
+	.Ribbon-crumbs a, .Ribbon-crumbs > svg { display: none; }
+	.Ribbon-title { max-width: 14ch; padding-left: 4px; }
+	.Ribbon-studyToggle span { display: none; }
 	.LockInSetup { inset: 0; width: 100vw; border-radius: 0; background: var(--panel); }
 	.LockInSetup-header { padding-top: max(9px, env(safe-area-inset-top)); }
 	.LockInSetup-form { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
@@ -1217,10 +1315,8 @@ img { max-width: 100%; }
 	.DueReviews { margin-bottom: 22px; }
 	.NewBoard { align-items: stretch; }
 	.NewBoard .Button { padding-inline: 12px; }
-	.BoardShell-headerGroup { gap: 0; }
-	.BoardShell-studyToggle span { display: none; }
-	.BoardShell-copy, .BoardShell-studyToggle, .BoardShell-lockIn { padding-inline: 7px; }
-	.BoardShell-lockIn span { display: none; }
+	.Ribbon-menuTrigger { padding-inline: 7px; }
+	.Ribbon-studyToggle { padding-inline: 7px; }
 	.StudyPanel-messageContent { padding: 10px; }
 	.StudyWelcome { padding-block: 10px 14px; }
 	.StudyComposer { margin: 6px; }
@@ -1242,19 +1338,19 @@ img { max-width: 100%; }
 	.BoardRow { min-height: 52px; }
 	.BoardRow-actions { gap: 0; padding-right: 2px; }
 	.ReviewRatings button { min-height: 40px; }
-	.BoardShell { --chrome-top-inset: 64px; }
-	.CanvasIsland-button, .CanvasZoom-level { width: 36px; height: 36px; }
-	.CanvasZoom-level { width: auto; min-width: 50px; }
-	.CanvasIsland .tlui-button { width: 36px; min-width: 36px; height: 36px; min-height: 36px; }
-	.CanvasIsland .tlui-page-menu__trigger { width: auto; }
-	.CanvasTimer { margin-left: 42px; }
+	.RibbonMenu { width: 244px; }
+	.RibbonMenu-item, .RibbonMenu-step, .Ribbon-tool, .Ribbon-menuTrigger--icon { min-height: 36px; }
+	.RibbonMenu-step, .Ribbon-tool, .Ribbon-menuTrigger--icon { width: 36px; height: 36px; }
+	.Ribbon-slot .tlui-button { width: 36px; min-width: 36px; height: 36px; min-height: 36px; }
+	.Ribbon-slot .tlui-page-menu__trigger { width: auto; }
+	.CanvasTimer-button { width: 36px; height: 36px; }
 	.CanvasTimer-readout { height: 36px; }
 	.SpotifyPlayer { height: 44px; grid-template-columns: 36px minmax(0, 1fr) auto; }
 	.SpotifyPlayer:not(.SpotifyPlayer--setup) { width: 76px; grid-template-columns: 36px 28px; }
 	.SpotifyPlayer--setup { width: 44px; grid-template-columns: 1fr; }
 	.SpotifyPlayer-art, .SpotifyPlayer--setup a { width: 36px; height: 36px; }
 	.SpotifyPlayer-controls .SpotifyPlayer-play { height: 36px; }
-	.BoardShell-copy, .BoardShell-studyToggle, .BoardShell-lockIn { min-width: 40px; min-height: 40px; justify-content: center; }
+	.Ribbon-studyToggle { min-width: 40px; min-height: 40px; justify-content: center; }
 	.LockInCelebration-card > button { min-height: 44px; }
 	.StudyPanel-header { min-height: 48px; padding-right: 50px; }
 	.StudyHistory > div button, .StudyHistory > button { min-height: 40px; }
@@ -1270,7 +1366,7 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
 	*, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 	button:not(:disabled):active { transform: none; }
-	.AuthLoading span, .BoardShell-status--offline::before { animation: none; }
+	.AuthLoading span, .Ribbon-status--offline::before { animation: none; }
 	.ProgressBar::after { width: 100%; opacity: .45; animation: none; }
 	.LockInCelebration, .LockInCelebration-aura, .LockInCelebration-card, .LockInCelebration-icon { animation: lock-in-celebration-fade 160ms var(--ease-swift) both !important; }
 }

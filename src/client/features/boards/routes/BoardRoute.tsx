@@ -8,7 +8,6 @@ import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
 import { BoardShell } from '../components/BoardShell'
 import { StudyPanel } from '../../study/components/StudyPanel'
-import { PDFImportControl } from '../../study/components/PDFImportControl'
 import { canvasShapeUtils, synchronizedShapeUtils } from '../lib/canvasShapes'
 import { createCanvasComponents } from '../lib/canvasComponents'
 import { canvasOverrides, canvasTools } from '../lib/canvasOverrides'
@@ -17,6 +16,7 @@ import { createMultiplayerAssetStore } from '../lib/multiplayerAssetStore'
 import { canvasThemes } from '../lib/canvasThemes'
 import { useTheme } from '../../theme/ThemeProvider'
 import { LockInProvider } from '../../lock-in/LockInProvider'
+import { ZenModeProvider } from '../lib/ZenModeProvider'
 import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
 
 export function Component() {
@@ -73,6 +73,7 @@ export function Component() {
 	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your board" /></div>
 
 	return (
+		<ZenModeProvider>
 		<LockInProvider boardID={boardID} editor={editor}>
 			<CraftDocumentsController
 				boardID={boardID}
@@ -96,9 +97,9 @@ export function Component() {
 							editor.registerExternalAssetHandler('url', getBookmarkPreview)
 						}}
 					/>
-					<PDFImportControl boardID={boardID} editor={editor} />
 				</div>
 			</BoardShell>
 		</LockInProvider>
+		</ZenModeProvider>
 	)
 }

@@ -8,8 +8,14 @@ import {
 } from '../db/studyConversations'
 import { requireSession } from '../auth/session'
 import type { IRequest } from 'itty-router'
+import {
+	DEFAULT_CONVERSATION_TITLE_MODEL,
+	generateConversationTitle,
+} from '../agents/conversationTitle'
+import type { AIRunner } from './lockIn'
 
 const MAX_TITLE_LENGTH = 80
+const MAX_TITLE_SOURCE_LENGTH = 2_000
 
 type ConversationAuthorization =
 	| { database: Database; userID: string }
@@ -53,6 +59,51 @@ export async function handleStudyConversationUpdate(request: IRequest, env: Env)
 	return Response.json({ conversation })
 }
 
+export async function handleStudyConversationTitle(request: IRequest, env: Env) {
+	const authorized = await authorize(request, env)
+	if ('response' in authorized) return authorized.response
+
+	const message = await readTitleSource(request)
+	if (!message) return Response.json({ error: 'A message is required to name the conversation' }, { status: 400 })
+
+	const boardID = request.params.boardID
+	const conversationID = request.params.conversationID
+	let title: string | null = null
+	try {
+		title = await generateConversationTitle(
+			env.AI as AIRunner,
+			env.CONVERSATION_TITLE_MODEL?.trim() || DEFAULT_CONVERSATION_TITLE_MODEL,
+			message,
+			{
+				gateway: {
+					id: env.AI_GATEWAY_ID ?? 'default',
+					metadata: { boardID, conversationID, pipeline: 'conversation-title' },
+				},
+				tags: ['agentboard', 'conversation-title'],
+			}
+		)
+	} catch (error) {
+		console.error(JSON.stringify({
+			boardID,
+			conversationID,
+			error: error instanceof Error ? error.message : 'Unknown conversation title error',
+			pipeline: 'conversation-title',
+		}))
+	}
+
+	/** Fall back to a trimmed excerpt so a naming outage never leaves "New conversation". */
+	const resolved = title ?? fallbackTitle(message)
+	const conversation = await updateStudyConversation(
+		authorized.database,
+		boardID,
+		authorized.userID,
+		conversationID,
+		resolved
+	)
+	if (!conversation) return Response.json({ error: 'Conversation not found' }, { status: 404 })
+	return Response.json({ conversation })
+}
+
 async function authorize(request: IRequest, env: Env): Promise<ConversationAuthorization> {
 	const authentication = await requireSession(request, env)
 	if (authentication.response) return { response: authentication.response }
@@ -74,4 +125,18 @@ async function readOptionalTitle(request: Request) {
 	if (typeof value !== 'string') return null
 	const title = value.trim().replace(/\s+/g, ' ')
 	return title ? title.slice(0, MAX_TITLE_LENGTH) : null
+}
+
+async function readTitleSource(request: Request): Promise<string | null> {
+	const body: unknown = await request.json().catch(() => ({}))
+	if (!body || typeof body !== 'object') return null
+	const value = Reflect.get(body, 'message')
+	if (typeof value !== 'string') return null
+	const message = value.trim().replace(/\s+/g, ' ')
+	return message ? message.slice(0, MAX_TITLE_SOURCE_LENGTH) : null
+}
+
+function fallbackTitle(message: string): string {
+	const normalized = message.trim().replace(/\s+/g, ' ')
+	return normalized.length > 52 ? `${normalized.slice(0, 51).trimEnd()}…` : normalized
 }

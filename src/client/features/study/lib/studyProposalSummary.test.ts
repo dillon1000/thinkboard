@@ -80,4 +80,20 @@ describe('getProposalPreview', () => {
 			{ label: 'Layouts', value: 'stack' },
 		]))
 	})
+
+	it('shows the exact memory that requires approval', () => {
+		const preview = getProposalPreview('saveMemory', {
+			content: 'Prefers one hint at a time before seeing a full solution.',
+			kind: 'preference',
+			memoryKey: 'hint-pacing',
+			title: 'Hint pacing',
+			topic: 'Study style',
+		})
+
+		expect(preview.details).toEqual([
+			{ label: 'Remember', value: 'Prefers one hint at a time before seeing a full solution.' },
+			{ label: 'Topic', value: 'Study style' },
+			{ label: 'Type', value: 'Preference' },
+		])
+	})
 })

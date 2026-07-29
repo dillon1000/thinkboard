@@ -1,0 +1,1 @@
+ALTER TABLE `studyMistake` ADD `kind` text DEFAULT 'learning-pattern' NOT NULL;

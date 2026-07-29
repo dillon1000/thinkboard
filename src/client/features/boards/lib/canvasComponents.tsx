@@ -1,17 +1,18 @@
 import type { TLComponents } from 'tldraw'
-import { CanvasMenuPanel } from '../components/CanvasMenuPanel'
-import { CanvasStylePanel } from '../components/CanvasStylePanel'
-import { CanvasToolbar } from '../components/CanvasToolbar'
-import { CanvasZoom } from '../components/CanvasZoom'
+import { CanvasRibbon } from '../components/CanvasRibbon'
 import { InlinePrompt } from '../components/InlinePrompt'
+import { ZenRadialMenu } from '../components/ZenRadialMenu'
 import { LockInCanvasOverlay } from '../../lock-in/LockInCanvasOverlay'
 
 /**
- * tldraw's chrome is recomposed rather than restyled: three islands and a style panel, each
- * built from tldraw's own menus and pickers so nothing upstream can do is lost. The help
- * menu is the one component dropped — its keyboard shortcuts live in the board menu.
+ * The canvas carries one piece of chrome: a ribbon along the top that absorbs everything that
+ * used to float over the board — tldraw's menus, tools, style pickers and zoom, plus our own
+ * timer, Spotify player, PDF import, theme switch and study toggle. tldraw's own panel slots are
+ * emptied so nothing renders twice; their contents are recomposed inside the ribbon's bands, so
+ * every menu, picker and shortcut still behaves the way it does upstream.
  *
- * Built per board because the cursor-side agent needs to know which board it is answering for.
+ * Built per board because the ribbon and the cursor-side agent both need to know which board
+ * they are acting on.
  */
 export function createCanvasComponents(boardID: string): TLComponents {
 	return {
@@ -20,11 +21,14 @@ export function createCanvasComponents(boardID: string): TLComponents {
 			<>
 				<LockInCanvasOverlay />
 				<InlinePrompt boardID={boardID} />
+				<ZenRadialMenu />
 			</>
 		),
-		MenuPanel: CanvasMenuPanel,
-		NavigationPanel: CanvasZoom,
-		StylePanel: CanvasStylePanel,
-		Toolbar: CanvasToolbar,
+		/* The top-left slot is stretched to the full width in CSS; the ribbon owns that whole row. */
+		MenuPanel: () => <CanvasRibbon boardID={boardID} />,
+		NavigationPanel: null,
+		StylePanel: null,
+		Toolbar: null,
+		TopPanel: null,
 	}
 }

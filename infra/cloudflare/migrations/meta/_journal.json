@@ -50,6 +50,13 @@
       "when": 1785138249274,
       "tag": "0006_flowery_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785360324590,
+      "tag": "0007_spotty_donald_blake",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import {
 	IconCards,
 	IconCheck,
 	IconExternalLink,
+	IconFocusCentered,
 	IconLock,
 } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
@@ -23,6 +24,10 @@ import {
 	readDueReviewVisibility,
 	writeDueReviewVisibility,
 } from '../../boards/lib/dueReviewPreferences'
+import {
+	readRadialMenuAlwaysOn,
+	writeRadialMenuAlwaysOn,
+} from '../../boards/lib/radialMenuPreference'
 import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
 export function Component() {
@@ -31,6 +36,7 @@ export function Component() {
 	const [spotifyScopes, setSpotifyScopes] = useState<string[]>([])
 	const [showSpotifyStatus, setShowSpotifyStatus] = useState(readSpotifyStatusVisibility)
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
+	const [radialMenuAlwaysOn, setRadialMenuAlwaysOn] = useState(readRadialMenuAlwaysOn)
 	const [isLoading, setIsLoading] = useState(true)
 	const [isLinking, setIsLinking] = useState(false)
 	const [isUnlinking, setIsUnlinking] = useState(false)
@@ -228,6 +234,43 @@ export function Component() {
 										onChange={(event) => {
 											setShowDueReviews(event.target.checked)
 											writeDueReviewVisibility(event.target.checked)
+										}}
+										type="checkbox"
+									/>
+									<span aria-hidden="true" className="SpotifyPreference-control"><span /></span>
+								</label>
+							</div>
+						</article>
+					</div>
+				</section>
+
+				<section aria-labelledby="canvas-heading" className="Settings-section">
+					<div className="Settings-sectionHeading">
+						<h2 id="canvas-heading">Canvas</h2>
+						<p>How you reach the board's controls while you work.</p>
+					</div>
+
+					<div className="ConnectionList">
+						<article className="ConnectionCard">
+							<div className="ConnectionCard-icon ConnectionCard-icon--identity">
+								<IconFocusCentered aria-hidden="true" size={20} stroke={1.8} />
+							</div>
+							<div className="ConnectionCard-copy">
+								<div>
+									<h3>Press-and-hold menu</h3>
+								</div>
+								<p>Press and hold anywhere on a board — cursor, touch or pen — to open a quick menu of tools, colours, chat, PDF import and music.</p>
+								<small>Always available in Zen Mode. Turn this on to use it on any board, even with the toolbars showing.</small>
+								<label className="SpotifyPreference">
+									<span>
+										<strong>Enable outside Zen Mode</strong>
+										<small>Summon the menu without hiding the rest of the interface.</small>
+									</span>
+									<input
+										checked={radialMenuAlwaysOn}
+										onChange={(event) => {
+											setRadialMenuAlwaysOn(event.target.checked)
+											writeRadialMenuAlwaysOn(event.target.checked)
 										}}
 										type="checkbox"
 									/>

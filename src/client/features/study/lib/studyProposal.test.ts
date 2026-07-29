@@ -85,6 +85,20 @@ describe('parseLeakedProposal', () => {
 		})
 	})
 
+	it('recovers an approved memory proposal', () => {
+		const input = {
+			content: 'Prefers one hint at a time before seeing a full solution.',
+			kind: 'preference',
+			memoryKey: 'hint-pacing',
+			title: 'Hint pacing',
+			topic: 'Study style',
+		}
+		expect(parseLeakedProposal(JSON.stringify({ name: 'saveMemory', parameters: input }))).toEqual({
+			input,
+			toolName: 'saveMemory',
+		})
+	})
+
 	it('recovers a narrated equation call', () => {
 		const call = {
 			toolName: 'writeEquation',

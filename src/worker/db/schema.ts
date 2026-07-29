@@ -162,6 +162,9 @@ export const studyMistake = sqliteTable(
 		concept: text('concept').notNull(),
 		title: text('title').notNull(),
 		description: text('description').notNull(),
+		kind: text('kind', {
+			enum: ['background', 'goal', 'learning-pattern', 'preference'],
+		}).notNull().default('learning-pattern'),
 		patternKey: text('patternKey').notNull(),
 		shapeIDs: text('shapeIDs').notNull(),
 		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),

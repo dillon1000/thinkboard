@@ -1,25 +1,10 @@
-import { appRoutes } from '@agentboard/shared'
-import {
-	IconCheck,
-	IconChevronRight,
-	IconCopy,
-	IconLayoutSidebarRightCollapse,
-	IconLayoutSidebarRightExpand,
-	IconLock,
-	IconPlayerPause,
-	IconPlayerPlay,
-	IconX,
-} from '@tabler/icons-react'
-import { type ReactNode, useEffect, useState } from 'react'
-import { ThemeToggle } from '../../theme/ThemeToggle'
+import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { BoardChromeProvider } from '../lib/BoardChromeProvider'
+import { useZenMode } from '../lib/ZenModeProvider'
 import { LockInSetup } from '../../lock-in/LockInSetup'
 import { LockInCelebration } from '../../lock-in/LockInCelebration'
 import { useLockIn } from '../../lock-in/LockInProvider'
-import {
-	formatLockInTime,
-	getLockInElapsedMS,
-	getLockInRemainingMS,
-} from '../../lock-in/lib/lockInSession'
 
 const STUDY_PANEL_STORAGE_KEY = 'agentboard.study-panel'
 
@@ -34,14 +19,8 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 	const [didCopy, setDidCopy] = useState(false)
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
 	const [isOnline, setIsOnline] = useState(navigator.onLine)
-	const {
-		endSession,
-		now,
-		openSetup,
-		pauseSession,
-		resumeSession,
-		session,
-	} = useLockIn()
+	const zen = useZenMode()
+	const { session } = useLockIn()
 
 	useEffect(() => {
 		if (!didCopy) return
@@ -64,6 +43,17 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 		if (session) setStudyPanelOpen(true)
 	}, [session?.id])
 
+	/* The radial menu's Chat petal opens the study pane through here — it can't reach this state. */
+	useEffect(() => {
+		zen.registerOpenChat(() => setStudyPanelOpen(true))
+		return () => zen.registerOpenChat(null)
+	}, [zen])
+
+	/* Entering Zen clears the canvas; the chat petal brings the study pane back when it's wanted. */
+	useEffect(() => {
+		if (zen.enabled) setStudyPanelOpen(false)
+	}, [zen.enabled])
+
 	async function copyBoardLink() {
 		await navigator.clipboard.writeText(window.location.href)
 		setDidCopy(true)
@@ -78,92 +68,22 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 		}
 	}
 
+	const chrome = useMemo(() => ({
+		boardID,
+		copyBoardLink: () => void copyBoardLink(),
+		didCopyBoardLink: didCopy,
+		isOnline,
+		isStudyOpen,
+		setStudyOpen: setStudyPanelOpen,
+		title,
+	}), [boardID, didCopy, isOnline, isStudyOpen, title])
+
 	return (
-		<div className="BoardShell" data-lock-in={Boolean(session)} data-study-open={isStudyOpen}>
+		<div className="BoardShell" data-lock-in={Boolean(session)} data-study-open={isStudyOpen} data-zen={zen.enabled}>
 			<div className="BoardShell-workspace">
-				<main className="BoardShell-content">{children}</main>
-				<header className="BoardShell-header">
-					<div className="BoardShell-headerGroup">
-						<nav aria-label="Breadcrumb" className="BoardShell-crumbs">
-							<a href={appRoutes.home}>Boards</a>
-							<IconChevronRight aria-hidden="true" size={13} stroke={1.8} />
-							<span className="BoardShell-title" data-board-id={boardID} title={title}>{title}</span>
-						</nav>
-						<span className={`BoardShell-status${isOnline ? '' : ' BoardShell-status--offline'}`} role="status">
-							{isOnline ? 'Live' : 'Offline'}
-						</span>
-					</div>
-					<div className="BoardShell-headerGroup BoardShell-headerGroup--actions">
-						{session ? (
-							<div className="LockInTimer" role="timer">
-								<IconLock aria-hidden="true" size={15} stroke={1.9} />
-								<strong>{formatLockInTime(getLockInRemainingMS(session, now))}</strong>
-								<span className="LockInTimer-progress" aria-hidden="true">
-									<i style={{
-										transform: `scaleX(${Math.min(1, getLockInElapsedMS(session, now) / (session.durationMinutes * 60_000))})`,
-									}} />
-								</span>
-								<button
-									aria-label={session.runningSince === null ? 'Resume Lock In session' : 'Pause Lock In session'}
-									onClick={session.runningSince === null ? resumeSession : pauseSession}
-									title={session.runningSince === null ? 'Resume Lock In session' : 'Pause Lock In session'}
-									type="button"
-								>
-									{session.runningSince === null
-										? <IconPlayerPlay aria-hidden="true" size={15} />
-										: <IconPlayerPause aria-hidden="true" size={15} />}
-								</button>
-								<button
-									aria-label="End Lock In session"
-									className="LockInTimer-end"
-									onClick={endSession}
-									title="End Lock In session"
-									type="button"
-								>
-									<IconX aria-hidden="true" size={15} />
-								</button>
-							</div>
-						) : null}
-						{!session ? <button
-							className="BoardShell-lockIn"
-							onClick={() => {
-								setStudyPanelOpen(false)
-								openSetup()
-							}}
-							title="Start Lock In Mode"
-							type="button"
-						>
-							<IconLock aria-hidden="true" size={15} stroke={1.8} />
-							<span>Lock In</span>
-						</button> : null}
-						<button
-							aria-label={didCopy ? 'Board link copied' : 'Copy board link'}
-							aria-live="polite"
-							className="BoardShell-copy"
-							onClick={() => void copyBoardLink()}
-							title={didCopy ? 'Board link copied' : 'Copy board link'}
-							type="button"
-						>
-							{didCopy ? <IconCheck aria-hidden="true" size={15} key="check" /> : <IconCopy aria-hidden="true" size={15} key="copy" />}
-							<span>{didCopy ? 'Copied' : 'Copy link'}</span>
-						</button>
-						<ThemeToggle />
-						<button
-							aria-controls="study-panel"
-							aria-expanded={isStudyOpen}
-							aria-label={isStudyOpen ? 'Close study panel' : 'Open study panel'}
-							className="BoardShell-studyToggle"
-							onClick={() => setStudyPanelOpen(!isStudyOpen)}
-							title={isStudyOpen ? 'Close study panel' : 'Open study panel'}
-							type="button"
-						>
-							{isStudyOpen
-								? <IconLayoutSidebarRightCollapse aria-hidden="true" size={15} stroke={1.8} key="collapse" />
-								: <IconLayoutSidebarRightExpand aria-hidden="true" size={15} stroke={1.8} key="expand" />}
-							<span>Study</span>
-						</button>
-					</div>
-				</header>
+				<main className="BoardShell-content">
+					<BoardChromeProvider value={chrome}>{children}</BoardChromeProvider>
+				</main>
 				<button
 					aria-label="Close study panel"
 					className="BoardShell-studyScrim"

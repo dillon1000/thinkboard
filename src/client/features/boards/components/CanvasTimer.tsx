@@ -58,14 +58,14 @@ export function CanvasTimer() {
 	const toggleLabel = isRunning ? 'Pause timer' : elapsedMS > 0 ? 'Resume timer' : 'Start timer'
 
 	return (
-		<div aria-label="Canvas timer" className="CanvasIsland CanvasTimer" role="group">
+		<div aria-label="Canvas timer" className="CanvasTimer" role="group">
 			<div aria-label={`${time} elapsed`} className="CanvasTimer-readout" role="timer">
 				<IconClock aria-hidden="true" size={15} stroke={1.8} />
 				<span>{time}</span>
 			</div>
 			<button
 				aria-label={toggleLabel}
-				className="CanvasIsland-button"
+				className="CanvasTimer-button"
 				data-active={isRunning}
 				onClick={toggleTimer}
 				title={toggleLabel}
@@ -77,7 +77,7 @@ export function CanvasTimer() {
 			</button>
 			<button
 				aria-label="Reset timer"
-				className="CanvasIsland-button"
+				className="CanvasTimer-button"
 				disabled={elapsedMS === 0}
 				onClick={resetTimer}
 				title="Reset timer"

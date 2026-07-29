@@ -1,4 +1,5 @@
 import {
+	agentMemoryProposalSchema,
 	conceptMapProposalSchema,
 	canvasPlanInputSchema,
 	canvasPlanSchema,
@@ -21,6 +22,7 @@ export type SupportedProposalName =
 	| 'createWalkthrough'
 	| 'composeCanvas'
 	| 'recordMistake'
+	| 'saveMemory'
 	| 'writeEquation'
 
 export interface LeakedProposal {
@@ -43,6 +45,7 @@ const proposalNames: readonly SupportedProposalName[] = [
 	'composeCanvas',
 	'writeEquation',
 	'recordMistake',
+	'saveMemory',
 ]
 
 export function parseLeakedProposal(text: string): LeakedProposal | null {
@@ -91,6 +94,9 @@ function parseProposalValue(value: unknown): LeakedProposal | null {
 		return { input, toolName }
 	}
 	if (toolName === 'recordMistake' && mistakeProposalSchema.safeParse(input).success) {
+		return { input, toolName }
+	}
+	if (toolName === 'saveMemory' && agentMemoryProposalSchema.safeParse(input).success) {
 		return { input, toolName }
 	}
 	if (toolName === 'composeCanvas') {

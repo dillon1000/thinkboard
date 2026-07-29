@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+	agentMemoryProposalSchema,
 	flashcardReviewRatingSchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
@@ -27,6 +28,23 @@ describe('study learning contracts', () => {
 			description: 'Distributed a negative sign incorrectly.',
 			patternKey: 'Negative Distribution',
 			title: 'Negative sign distribution',
+		}).success).toBe(false)
+	})
+
+	it('accepts bounded memory proposals with stable keys', () => {
+		expect(agentMemoryProposalSchema.safeParse({
+			content: 'Prefers one hint at a time before seeing a full solution.',
+			kind: 'preference',
+			memoryKey: 'hint-pacing',
+			title: 'Hint pacing',
+			topic: 'Study style',
+		}).success).toBe(true)
+		expect(agentMemoryProposalSchema.safeParse({
+			content: 'Remember this.',
+			kind: 'private-secret',
+			memoryKey: 'Invalid Key',
+			title: 'Invalid',
+			topic: 'Study style',
 		}).success).toBe(false)
 	})
 })

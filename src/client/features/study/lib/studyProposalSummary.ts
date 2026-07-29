@@ -1,4 +1,5 @@
 import {
+	agentMemoryProposalSchema,
 	conceptMapProposalSchema,
 	normalizeCanvasPlanInput,
 	equationProposalSchema,
@@ -21,6 +22,7 @@ export function proposalShortLabel(toolName: string) {
 	if (toolName === 'writeEquation') return 'Equation'
 	if (toolName === 'composeCanvas') return 'Canvas composition'
 	if (toolName === 'recordMistake') return 'Mistake record'
+	if (toolName === 'saveMemory') return 'Memory'
 	return 'Board item'
 }
 
@@ -136,6 +138,19 @@ export function getProposalPreview(toolName: string, input: unknown): ProposalPr
 			}
 		}
 	}
+	if (toolName === 'saveMemory') {
+		const proposal = agentMemoryProposalSchema.safeParse(input)
+		if (proposal.success) {
+			return {
+				description,
+				details: [
+					{ label: 'Remember', value: proposal.data.content },
+					{ label: 'Topic', value: proposal.data.topic },
+					{ label: 'Type', value: formatMemoryKind(proposal.data.kind) },
+				],
+			}
+		}
+	}
 	if (toolName === 'composeCanvas') {
 		const proposal = parseCanvasPlan(input)
 		if (proposal) {
@@ -195,6 +210,12 @@ export function summarizeProposal(toolName: string, input: unknown) {
 		const proposal = mistakeProposalSchema.safeParse(input)
 		return proposal.success ? `${proposal.data.title} will be saved to your private learning history.` : 'Preparing a mistake record…'
 	}
+	if (toolName === 'saveMemory') {
+		const proposal = agentMemoryProposalSchema.safeParse(input)
+		return proposal.success
+			? `Remember “${proposal.data.title}” across your boards.`
+			: 'Preparing a memory…'
+	}
 	if (toolName === 'composeCanvas') {
 		const proposal = parseCanvasPlan(input)
 		if (!proposal) return 'Preparing a canvas composition…'
@@ -203,6 +224,10 @@ export function summarizeProposal(toolName: string, input: unknown) {
 		return `${objectCount} board objects${editCount ? ` and ${editCount} edits` : ''}, arranged with native canvas tools.`
 	}
 	return 'A board item is ready for review.'
+}
+
+function formatMemoryKind(kind: string) {
+	return kind.split('-').map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ')
 }
 
 function parseCanvasPlan(input: unknown) {

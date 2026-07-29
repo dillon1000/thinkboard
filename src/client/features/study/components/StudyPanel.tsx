@@ -7,6 +7,7 @@ import {
 	parseCraftDocumentCitationHref,
 	studyReasoningEffortSchema,
 	type ConceptMapProposal,
+	type AgentMemoryProposal,
 	type CanvasPlanInput,
 	type CanvasContext,
 	type EquationProposal,
@@ -18,6 +19,7 @@ import {
 	type SpotifyAgentPlayInput,
 	type SpotifyAgentPlayOutput,
 	type StudyConversation,
+	type StudyMessageContextChip,
 	type StudyMessageMetadata,
 	type StudyModelMode,
 	type StudyMode,
@@ -42,6 +44,7 @@ import {
 	IconHistory,
 	IconLock,
 	IconPaperclip,
+	IconPhoto,
 	IconPlayerStop,
 	IconPlus,
 	IconRefresh,
@@ -92,6 +95,7 @@ import {
 	isStudyToolName,
 	persistProposalEffect,
 	recordProposedMistake,
+	saveProposedMemory,
 	type StudyToolName,
 } from '../lib/studyProposalApply'
 import {
@@ -237,17 +241,24 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 
 	function updateConversation(message: string) {
 		if (!currentConversation) return
+		const conversationID = currentConversation.id
 		const shouldSetTitle = currentConversation.title === 'New conversation'
-		const nextTitle = shouldSetTitle ? createConversationTitle(message) : currentConversation.title
-		const optimistic = { ...currentConversation, title: nextTitle, updatedAt: new Date().toISOString() }
+		/** Show a trimmed excerpt immediately; Llama 4 replaces it with a topic label moments later. */
+		const optimisticTitle = shouldSetTitle ? createConversationTitle(message) : currentConversation.title
+		const optimistic = { ...currentConversation, title: optimisticTitle, updatedAt: new Date().toISOString() }
 		setConversations((current) => [optimistic, ...(current ?? []).filter(({ id }) => id !== optimistic.id)])
-		void apiRequest<{ conversation: StudyConversation }>(
-			apiRoutes.studyConversation(boardID, currentConversation.id),
-			{
-				body: JSON.stringify(shouldSetTitle ? { title: nextTitle } : {}),
-				method: 'PATCH',
-			}
-		).then((response) => {
+
+		const request = shouldSetTitle
+			? apiRequest<{ conversation: StudyConversation }>(
+				apiRoutes.studyConversationTitle(boardID, conversationID),
+				{ body: JSON.stringify({ message }), method: 'POST' }
+			)
+			: apiRequest<{ conversation: StudyConversation }>(
+				apiRoutes.studyConversation(boardID, conversationID),
+				{ body: JSON.stringify({}), method: 'PATCH' }
+			)
+
+		void request.then((response) => {
 			setConversations((current) => [
 				response.conversation,
 				...(current ?? []).filter(({ id }) => id !== response.conversation.id),
@@ -385,6 +396,7 @@ type StudyTools = {
 	composeCanvas: { input: CanvasPlanInput; output: { applied: boolean } }
 	writeEquation: { input: EquationProposal; output: { applied: boolean } }
 	recordMistake: { input: MistakeProposal; output: { applied: boolean } }
+	saveMemory: { input: AgentMemoryProposal; output: { applied: boolean } }
 	playSpotify: { input: SpotifyAgentPlayInput; output: SpotifyAgentPlayOutput }
 	search: { input: unknown; output: unknown }
 	answer: { input: unknown; output: unknown }
@@ -457,12 +469,18 @@ function StudyConversationChat({
 		event.preventDefault()
 		const text = input.trim()
 		if ((!text && attachments.length === 0) || chat.status !== 'ready') return
+		/** Freeze what was attached so it can ride along as chips on the sent message. */
+		const contextChips = buildContextChips(selectionCount, hasPDFTextSelection)
 		setInput('')
 		setAttachments([])
 		setAttachmentError(null)
 		if (fileInputRef.current) fileInputRef.current.value = ''
 		onActivity(text || 'Image question')
-		void chat.sendMessage({ files: attachments, text })
+		void chat.sendMessage({
+			files: attachments,
+			text,
+			...(contextChips.length ? { metadata: { contextChips } } : {}),
+		})
 	}
 
 	async function attachImages(files: FileList) {
@@ -546,7 +564,9 @@ function StudyConversationChat({
 	) {
 		try {
 			if (applied) {
-				if (toolName === 'recordMistake') {
+				if (toolName === 'saveMemory') {
+					await saveProposedMemory(boardID, proposal)
+				} else if (toolName === 'recordMistake') {
 					await recordProposedMistake(boardID, proposal)
 				} else {
 					if (!editor) throw new Error('The canvas is not ready')
@@ -599,7 +619,15 @@ function StudyConversationChat({
 										messageId={message.id}
 										scrollAnchor={message.role === 'user'}
 									>
-										<span className="sr-only">{message.role === 'user' ? 'You' : 'Study partner'}</span>
+										{message.role === 'assistant' ? (
+											<div className="ChatMessage-head">
+												<span className="ChatMessage-orb" aria-hidden="true" />
+												<strong>Study partner</strong>
+											</div>
+										) : (
+											<span className="sr-only">You</span>
+										)}
+										{message.role === 'user' ? <MessageContextChips metadata={message.metadata} parts={message.parts} /> : null}
 										{message.parts.map((part, index) => {
 											if (part.type === 'reasoning') {
 												if (message.role !== 'assistant') return null
@@ -633,16 +661,15 @@ function StudyConversationChat({
 												}
 												return <AssistantMarkdown boardID={boardID} editor={editor} isAnimating={isAnimating} key={index}>{part.text}</AssistantMarkdown>
 											}
-											if (part.type === 'file' && part.mediaType.startsWith('image/')) {
-												return <img alt={part.filename ?? 'Image attachment'} className="ChatAttachment" key={index} src={part.url} />
-											}
+											/** Attached images ride above the bubble as chips (see MessageContextChips). */
+											if (part.type === 'file' && part.mediaType.startsWith('image/')) return null
 											if (!isToolUIPart(part)) return null
 											const toolName = getToolName(part)
 											if (!isStudyToolName(toolName)) return null
 											const isApplied = part.state === 'output-available' && isAppliedOutput(part.output)
 											return (
 												<ProposalToolCall
-													acceptDisabled={!editor && toolName !== 'recordMistake'}
+													acceptDisabled={!editor && !isMemoryTool(toolName)}
 													input={part.input}
 													key={part.toolCallId}
 													onAccept={() => resolveProposal(toolName, part.toolCallId, part.input, true)}
@@ -767,6 +794,59 @@ function StudyConversationChat({
 					</div>
 				</div>
 			</form>
+		</div>
+	)
+}
+
+function buildContextChips(
+	selectionCount: number,
+	hasPDFTextSelection: boolean
+): StudyMessageContextChip[] {
+	const chips: StudyMessageContextChip[] = []
+	if (selectionCount > 0) {
+		chips.push({ kind: 'shapes', label: selectionCount === 1 ? '1 shape' : `${selectionCount} shapes` })
+	}
+	if (hasPDFTextSelection) chips.push({ kind: 'pdf', label: 'PDF selection' })
+	return chips
+}
+
+function ContextChipIcon({ kind }: { kind: StudyMessageContextChip['kind'] }) {
+	if (kind === 'shapes') return <IconFocus2 aria-hidden="true" size={13} stroke={1.8} />
+	if (kind === 'image') return <IconPhoto aria-hidden="true" size={13} stroke={1.8} />
+	return <IconFileText aria-hidden="true" size={13} stroke={1.8} />
+}
+
+/** Cursor-style context chips pinned above a user message: canvas shapes, PDF text, attached images. */
+function MessageContextChips({
+	metadata,
+	parts,
+}: {
+	metadata?: StudyMessageMetadata
+	parts: StudyUIMessage['parts']
+}) {
+	const chips = metadata?.contextChips ?? []
+	const images = parts.flatMap((part, index) =>
+		part.type === 'file' && part.mediaType.startsWith('image/')
+			? [{ url: part.url, filename: part.filename ?? `Image ${index + 1}` }]
+			: []
+	)
+	if (chips.length === 0 && images.length === 0) return null
+
+	return (
+		<div className="MsgChips">
+			{chips.map((chip, index) => (
+				<span className="ContextChip" key={`chip-${index}`}>
+					<ContextChipIcon kind={chip.kind} />
+					<span className="ContextChip-label">{chip.label}</span>
+					{chip.meta ? <span className="ContextChip-meta">{chip.meta}</span> : null}
+				</span>
+			))}
+			{images.map((image, index) => (
+				<span className="ContextChip" key={`image-${index}`} title={image.filename}>
+					<img alt="" src={image.url} />
+					<span className="ContextChip-label">{image.filename}</span>
+				</span>
+			))}
 		</div>
 	)
 }
@@ -1000,9 +1080,11 @@ function ProposalToolCall({
 					title={canPreview ? `${isExpanded ? 'Hide' : 'Preview'} ${label.toLowerCase()}` : undefined}
 					type="button"
 				>
-					<IconChevronRight aria-hidden="true" className={isExpanded ? 'is-expanded' : undefined} size={14} stroke={2} />
-					<IconSparkles aria-hidden="true" className="ProposalCall-icon" size={14} stroke={1.8} />
-					<span className="ProposalCall-label">{label}</span>
+					<IconSparkles aria-hidden="true" className="ProposalCall-icon" size={16} stroke={1.9} />
+					<span className="ProposalCall-label">
+						<strong>{label}</strong>
+						<small>{canPreview ? (isExpanded ? 'Hide preview' : preview.description) : 'Generating…'}</small>
+					</span>
 				</button>
 				{isReady ? (
 					<div aria-label={`${label} approval`} className="ProposalCall-actions" role="group">
@@ -1011,7 +1093,7 @@ function ProposalToolCall({
 							className="ProposalCall-action ProposalCall-action--accept"
 							disabled={acceptDisabled || pendingDecision !== null}
 							onClick={() => void decide('accept')}
-							title={toolName === 'recordMistake' ? 'Accept and save' : 'Accept and add to board'}
+							title={isMemoryTool(toolName) ? 'Accept and save' : 'Accept and add to board'}
 							type="button"
 						>
 							<IconCheck aria-hidden="true" size={15} stroke={2.2} />
@@ -1052,7 +1134,7 @@ function ProposalToolCall({
 
 function proposalCallStateLabel(status: ProposalCallStatus, toolName: StudyToolName) {
 	if (status === 'preparing') return 'Generating…'
-	if (status === 'accepted') return toolName === 'recordMistake' ? 'Saved' : 'Added'
+	if (status === 'accepted') return isMemoryTool(toolName) ? 'Saved' : 'Added'
 	if (status === 'rejected') return 'Rejected'
 	if (status === 'error') return 'Failed'
 	return 'Ready'
@@ -1088,6 +1170,9 @@ function addProposalOutput(
 	if (toolName === 'composeCanvas') {
 		return addToolOutput({ tool: 'composeCanvas', toolCallId: toolCallID, output })
 	}
+	if (toolName === 'saveMemory') {
+		return addToolOutput({ tool: 'saveMemory', toolCallId: toolCallID, output })
+	}
 	return addToolOutput({ tool: 'recordMistake', toolCallId: toolCallID, output })
 }
 
@@ -1119,6 +1204,7 @@ function addProposalError(
 	if (toolName === 'createPracticeSet') return addToolOutput({ tool: 'createPracticeSet', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'writeEquation') return addToolOutput({ tool: 'writeEquation', toolCallId: toolCallID, state: 'output-error', errorText })
 	if (toolName === 'composeCanvas') return addToolOutput({ tool: 'composeCanvas', toolCallId: toolCallID, state: 'output-error', errorText })
+	if (toolName === 'saveMemory') return addToolOutput({ tool: 'saveMemory', toolCallId: toolCallID, state: 'output-error', errorText })
 	return addToolOutput({ tool: 'recordMistake', toolCallId: toolCallID, state: 'output-error', errorText })
 }
 
@@ -1137,7 +1223,9 @@ function LeakedProposalCall({
 
 	async function applyLeakedProposal() {
 		try {
-			if (proposal.toolName === 'recordMistake') {
+			if (proposal.toolName === 'saveMemory') {
+				await saveProposedMemory(boardID, proposal.input)
+			} else if (proposal.toolName === 'recordMistake') {
 				await recordProposedMistake(boardID, proposal.input)
 			} else {
 				if (!editor) return
@@ -1154,7 +1242,7 @@ function LeakedProposalCall({
 
 	return (
 		<ProposalToolCall
-			acceptDisabled={!editor && proposal.toolName !== 'recordMistake'}
+			acceptDisabled={!editor && !isMemoryTool(proposal.toolName)}
 			input={proposal.input}
 			onAccept={applyLeakedProposal}
 			onReject={() => setStatus('rejected')}
@@ -1162,6 +1250,10 @@ function LeakedProposalCall({
 			toolName={proposal.toolName}
 		/>
 	)
+}
+
+function isMemoryTool(toolName: StudyToolName) {
+	return toolName === 'recordMistake' || toolName === 'saveMemory'
 }
 
 function createConversationTitle(message: string) {

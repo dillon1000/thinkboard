@@ -2,6 +2,17 @@ import { z } from 'zod'
 
 export const studyModeSchema = z.enum(['direct', 'socratic'])
 export const flashcardReviewRatingSchema = z.enum(['again', 'hard', 'good', 'easy'])
+export const agentMemoryKindSchema = z.enum([
+	'background',
+	'goal',
+	'learning-pattern',
+	'preference',
+])
+export const agentMemoryKeySchema = z.string()
+	.trim()
+	.min(1)
+	.max(120)
+	.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
 
 export const registerFlashcardsSchema = z.object({
 	cards: z.array(z.object({
@@ -15,9 +26,19 @@ export const mistakeProposalSchema = z.object({
 	concept: z.string().trim().min(1).max(100).describe('Academic concept or skill involved.'),
 	title: z.string().trim().min(1).max(120).describe('Short, student-friendly name for the mistake.'),
 	description: z.string().trim().min(1).max(800).describe('What went wrong and what to check next time.'),
-	patternKey: z.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+	patternKey: agentMemoryKeySchema
 		.describe('Stable lowercase kebab-case identifier for grouping repeated mistakes.'),
 	shapeIDs: z.array(z.string().max(120)).max(30).default([]),
+})
+
+export const agentMemoryProposalSchema = z.object({
+	content: z.string().trim().min(1).max(800)
+		.describe('One concise fact to remember. Do not include sensitive personal data.'),
+	kind: agentMemoryKindSchema.describe('Why this memory can improve future study help.'),
+	memoryKey: agentMemoryKeySchema
+		.describe('Stable lowercase kebab-case identifier. Reuse it when updating the same fact.'),
+	title: z.string().trim().min(1).max(120).describe('Short label shown to the student.'),
+	topic: z.string().trim().min(1).max(100).describe('Subject or area this memory applies to.'),
 })
 
 export interface DueFlashcard {
@@ -42,15 +63,18 @@ export interface StudyMistake {
 	title: string
 }
 
-export interface MistakePattern {
-	concept: string
+export interface AgentMemory {
+	content: string
 	count: number
-	description: string
-	lastSeenAt: string
-	patternKey: string
+	kind: AgentMemoryKind
+	lastSavedAt: string
+	memoryKey: string
 	title: string
+	topic: string
 }
 
+export type AgentMemoryKind = z.infer<typeof agentMemoryKindSchema>
+export type AgentMemoryProposal = z.infer<typeof agentMemoryProposalSchema>
 export type FlashcardReviewRating = z.infer<typeof flashcardReviewRatingSchema>
 export type MistakeProposal = z.infer<typeof mistakeProposalSchema>
 export type StudyMode = z.infer<typeof studyModeSchema>

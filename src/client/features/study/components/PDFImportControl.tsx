@@ -21,6 +21,7 @@ import {
 	describePDFImportFailure,
 	type PDFImportFailure,
 } from '../lib/pdfImportError'
+import { useZenMode } from '../../boards/lib/ZenModeProvider'
 import { openCraftDocuments } from '../../craft/craftPreviewEvent'
 
 interface PDFImportControlProps {
@@ -34,6 +35,13 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const [failedDocuments, setFailedDocuments] = useState<DocumentSummary[]>([])
 	const [processingDocumentCount, setProcessingDocumentCount] = useState(0)
 	const inputRef = useRef<HTMLInputElement>(null)
+	const zen = useZenMode()
+
+	/* Zen hides this button, so the radial menu's PDF petal opens the file picker through here. */
+	useEffect(() => {
+		zen.registerImportPDF(() => inputRef.current?.click())
+		return () => zen.registerImportPDF(null)
+	}, [zen])
 
 	const refreshDocuments = useCallback(async () => {
 		const response = await listBoardDocuments(boardID)
@@ -112,35 +120,44 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 		<div className="PDFImportControl" onDragOver={(event: DragEvent) => event.preventDefault()}>
 			<input accept="application/pdf,.pdf" onChange={handleFiles} ref={inputRef} type="file" />
 			<button
-				className="PDFImportButton"
+				className="RibbonMenu-item PDFImportButton"
 				disabled={!editor || Boolean(progress)}
 				onClick={() => inputRef.current?.click()}
 				title="Import PDF pages onto this board"
 				type="button"
 			>
-				{progress && progress.stage !== 'ready' ? (
-					<ThinkingOrb aria-hidden="true" size={20} state={getProgressOrbState(progress)} />
-				) : (
-					<IconFileTypePdf aria-hidden="true" size={17} stroke={1.8} />
-				)}
+				<span aria-hidden="true" className="RibbonMenu-itemIcon">
+					{progress && progress.stage !== 'ready' ? (
+						<ThinkingOrb size={20} state={getProgressOrbState(progress)} />
+					) : (
+						<IconFileTypePdf size={17} stroke={1.7} />
+					)}
+				</span>
 				<span aria-live="polite">{progressLabel ?? 'Import PDF'}</span>
 			</button>
 			<button
-				className="CraftDocuments-trigger"
+				className="RibbonMenu-item CraftDocuments-trigger"
 				onClick={openCraftDocuments}
 				title="Link Craft documents to this board"
 				type="button"
 			>
-				<IconBrandCraft aria-hidden="true" size={17} stroke={1.7} />
+				<span aria-hidden="true" className="RibbonMenu-itemIcon">
+					<IconBrandCraft size={17} stroke={1.7} />
+				</span>
 				<span>Craft documents</span>
 			</button>
 			{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
-			{failedDocuments.map((document) => (
-				<div className="PDFImportNotice" key={document.id} role="status">
-					<span><strong>{document.title}</strong> needs processing again.</span>
-					<button onClick={() => void retry(document.id)} type="button"><IconRefresh size={14} /> Retry</button>
+			{/* The ribbon has no room for a stack of notices, so they float clear of it. */}
+			{failedDocuments.length ? (
+				<div className="PDFImportNotices">
+					{failedDocuments.map((document) => (
+						<div className="PDFImportNotice" key={document.id} role="status">
+							<span><strong>{document.title}</strong> needs processing again.</span>
+							<button onClick={() => void retry(document.id)} type="button"><IconRefresh size={14} /> Retry</button>
+						</div>
+					))}
 				</div>
-			))}
+			) : null}
 		</div>
 	)
 }

@@ -68,4 +68,13 @@ describe('getRequestedStudyTool', () => {
 			{ role: 'user', parts: [{ type: 'text', text: 'Change the text in my Craft document.' }] },
 		])).toBeUndefined()
 	})
+
+	it('forces the memory tool for an explicit remember request', () => {
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Remember that I prefer one hint at a time.' }] },
+		])).toBe('saveMemory')
+		expect(getRequestedStudyTool([
+			{ role: 'user', parts: [{ type: 'text', text: 'Save this mistake so we can track it.' }] },
+		])).toBe('saveMemory')
+	})
 })

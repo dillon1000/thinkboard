@@ -17,6 +17,7 @@ import {
 } from './routes/boards'
 import {
 	handleStudyConversationCreate,
+	handleStudyConversationTitle,
 	handleStudyConversationUpdate,
 	handleStudyConversationsList,
 } from './routes/studyConversations'
@@ -24,11 +25,13 @@ import { handleSpotifyPlayerAction, handleSpotifyPlayerGet } from './routes/spot
 import { handleInlineAgentRequest, handleStudyConversationMessages } from './routes/studyChat'
 import { handleLockInReview } from './routes/lockIn'
 import {
+	handleBoardMemoryCreate,
 	handleBoardMistakes,
 	handleDueFlashcards,
 	handleFlashcardRegistration,
 	handleFlashcardReview,
 	handleStudyMemory,
+	handleStudyMemoryDelete,
 } from './routes/studyLearning'
 import {
 	handleDocumentComplete,
@@ -85,10 +88,13 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.post(apiRoutePatterns.boardInlineAgent, handleInlineAgentRequest)
 	.post(apiRoutePatterns.boardLockInReview, handleLockInReview)
 	.patch(apiRoutePatterns.studyConversation, handleStudyConversationUpdate)
+	.post(apiRoutePatterns.studyConversationTitle, handleStudyConversationTitle)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)
 	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
+	.delete(apiRoutePatterns.studyMemoryItem, handleStudyMemoryDelete)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
+	.post(apiRoutePatterns.boardMemories, handleBoardMemoryCreate)
 	.get(apiRoutePatterns.boardMistakes, handleBoardMistakes)
 	.post(apiRoutePatterns.boardMistakes, handleBoardMistakes)
 	.get(apiRoutePatterns.boardDocuments, authorizeBoardRequest(handleDocumentsList))

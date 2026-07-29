@@ -14,6 +14,16 @@ describe('getStudyToolContinuation', () => {
 		])).toBe('applied')
 	})
 
+	it('recognizes a saved memory result', () => {
+		expect(getStudyToolContinuation([
+			{
+				role: 'assistant',
+				parts: [{ type: 'tool-saveMemory', state: 'output-available', output: { applied: true } }],
+			},
+		])).toBe('saved')
+		expect(getStudyToolContinuationInstruction('saved')).toContain('approved and saved the memory')
+	})
+
 	it('recognizes a dismissed proposal result', () => {
 		expect(getStudyToolContinuation([
 			{

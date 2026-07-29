@@ -46,10 +46,18 @@ export function studyModelSupportsReasoning(mode: StudyModelMode) {
 	return STUDY_MODELS[mode].supportsReasoning
 }
 
+/** A compact summary of the canvas/PDF context a student attached to one message, shown as a chip. */
+export interface StudyMessageContextChip {
+	kind: 'shapes' | 'pdf' | 'document' | 'image'
+	label: string
+	meta?: string
+}
+
 export interface StudyMessageMetadata {
 	contextTokens?: number
 	contextWindowTokens?: number
 	model?: string
 	modelMode?: StudyModelMode
 	reasoningEffort?: StudyReasoningEffort
+	contextChips?: StudyMessageContextChip[]
 }

@@ -25,8 +25,9 @@
 	"vars": {
 		"AI_MODEL": "openai/gpt-5.6-luna",
 		"LOCK_IN_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+		"CONVERSATION_TITLE_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
 		"AI_GATEWAY_ID": "default",
-		"EMBEDDING_MODEL": "@cf/baai/bge-base-en-v1.5",
+		"EMBEDDING_MODEL": "@cf/baai/bge-large-en-v1.5",
 		"OCR_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
 		"PDF_DAILY_PAGE_QUOTA": "1000",
 		"PDF_STORED_BYTES_QUOTA": "2147483648",

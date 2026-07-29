@@ -7,6 +7,7 @@ export type StudyToolName =
 	| 'createWalkthrough'
 	| 'composeCanvas'
 	| 'recordMistake'
+	| 'saveMemory'
 	| 'writeEquation'
 
 interface ChatMessageLike {
@@ -42,8 +43,8 @@ export function getRequestedStudyTool(
 	if (/\b(?:write|put|place|show|add|derive)\b[\s\S]{0,80}\b(?:equations?|formulas?|derivations?|identity)\b/i.test(text)) {
 		return 'writeEquation'
 	}
-	if (/\b(?:save|record|remember|track)\b[\s\S]{0,80}\b(?:mistake|error)\b/i.test(text)) {
-		return 'recordMistake'
+	if (/\b(?:remember|save|record|track)\b[\s\S]{0,120}\b(?:about me|background|fact|goal|memory|mistake|preference|that|this)\b/i.test(text)) {
+		return 'saveMemory'
 	}
 	if (/\b(?:add|create|make|leave|put|place|write|propose)\b[\s\S]{0,80}\b(?:(?:review|correction|feedback)\s+note|correction)\b/i.test(text)) {
 		return 'addReviewNote'

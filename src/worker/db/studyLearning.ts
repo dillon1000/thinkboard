@@ -1,7 +1,8 @@
 import type {
+	AgentMemory,
+	AgentMemoryProposal,
 	DueFlashcard,
 	FlashcardReviewRating,
-	MistakePattern,
 	MistakeProposal,
 	StudyMistake,
 } from '@agentboard/shared'
@@ -153,12 +154,83 @@ export async function recordStudyMistake(
 		concept: proposal.concept,
 		title: proposal.title,
 		description: proposal.description,
+		kind: 'learning-pattern' as const,
 		patternKey: proposal.patternKey,
 		shapeIDs: JSON.stringify(proposal.shapeIDs),
 		createdAt: now,
 	}
 	await database.insert(studyMistake).values(value)
 	return toStudyMistake(value)
+}
+
+/**
+ * Saves one approved user memory with the board that supplied its source context.
+ * A stable memory key lets later saves update the agent's effective view without
+ * deleting the earlier approval record.
+ */
+export async function recordAgentMemory(
+	database: Database,
+	userID: string,
+	boardID: string,
+	proposal: AgentMemoryProposal,
+	now = new Date()
+) {
+	await database.insert(studyMistake).values({
+		id: crypto.randomUUID(),
+		userID,
+		boardID,
+		concept: proposal.topic,
+		title: proposal.title,
+		description: proposal.content,
+		kind: proposal.kind,
+		patternKey: proposal.memoryKey,
+		shapeIDs: '[]',
+		createdAt: now,
+	})
+}
+
+export async function listAgentMemories(
+	database: Database,
+	userID: string
+): Promise<AgentMemory[]> {
+	const rows = await database.select().from(studyMistake)
+		.where(eq(studyMistake.userID, userID))
+		.orderBy(desc(studyMistake.createdAt))
+		.limit(200)
+	const memories = new Map<string, AgentMemory>()
+	for (const row of rows) {
+		const current = memories.get(row.patternKey)
+		if (current) {
+			current.count += 1
+			continue
+		}
+		memories.set(row.patternKey, {
+			content: row.description,
+			count: 1,
+			kind: row.kind,
+			lastSavedAt: row.createdAt.toISOString(),
+			memoryKey: row.patternKey,
+			title: row.title,
+			topic: row.concept,
+		})
+	}
+	return [...memories.values()].sort((a, b) =>
+		b.lastSavedAt.localeCompare(a.lastSavedAt)
+	)
+}
+
+export async function removeAgentMemory(
+	database: Database,
+	userID: string,
+	memoryKey: string
+) {
+	const removed = await database.delete(studyMistake)
+		.where(and(
+			eq(studyMistake.userID, userID),
+			eq(studyMistake.patternKey, memoryKey)
+		))
+		.returning({ id: studyMistake.id })
+	return removed.length
 }
 
 export async function listBoardMistakes(
@@ -171,33 +243,6 @@ export async function listBoardMistakes(
 		.orderBy(desc(studyMistake.createdAt))
 		.limit(100)
 	return rows.map(toStudyMistake)
-}
-
-export async function listMistakePatterns(
-	database: Database,
-	userID: string
-): Promise<MistakePattern[]> {
-	const rows = await database.select().from(studyMistake)
-		.where(eq(studyMistake.userID, userID))
-		.orderBy(desc(studyMistake.createdAt))
-		.limit(200)
-	const patterns = new Map<string, MistakePattern>()
-	for (const row of rows) {
-		const current = patterns.get(row.patternKey)
-		if (current) {
-			current.count += 1
-			continue
-		}
-		patterns.set(row.patternKey, {
-			concept: row.concept,
-			count: 1,
-			description: row.description,
-			lastSeenAt: row.createdAt.toISOString(),
-			patternKey: row.patternKey,
-			title: row.title,
-		})
-	}
-	return [...patterns.values()].sort((a, b) => b.count - a.count).slice(0, 12)
 }
 
 function toStudyMistake(value: typeof studyMistake.$inferSelect): StudyMistake {

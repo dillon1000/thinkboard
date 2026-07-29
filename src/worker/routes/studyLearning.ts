@@ -1,4 +1,6 @@
 import {
+	agentMemoryKeySchema,
+	agentMemoryProposalSchema,
 	flashcardReviewRatingSchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
@@ -10,8 +12,10 @@ import { createDatabase } from '../db/client'
 import {
 	listBoardMistakes,
 	listDueFlashcards,
-	listMistakePatterns,
+	listAgentMemories,
+	recordAgentMemory,
 	recordStudyMistake,
+	removeAgentMemory,
 	registerFlashcards,
 	reviewFlashcard,
 } from '../db/studyLearning'
@@ -43,17 +47,51 @@ export async function handleDueFlashcards(request: IRequest, env: Env) {
 }
 
 /**
- * Returns the durable learning patterns supplied to the study agent for this user.
+ * Returns the durable memories supplied to the study agent for this user.
  * The response excludes board-scoped context and linked-service data.
  */
 export async function handleStudyMemory(request: IRequest, env: Env) {
 	const authentication = await requireSession(request, env)
 	if ('response' in authentication) return authentication.response
-	const patterns = await listMistakePatterns(
+	const memories = await listAgentMemories(
 		createDatabase(env),
 		authentication.session.user.id
 	)
-	return Response.json({ patterns })
+	return Response.json({ memories })
+}
+
+/**
+ * Removes every saved occurrence for one stable memory key owned by the user.
+ * The key is user-scoped, so it cannot remove another account's memory.
+ */
+export async function handleStudyMemoryDelete(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const memoryKey = agentMemoryKeySchema.safeParse(request.params.memoryKey)
+	if (!memoryKey.success) return Response.json({ error: 'Invalid memory key' }, { status: 400 })
+	const removed = await removeAgentMemory(
+		createDatabase(env),
+		authentication.session.user.id,
+		memoryKey.data
+	)
+	if (!removed) return Response.json({ error: 'Memory not found' }, { status: 404 })
+	return Response.json({ removed: true })
+}
+
+export async function handleBoardMemoryCreate(request: IRequest, env: Env) {
+	const authorized = await authorizeBoard(request, env)
+	if ('response' in authorized) return authorized.response
+	if (authorized.role === 'viewer') return Response.json({ error: 'Forbidden' }, { status: 403 })
+	const body: unknown = await request.json().catch(() => null)
+	const parsed = agentMemoryProposalSchema.safeParse(body)
+	if (!parsed.success) return Response.json({ error: 'Invalid memory' }, { status: 400 })
+	await recordAgentMemory(
+		authorized.database,
+		authorized.userID,
+		request.params.boardID,
+		parsed.data
+	)
+	return Response.json({ saved: true }, { status: 201 })
 }
 
 export async function handleFlashcardReview(request: IRequest, env: Env) {

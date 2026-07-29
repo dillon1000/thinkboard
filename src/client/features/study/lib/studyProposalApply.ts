@@ -6,6 +6,7 @@ import {
 	WALKTHROUGH_SHAPE_TYPE,
 	MATH_SHAPE_TYPE,
 	apiRoutes,
+	agentMemoryProposalSchema,
 	conceptMapProposalSchema,
 	equationProposalSchema,
 	flashcardProposalSchema,
@@ -42,6 +43,7 @@ export const STUDY_TOOL_NAMES = [
 	'createWalkthrough',
 	'composeCanvas',
 	'recordMistake',
+	'saveMemory',
 	'writeEquation',
 ] as const
 
@@ -272,6 +274,13 @@ export async function persistProposalEffect(boardID: string, effect: ProposalEff
 export async function recordProposedMistake(boardID: string, input: unknown) {
 	await apiRequest(apiRoutes.boardMistakes(boardID), {
 		body: JSON.stringify(mistakeProposalSchema.parse(input)),
+		method: 'POST',
+	})
+}
+
+export async function saveProposedMemory(boardID: string, input: unknown) {
+	await apiRequest(apiRoutes.boardMemories(boardID), {
+		body: JSON.stringify(agentMemoryProposalSchema.parse(input)),
 		method: 'POST',
 	})
 }

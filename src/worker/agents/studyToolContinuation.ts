@@ -1,4 +1,4 @@
-export type StudyToolContinuation = 'applied' | 'dismissed' | 'error'
+export type StudyToolContinuation = 'applied' | 'dismissed' | 'error' | 'saved'
 
 interface ChatMessageLike {
 	parts: ReadonlyArray<{ state?: string; type: string; output?: unknown }>
@@ -14,6 +14,7 @@ const STUDY_TOOL_TYPES = new Set([
 	'tool-createPracticeSet',
 	'tool-composeCanvas',
 	'tool-recordMistake',
+	'tool-saveMemory',
 	'tool-writeEquation',
 ])
 
@@ -30,11 +31,13 @@ export function getStudyToolContinuation(
 	if (!toolPart) return undefined
 	if (toolPart.state === 'output-error') return 'error'
 
-	return toolPart.output &&
+	const applied = toolPart.output &&
 		typeof toolPart.output === 'object' &&
 		Reflect.get(toolPart.output, 'applied') === true
-		? 'applied'
-		: 'dismissed'
+	if (!applied) return 'dismissed'
+	return toolPart.type === 'tool-saveMemory' || toolPart.type === 'tool-recordMistake'
+		? 'saved'
+		: 'applied'
 }
 
 export function getStudyToolContinuationInstruction(
@@ -44,6 +47,8 @@ export function getStudyToolContinuationInstruction(
 
 	const result = continuation === 'applied'
 		? 'The browser reports that the student added the proposal to the board.'
+		: continuation === 'saved'
+			? 'The browser reports that the student approved and saved the memory.'
 		: continuation === 'dismissed'
 			? 'The browser reports that the student dismissed the proposal.'
 			: 'The browser reports that it could not add the proposal.'
