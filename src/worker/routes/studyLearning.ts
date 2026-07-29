@@ -10,6 +10,7 @@ import { createDatabase } from '../db/client'
 import {
 	listBoardMistakes,
 	listDueFlashcards,
+	listMistakePatterns,
 	recordStudyMistake,
 	registerFlashcards,
 	reviewFlashcard,
@@ -39,6 +40,20 @@ export async function handleDueFlashcards(request: IRequest, env: Env) {
 		authentication.session.user.id
 	)
 	return Response.json({ reviews })
+}
+
+/**
+ * Returns the durable learning patterns supplied to the study agent for this user.
+ * The response excludes board-scoped context and linked-service data.
+ */
+export async function handleStudyMemory(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const patterns = await listMistakePatterns(
+		createDatabase(env),
+		authentication.session.user.id
+	)
+	return Response.json({ patterns })
 }
 
 export async function handleFlashcardReview(request: IRequest, env: Env) {

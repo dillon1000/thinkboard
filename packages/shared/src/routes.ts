@@ -16,6 +16,7 @@ export const apiRoutePatterns = {
 	boards: '/api/boards',
 	studyReviews: '/api/study/reviews',
 	studyReview: '/api/study/reviews/:reviewID',
+	studyMemory: '/api/study/memory',
 	studyConversations: '/api/boards/:boardID/conversations',
 	studyConversation: '/api/boards/:boardID/conversations/:conversationID',
 	studyConversationMessages: '/api/boards/:boardID/conversations/:conversationID/messages',
@@ -28,6 +29,7 @@ export const apiRoutePatterns = {
 export const appRoutes = {
 	home: '/boards',
 	login: '/login',
+	memory: '/memory',
 	settings: '/settings',
 	board: (boardID: string) => `/boards/${encodeURIComponent(boardID)}`,
 } as const
@@ -61,6 +63,7 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/documents/${encodeURIComponent(documentID)}/status`,
 	studyReviews: '/api/study/reviews',
 	studyReview: (reviewID: string) => `/api/study/reviews/${encodeURIComponent(reviewID)}`,
+	studyMemory: '/api/study/memory',
 	studyConversations: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/conversations`,
 	studyConversation: (boardID: string, conversationID: string) =>

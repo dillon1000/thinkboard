@@ -1,11 +1,12 @@
 import { appRoutes } from '@agentboard/shared'
 import {
+	IconBrain,
 	IconLayoutBoard,
 	IconLayoutSidebarLeftCollapse,
 	IconLayoutSidebarLeftExpand,
 	IconLogout2,
-	IconSettings,
 	IconSparkles,
+	IconSettings,
 } from '@tabler/icons-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -16,7 +17,7 @@ import { ThemeToggle } from '../../theme/ThemeToggle'
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
 interface WorkspaceShellProps {
-	activePage: 'boards' | 'settings'
+	activePage: 'boards' | 'memory' | 'settings'
 	children: ReactNode
 	skipTargetID: string
 	title: string
@@ -68,6 +69,9 @@ export function WorkspaceShell({
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<Link aria-current={activePage === 'boards' ? 'page' : undefined} to={appRoutes.home}>
 						<IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards
+					</Link>
+					<Link aria-current={activePage === 'memory' ? 'page' : undefined} to={appRoutes.memory}>
+						<IconBrain aria-hidden="true" size={16} stroke={1.7} /> Memory
 					</Link>
 					<Link aria-current={activePage === 'settings' ? 'page' : undefined} to={appRoutes.settings}>
 						<IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings

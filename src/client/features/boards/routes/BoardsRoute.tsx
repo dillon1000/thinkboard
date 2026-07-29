@@ -3,6 +3,7 @@ import { apiRoutes, appRoutes } from '@agentboard/shared'
 import {
 	IconArchive,
 	IconBrandCraft,
+	IconBrain,
 	IconCards,
 	IconChevronDown,
 	IconLayoutBoard,
@@ -180,6 +181,7 @@ export function Component() {
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<Link to={appRoutes.memory}><IconBrain aria-hidden="true" size={16} stroke={1.7} /> Memory</Link>
 					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
 				</nav>
 				<div className="CraftWhiteboard-sidebarFooter">

@@ -28,6 +28,7 @@ import {
 	handleDueFlashcards,
 	handleFlashcardRegistration,
 	handleFlashcardReview,
+	handleStudyMemory,
 } from './routes/studyLearning'
 import {
 	handleDocumentComplete,
@@ -86,6 +87,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.patch(apiRoutePatterns.studyConversation, handleStudyConversationUpdate)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)
+	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
 	.get(apiRoutePatterns.boardMistakes, handleBoardMistakes)
 	.post(apiRoutePatterns.boardMistakes, handleBoardMistakes)

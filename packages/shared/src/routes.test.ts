@@ -48,6 +48,8 @@ describe('route builders', () => {
 		)
 		expect(apiRoutes.studyReviews).toBe('/api/study/reviews')
 		expect(apiRoutes.studyReview('review one')).toBe('/api/study/reviews/review%20one')
+		expect(apiRoutes.studyMemory).toBe('/api/study/memory')
+		expect(appRoutes.memory).toBe('/memory')
 	})
 
 	it('encodes external URLs in bookmark preview requests', () => {
