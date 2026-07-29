@@ -292,6 +292,8 @@ img { max-width: 100%; }
 
 .BoardLibrary { scroll-margin-top: 56px; animation: rise-in 360ms var(--ease-out) 60ms backwards; }
 .SectionHeading { display: flex; align-items: center; gap: 4px; padding-bottom: 4px; }
+/* The scroll-fade mask creates a stacking context, so the menu needs a layer above the card rail. */
+.DueReviews .SectionHeading { position: relative; z-index: 1; }
 .SectionHeading-toggle { display: inline-flex; min-height: 26px; align-items: center; gap: 5px; border: 0; border-radius: 5px; background: transparent; padding: 0 6px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
 .SectionHeading-toggle > svg { color: var(--faint); transition: rotate 200ms var(--ease-swift); }
 .SectionHeading-toggle[aria-expanded='false'] > svg { rotate: -90deg; }
