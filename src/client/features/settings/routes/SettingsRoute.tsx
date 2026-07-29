@@ -115,7 +115,6 @@ export function Component() {
 		<WorkspaceShell activePage="settings" skipTargetID="settings-content" title="Settings">
 			<div className="Settings-content" id="settings-content">
 				<header className="Settings-heading">
-					<p className="Eyebrow">Workspace</p>
 					<h1>Settings</h1>
 					<p>Manage the services Agentboard can use alongside your study tools.</p>
 				</header>
