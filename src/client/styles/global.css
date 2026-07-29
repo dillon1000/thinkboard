@@ -291,6 +291,8 @@ img { max-width: 100%; }
 .Dashboard-greeting { margin: 0 0 28px; font-size: 27px; font-weight: 700; letter-spacing: -.02em; animation: rise-in 360ms var(--ease-out) backwards; }
 
 .BoardLibrary { scroll-margin-top: 56px; animation: rise-in 360ms var(--ease-out) 60ms backwards; }
+.BoardLibrary + .BoardLibrary { margin-top: 28px; }
+.BoardRow--archived { opacity: .74; }
 .SectionHeading { display: flex; align-items: center; gap: 4px; padding-bottom: 4px; }
 /* The scroll-fade mask creates a stacking context, so the menu needs a layer above the card rail. */
 .DueReviews .SectionHeading { position: relative; z-index: 1; }

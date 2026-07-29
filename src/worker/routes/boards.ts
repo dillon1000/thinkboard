@@ -1,4 +1,13 @@
-import { archiveBoard, createBoard, getBoard, getBoardAccess, listBoards, renameBoard } from '../db/boards'
+import {
+	archiveBoard,
+	createBoard,
+	getBoard,
+	getBoardAccess,
+	listArchivedBoards,
+	listBoards,
+	renameBoard,
+	restoreBoard,
+} from '../db/boards'
 import { createDatabase } from '../db/client'
 import { requireSession } from '../auth/session'
 import type { IRequest } from 'itty-router'
@@ -10,6 +19,14 @@ export async function handleBoardsList(request: IRequest, env: Env) {
 	if ('response' in authentication) return authentication.response
 
 	const boards = await listBoards(createDatabase(env), authentication.session.user.id)
+	return Response.json({ boards })
+}
+
+export async function handleArchivedBoardsList(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+
+	const boards = await listArchivedBoards(createDatabase(env), authentication.session.user.id)
 	return Response.json({ boards })
 }
 
@@ -64,6 +81,21 @@ export async function handleBoardArchive(request: IRequest, env: Env) {
 
 	await archiveBoard(database, access.boardID)
 	return new Response(null, { status: 204 })
+}
+
+export async function handleBoardRestore(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+
+	const database = createDatabase(env)
+	const archivedBoards = await listArchivedBoards(database, authentication.session.user.id)
+	const archivedBoard = archivedBoards.find(({ id }) => id === request.params.boardID)
+	if (!archivedBoard) return Response.json({ error: 'Archived board not found' }, { status: 404 })
+
+	await restoreBoard(database, archivedBoard.id)
+	return Response.json({
+		board: { ...archivedBoard, updatedAt: new Date().toISOString() },
+	})
 }
 
 async function readTitle(request: Request) {

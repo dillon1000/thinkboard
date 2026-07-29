@@ -4,6 +4,10 @@ import { apiRoutes, appRoutes } from './routes'
 describe('route builders', () => {
 	it('encodes board IDs in application and socket paths', () => {
 		expect(appRoutes.board('biology/week 1')).toBe('/boards/biology%2Fweek%201')
+		expect(apiRoutes.archivedBoards).toBe('/api/boards/archived')
+		expect(apiRoutes.boardRestore('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/restore'
+		)
 		expect(apiRoutes.boardSocket('biology/week 1')).toBe(
 			'/api/connect/biology%2Fweek%201'
 		)

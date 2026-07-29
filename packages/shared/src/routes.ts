@@ -14,7 +14,9 @@ export const apiRoutePatterns = {
 	boardDocumentRetry: '/api/boards/:boardID/documents/:documentID/retry',
 	boardDocumentStatus: '/api/boards/:boardID/documents/:documentID/status',
 	board: '/api/boards/:boardID',
+	boardRestore: '/api/boards/:boardID/restore',
 	boards: '/api/boards',
+	archivedBoards: '/api/boards/archived',
 	studyReviews: '/api/study/reviews',
 	studyReview: '/api/study/reviews/:reviewID',
 	studyMemory: '/api/study/memory',
@@ -40,7 +42,10 @@ export const appRoutes = {
 
 export const apiRoutes = {
 	boards: '/api/boards',
+	archivedBoards: '/api/boards/archived',
 	board: (boardID: string) => `/api/boards/${encodeURIComponent(boardID)}`,
+	boardRestore: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/restore`,
 	boardContext: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/context`,
 	boardInlineAgent: (boardID: string) =>

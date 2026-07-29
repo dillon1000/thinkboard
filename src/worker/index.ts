@@ -9,10 +9,12 @@ import { createDatabase } from './db/client'
 import { StudyAgent } from './agents/StudyAgent'
 import { handleAssetDownload, handleAssetUpload } from './routes/assets'
 import {
+	handleArchivedBoardsList,
 	handleBoardArchive,
 	handleBoardCreate,
 	handleBoardGet,
 	handleBoardRename,
+	handleBoardRestore,
 	handleBoardsList,
 } from './routes/boards'
 import {
@@ -84,6 +86,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.delete('/api/integrations/craft', handleCraftConnectionDelete)
 	.get(apiRoutePatterns.boards, handleBoardsList)
 	.post(apiRoutePatterns.boards, handleBoardCreate)
+	.get(apiRoutePatterns.archivedBoards, handleArchivedBoardsList)
 	.get(apiRoutePatterns.studyConversations, handleStudyConversationsList)
 	.post(apiRoutePatterns.studyConversations, handleStudyConversationCreate)
 	.get(apiRoutePatterns.studyConversationMessages, handleStudyConversationMessages)
@@ -152,6 +155,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.board, handleBoardGet)
 	.patch(apiRoutePatterns.board, handleBoardRename)
 	.delete(apiRoutePatterns.board, handleBoardArchive)
+	.post(apiRoutePatterns.boardRestore, handleBoardRestore)
 	.get(apiRoutePatterns.boardSocket, async (request, env) => {
 		const authentication = await requireSession(request, env)
 		if ('response' in authentication) return authentication.response

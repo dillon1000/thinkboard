@@ -1,5 +1,5 @@
 import type { Board, BoardRole } from '@agentboard/shared'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import type { Database } from './client'
 import { board, boardMember } from './schema'
 
@@ -20,6 +20,33 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 		.from(boardMember)
 		.innerJoin(board, eq(board.id, boardMember.boardID))
 		.where(and(eq(boardMember.userID, userID), isNull(board.archivedAt)))
+		.orderBy(desc(board.updatedAt))
+
+	return rows.map((row) => ({
+		...row,
+		role: row.role as BoardRole,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	}))
+}
+
+/** Returns archived boards owned by the user so recoverable archive stays distinct from deletion. */
+export async function listArchivedBoards(database: Database, userID: string): Promise<Board[]> {
+	const rows = await database
+		.select({
+			id: board.id,
+			title: board.title,
+			role: boardMember.role,
+			createdAt: board.createdAt,
+			updatedAt: board.updatedAt,
+		})
+		.from(boardMember)
+		.innerJoin(board, eq(board.id, boardMember.boardID))
+		.where(and(
+			eq(boardMember.userID, userID),
+			eq(boardMember.role, 'owner'),
+			isNotNull(board.archivedAt)
+		))
 		.orderBy(desc(board.updatedAt))
 
 	return rows.map((row) => ({
@@ -98,6 +125,13 @@ export async function renameBoard(database: Database, boardID: string, title: st
 export async function archiveBoard(database: Database, boardID: string) {
 	const now = new Date()
 	await database.update(board).set({ archivedAt: now, updatedAt: now }).where(eq(board.id, boardID))
+}
+
+/** Clears the archive marker and brings the restored board to the top of the recent list. */
+export async function restoreBoard(database: Database, boardID: string) {
+	await database.update(board)
+		.set({ archivedAt: null, updatedAt: new Date() })
+		.where(eq(board.id, boardID))
 }
 
 export async function isBoardActive(database: Database, boardID: string) {

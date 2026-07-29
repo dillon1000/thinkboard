@@ -14,6 +14,7 @@ import {
 	IconLogout2,
 	IconPencil,
 	IconPlus,
+	IconRestore,
 	IconSettings,
 	IconSparkles,
 } from '@tabler/icons-react'
@@ -38,6 +39,7 @@ const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
 export function Component() {
 	const [boards, setBoards] = useState<Board[]>([])
+	const [archivedBoards, setArchivedBoards] = useState<Board[]>([])
 	const [dueReviews, setDueReviews] = useState<DueFlashcard[]>([])
 	const [revealedReviewID, setRevealedReviewID] = useState<string | null>(null)
 	const [title, setTitle] = useState('')
@@ -46,6 +48,7 @@ export function Component() {
 	const [isCreating, setIsCreating] = useState(false)
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
 	const [isListOpen, setIsListOpen] = useState(true)
+	const [isArchiveOpen, setIsArchiveOpen] = useState(false)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(readSidebarPreference)
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [isDueReviewMenuOpen, setIsDueReviewMenuOpen] = useState(false)
@@ -82,8 +85,12 @@ export function Component() {
 	async function loadBoards() {
 		setIsLoading(true)
 		try {
-			const response = await apiRequest<{ boards: Board[] }>(apiRoutes.boards)
-			setBoards(response.boards)
+			const [activeResponse, archivedResponse] = await Promise.all([
+				apiRequest<{ boards: Board[] }>(apiRoutes.boards),
+				apiRequest<{ boards: Board[] }>(apiRoutes.archivedBoards),
+			])
+			setBoards(activeResponse.boards)
+			setArchivedBoards(archivedResponse.boards)
 		} catch (loadError) {
 			setError(loadError instanceof Error ? loadError.message : 'Unable to load boards')
 		} finally {
@@ -180,9 +187,23 @@ export function Component() {
 			await fetch(apiRoutes.board(board.id), { method: 'DELETE' }).then((response) => {
 				if (!response.ok) throw new Error('Unable to archive board')
 			})
-			setBoards((current) => current.filter((item) => item.id !== board.id))
+				setBoards((current) => current.filter((item) => item.id !== board.id))
+				setArchivedBoards((current) => [board, ...current])
 		} catch (archiveError) {
 			setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive board')
+		}
+	}
+
+	async function handleRestore(board: Board) {
+		setError(null)
+		try {
+			const response = await apiRequest<{ board: Board }>(apiRoutes.boardRestore(board.id), {
+				method: 'POST',
+			})
+			setArchivedBoards((current) => current.filter(({ id }) => id !== board.id))
+			setBoards((current) => [response.board, ...current])
+		} catch (restoreError) {
+			setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore board')
 		}
 	}
 
@@ -297,7 +318,7 @@ export function Component() {
 						})}</div> : <p className="DueReviews-empty">You’re caught up. New flashcards appear here when they’re ready to review.</p>}
 					</section> : null}
 
-					<section className="BoardLibrary" id="board-library" aria-labelledby="recent-boards-heading">
+						<section className="BoardLibrary" id="board-library" aria-labelledby="recent-boards-heading">
 						<div className="SectionHeading">
 							<button aria-expanded={isListOpen} className="SectionHeading-toggle" onClick={() => setIsListOpen((open) => !open)} type="button">
 								<IconChevronDown aria-hidden="true" size={14} stroke={2} />
@@ -356,7 +377,38 @@ export function Component() {
 								</div> : null}
 							</>
 						) : null}
-					</section>
+						</section>
+						{archivedBoards.length ? (
+							<section className="BoardLibrary" aria-labelledby="archived-boards-heading">
+								<div className="SectionHeading">
+									<button
+										aria-expanded={isArchiveOpen}
+										className="SectionHeading-toggle"
+										onClick={() => setIsArchiveOpen((open) => !open)}
+										type="button"
+									>
+										<IconChevronDown aria-hidden="true" size={14} stroke={2} />
+										<span id="archived-boards-heading">Archived</span>
+									</button>
+									<span className="SectionHeading-count">{archivedBoards.length}</span>
+								</div>
+								{isArchiveOpen ? (
+									<div className="BoardList">
+										{archivedBoards.map((board, index) => (
+											<article className="BoardRow BoardRow--archived" key={board.id} style={{ '--row-index': Math.min(index, 12) } as CSSProperties}>
+												<div className="BoardRow-main">
+													<span className="BoardRow-icon"><IconArchive aria-hidden="true" size={17} stroke={1.6} /></span>
+													<span className="BoardRow-copy"><strong>{board.title}</strong><small>Archived {formatRelativeDate(board.updatedAt)}</small></span>
+												</div>
+												<div className="BoardRow-actions">
+													<button aria-label={`Restore ${board.title}`} onClick={() => void handleRestore(board)} title="Restore" type="button"><IconRestore aria-hidden="true" size={15} stroke={1.7} /></button>
+												</div>
+											</article>
+										))}
+									</div>
+								) : null}
+							</section>
+						) : null}
 				</div>
 			</section>
 			{isCraftWhiteboardImportOpen ? (
