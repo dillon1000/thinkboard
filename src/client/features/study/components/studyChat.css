@@ -45,6 +45,16 @@
 	font-weight: 600;
 }
 
+.StudyPanel-headtext {
+	min-width: 0;
+	flex: 1;
+}
+
+.StudyPanel-headtext h2 {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .StudyPanel-conversation {
 	font-size: 10.5px;
 }
@@ -86,12 +96,6 @@
 	padding: 30px 0 42px;
 }
 
-.StudyWelcome .Eyebrow {
-	margin-bottom: 8px;
-	color: var(--faint);
-	letter-spacing: .08em;
-}
-
 .StudyWelcome h3 {
 	max-width: 16ch;
 	margin-bottom: 8px;
@@ -101,10 +105,19 @@
 	letter-spacing: -.02em;
 }
 
+.StudyWelcome > h3 {
+	animation-delay: 0ms;
+}
+
 .StudyWelcome > p:not(.Eyebrow) {
 	max-width: 33ch;
 	font-size: 12.5px;
 	line-height: 1.55;
+	animation-delay: 50ms;
+}
+
+.StudyWelcome > .StudyPrompts {
+	animation-delay: 100ms;
 }
 
 .StudyPrompts {

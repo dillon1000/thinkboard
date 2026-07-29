@@ -257,16 +257,22 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 
 	return (
 		<div className="StudyPanel">
-			<header className="StudyPanel-header">
-				{lockInSession && showLockInPanel
-					? <IconLock className="StudyPanel-mark" aria-hidden="true" size={16} stroke={1.8} />
-					: <IconSparkles className="StudyPanel-mark" aria-hidden="true" size={16} stroke={1.8} />}
-				<h2>{lockInSession && showLockInPanel ? 'Lock In' : 'Study'}</h2>
-				{lockInSession && showLockInPanel ? (
-					<span className="StudyPanel-conversation" title={lockInSession.goal}>{lockInSession.goal}</span>
-				) : currentConversation ? (
-					<span className="StudyPanel-conversation" title={currentConversation.title}>{currentConversation.title}</span>
-				) : null}
+			<header className="StudyPanel-header" data-lock-in={Boolean(lockInSession && showLockInPanel)}>
+				<span className="StudyPanel-mark">
+					{lockInSession && showLockInPanel
+						? <IconLock aria-hidden="true" size={15} stroke={1.9} />
+						: <IconSparkles aria-hidden="true" size={15} stroke={1.9} />}
+				</span>
+				<div className="StudyPanel-headtext">
+					{lockInSession && showLockInPanel ? (
+						<>
+							<h2>Lock In</h2>
+							<span className="StudyPanel-conversation" title={lockInSession.goal}>{lockInSession.goal}</span>
+						</>
+					) : (
+						<h2 title={currentConversation?.title}>{currentConversation?.title ?? 'New conversation'}</h2>
+					)}
+				</div>
 				<div className="StudyPanel-actions">
 					{lockInSession && !showLockInPanel ? (
 						<button aria-label="Return to Lock In coach" onClick={() => setShowLockInPanel(true)} title="Return to Lock In coach" type="button"><IconLock aria-hidden="true" size={16} /></button>
@@ -570,7 +576,6 @@ function StudyConversationChat({
 						<MessageScroller.Content aria-busy={chat.status !== 'ready'} className="StudyPanel-messageContent">
 							{chat.messages.length === 0 ? (
 								<MessageScroller.Item className="StudyWelcome" messageId="study-welcome">
-									<p className="Eyebrow">In the margins</p>
 									<h3>Ask about anything on this board.</h3>
 									<p>Select a note or sketch first and I’ll use it as context. I can check reasoning, explain a concept, or propose flashcards and quizzes.</p>
 									<div className="StudyPrompts">
