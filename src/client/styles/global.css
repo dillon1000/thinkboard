@@ -745,7 +745,7 @@ img { max-width: 100%; }
 /* Study pane: the same material as the header, floating clear of every edge. */
 .BoardShell-studyScrim { display: none; }
 /* The pane hangs below the action island rather than sliding under it. */
-.BoardShell-study { position: absolute; z-index: 4; inset: 0 0 0 auto; width: calc(var(--study-panel-width) + max(var(--chrome-inset), env(safe-area-inset-right))); padding: calc(env(safe-area-inset-top) + var(--chrome-top-inset)) max(var(--chrome-inset), env(safe-area-inset-right)) max(var(--chrome-inset), env(safe-area-inset-bottom)) 0; pointer-events: none; }
+.BoardShell-study { position: absolute; z-index: 4; inset: 0 0 0 auto; width: calc(var(--study-panel-width) + max(var(--chrome-inset), env(safe-area-inset-right))); padding: max(var(--chrome-inset), env(safe-area-inset-top)) max(var(--chrome-inset), env(safe-area-inset-right)) max(var(--chrome-inset), env(safe-area-inset-bottom)) 0; pointer-events: none; }
 .BoardShell-studyInner { position: relative; display: flex; width: var(--study-panel-width); max-width: 100vw; height: 100%; flex-direction: column; overflow: hidden; border-radius: var(--chrome-radius); background: var(--chrome); box-shadow: var(--chrome-edge); backdrop-filter: var(--chrome-blur); pointer-events: auto; transition: opacity 110ms var(--ease-swift), translate var(--panel-motion); }
 .BoardShell-study[data-open='false'] .BoardShell-studyInner { opacity: 0; pointer-events: none; translate: calc(var(--study-panel-width) + var(--chrome-inset) * 2) 0; }
 .BoardShell-studyClose { position: absolute; z-index: 2; top: 7px; right: 7px; }
