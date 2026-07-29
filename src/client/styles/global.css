@@ -19,6 +19,8 @@
 	--faint: #9f9e9b;
 	--line: rgba(55, 53, 47, .09);
 	--line-strong: rgba(55, 53, 47, .16);
+	--scrollbar-thumb: rgba(55, 53, 47, .22);
+	--scrollbar-thumb-hover: rgba(55, 53, 47, .36);
 	--accent: #2383e2;
 	--accent-hover: #1b74cb;
 	--accent-soft: rgba(35, 131, 226, .09);
@@ -69,6 +71,8 @@
 	--faint: #6f6f6c;
 	--line: rgba(255, 255, 255, .094);
 	--line-strong: rgba(255, 255, 255, .16);
+	--scrollbar-thumb: rgba(255, 255, 255, .2);
+	--scrollbar-thumb-hover: rgba(255, 255, 255, .34);
 	--accent: #529cca;
 	--accent-hover: #6bacd4;
 	--accent-soft: rgba(82, 156, 202, .14);
@@ -93,7 +97,16 @@
 	--user-ink: #f3f3f2;
 }
 
-* { box-sizing: border-box; }
+* {
+	box-sizing: border-box;
+	scrollbar-color: var(--scrollbar-thumb) transparent;
+	scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: var(--scrollbar-thumb); background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
 
 html {
 	background: var(--canvas);
@@ -140,6 +153,57 @@ img { max-width: 100%; }
 @keyframes pulse-dot {
 	0%, 100% { opacity: 1; }
 	50% { opacity: .45; }
+}
+
+@property --scroll-fade-s {
+	syntax: '<length-percentage>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --scroll-fade-e {
+	syntax: '<length-percentage>';
+	inherits: false;
+	initial-value: 0px;
+}
+
+@keyframes scroll-fade-reveal-s {
+	from { --scroll-fade-s: 0px; }
+	to { --scroll-fade-s: var(--scroll-fade-size, min(12%, 40px)); }
+}
+
+@keyframes scroll-fade-reveal-e {
+	from { --scroll-fade-e: var(--scroll-fade-size, min(12%, 40px)); }
+	to { --scroll-fade-e: 0px; }
+}
+
+/* Applies the shadcn scroll-fade-x mask to a native horizontal scroll container. */
+.scroll-fade-x {
+	--scroll-fade-inline: linear-gradient(to right, transparent 0, #000 var(--scroll-fade-s), #000 calc(100% - var(--scroll-fade-e)), transparent 100%);
+	-webkit-mask-image: var(--scroll-fade-inline);
+	mask-image: var(--scroll-fade-inline);
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+}
+
+.scroll-fade-x:where([dir='rtl'], [dir='rtl'] *) {
+	--scroll-fade-inline: linear-gradient(to left, transparent 0, #000 var(--scroll-fade-s), #000 calc(100% - var(--scroll-fade-e)), transparent 100%);
+}
+
+@supports (animation-timeline: scroll()) {
+	.scroll-fade-x {
+		animation: scroll-fade-reveal-s 1ms ease-in-out, scroll-fade-reveal-e 1ms ease-in-out;
+		animation-timeline: scroll(self inline), scroll(self inline);
+		animation-range: 0 96px, calc(100% - 96px) 100%;
+		animation-fill-mode: both;
+	}
+}
+
+@supports not (animation-timeline: scroll()) {
+	.scroll-fade-x {
+		--scroll-fade-s: var(--scroll-fade-size, min(12%, 40px));
+		--scroll-fade-e: var(--scroll-fade-size, min(12%, 40px));
+	}
 }
 
 .SkipLink { position: fixed; z-index: 100; top: 8px; left: 8px; padding: 8px 12px; border-radius: 6px; background: var(--ink); color: var(--canvas); font-size: 12px; text-decoration: none; transform: translateY(-150%); transition: transform 160ms var(--ease-out); }

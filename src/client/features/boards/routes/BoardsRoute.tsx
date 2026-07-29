@@ -245,7 +245,7 @@ export function Component() {
 								<IconDots aria-hidden="true" size={16} stroke={1.8} />
 							</button>
 						</div>
-						{dueReviews.length ? <div className="DueReviewList">{dueReviews.map((review) => {
+						{dueReviews.length ? <div className="DueReviewList scroll-fade-x">{dueReviews.map((review) => {
 							const revealed = revealedReviewID === review.reviewID
 							return <article className="DueReviewCard" key={review.reviewID}>
 								<div><Link to={appRoutes.board(review.boardID)}>{review.boardTitle}</Link><small>{review.reviewCount ? `${review.reviewCount} reviews` : 'New card'}</small></div>
