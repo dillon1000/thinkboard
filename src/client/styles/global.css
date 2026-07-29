@@ -256,13 +256,15 @@ img { max-width: 100%; }
 .EmptyState p { margin: 3px 0 0; color: var(--faint); font-size: 12.5px; }
 
 .DueReviews { margin-bottom: 28px; animation: rise-in 360ms var(--ease-out) 30ms backwards; }
-.DueReviewList { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 8px; margin-top: 5px; }
-.DueReviewCard { display: grid; min-height: 170px; align-content: start; gap: 10px; border-radius: 8px; background: var(--sidebar); padding: 13px; box-shadow: var(--shadow-border); }
+.DueReviewList { display: flex; gap: 8px; overflow-x: auto; margin: 5px -8px 0; padding: 0 8px 8px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
+.DueReviewCard { display: grid; width: min(320px, calc(100vw - 64px)); min-height: 170px; flex: 0 0 min(320px, calc(100vw - 64px)); align-content: start; gap: 10px; border-radius: 8px; background: var(--sidebar); padding: 13px; box-shadow: var(--shadow-border); scroll-snap-align: start; }
 .DueReviewCard > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .DueReviewCard a { overflow: hidden; color: var(--muted); font-size: 11.5px; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .DueReviewCard small { color: var(--faint); font-size: 10.5px; }
-.DueReviewCard strong { font-size: 14px; line-height: 1.4; }
-.DueReviewCard p { margin: 0; border-radius: 6px; background: var(--panel); padding: 9px; color: var(--muted); font-size: 13px; line-height: 1.45; box-shadow: inset 0 0 0 1px var(--line); }
+.DueReviewCard-front { font-size: 14px; font-weight: 650; line-height: 1.4; }
+.DueReviewCard-back { border-radius: 6px; background: var(--panel); padding: 9px; color: var(--muted); font-size: 13px; line-height: 1.45; box-shadow: inset 0 0 0 1px var(--line); }
+.DueReviewCard-front > :first-child, .DueReviewCard-back > :first-child { margin-top: 0; }
+.DueReviewCard-front > :last-child, .DueReviewCard-back > :last-child { margin-bottom: 0; }
 .DueReviewCard > .Button { align-self: end; justify-self: start; }
 .ReviewRatings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: auto; }
 .ReviewRatings button { min-height: 28px; border: 0; border-radius: 5px; background: var(--surface); color: var(--muted); font-size: 11px; text-transform: capitalize; }

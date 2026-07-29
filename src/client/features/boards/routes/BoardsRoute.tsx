@@ -16,9 +16,11 @@ import {
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Streamdown } from 'streamdown'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
+import { studyMarkdownPlugins } from '../../study/lib/studyMath'
 import { ThemeToggle } from '../../theme/ThemeToggle'
 import {
 	CraftWhiteboardImportDialog,
@@ -84,14 +86,23 @@ export function Component() {
 	}
 
 	async function rateFlashcard(review: DueFlashcard, rating: FlashcardReviewRating) {
+		const reviewIndex = dueReviews.findIndex(({ reviewID }) => reviewID === review.reviewID)
+		setError(null)
+		setDueReviews((current) => current.filter(({ reviewID }) => reviewID !== review.reviewID))
+		setRevealedReviewID(null)
+
 		try {
 			await apiRequest(apiRoutes.studyReview(review.reviewID), {
 				body: JSON.stringify({ rating }),
 				method: 'POST',
 			})
-			setDueReviews((current) => current.filter(({ reviewID }) => reviewID !== review.reviewID))
-			setRevealedReviewID(null)
 		} catch (reviewError) {
+			setDueReviews((current) => {
+				if (current.some(({ reviewID }) => reviewID === review.reviewID)) return current
+				const restored = [...current]
+				restored.splice(Math.max(0, reviewIndex), 0, review)
+				return restored
+			})
 			setError(reviewError instanceof Error ? reviewError.message : 'Unable to save this review')
 		}
 	}
@@ -222,8 +233,8 @@ export function Component() {
 							const revealed = revealedReviewID === review.reviewID
 							return <article className="DueReviewCard" key={review.reviewID}>
 								<div><Link to={appRoutes.board(review.boardID)}>{review.boardTitle}</Link><small>{review.reviewCount ? `${review.reviewCount} reviews` : 'New card'}</small></div>
-								<strong>{review.front}</strong>
-								{revealed ? <p>{review.back}</p> : <button className="Button Button--primary" onClick={() => setRevealedReviewID(review.reviewID)} type="button">Show answer</button>}
+								<FlashcardMarkdown className="DueReviewCard-front">{review.front}</FlashcardMarkdown>
+								{revealed ? <FlashcardMarkdown className="DueReviewCard-back">{review.back}</FlashcardMarkdown> : <button className="Button Button--primary" onClick={() => setRevealedReviewID(review.reviewID)} type="button">Show answer</button>}
 								{revealed ? <div className="ReviewRatings" aria-label="How well did you remember?">
 									{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} onClick={() => void rateFlashcard(review, rating)} type="button">{rating}</button>)}
 								</div> : null}
@@ -306,6 +317,14 @@ export function Component() {
 				/>
 			) : null}
 		</main>
+	)
+}
+
+function FlashcardMarkdown({ children, className }: { children: string; className: string }) {
+	return (
+		<Streamdown className={className} controls={false} mode="static" plugins={studyMarkdownPlugins}>
+			{children}
+		</Streamdown>
 	)
 }
 
