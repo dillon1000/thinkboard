@@ -1,0 +1,263 @@
+.PDFLibrary-backdrop {
+	position: fixed;
+	z-index: 1300;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	background: rgb(18 16 14 / 38%);
+	padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+	backdrop-filter: blur(12px);
+}
+
+.PDFLibrary-dialog {
+	display: grid;
+	width: min(900px, 100%);
+	max-height: min(760px, calc(100vh - 40px));
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
+	overflow: hidden;
+	border-radius: 16px;
+	background: var(--panel);
+	color: var(--ink);
+	box-shadow: 0 28px 80px rgb(14 12 10 / 24%), var(--shadow-border);
+}
+
+.PDFLibrary-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px solid var(--border);
+	padding: 16px 18px;
+}
+
+.PDFLibrary-header > div {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+}
+
+.PDFLibrary-mark {
+	display: grid;
+	width: 38px;
+	height: 38px;
+	place-items: center;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--danger) 11%, var(--panel));
+	color: var(--danger);
+}
+
+.PDFLibrary-header h2,
+.PDFLibrary-header p {
+	margin: 0;
+}
+
+.PDFLibrary-header h2 {
+	font-size: 15px;
+	font-weight: 680;
+}
+
+.PDFLibrary-header p {
+	margin-top: 2px;
+	color: var(--faint);
+	font-size: 11.5px;
+}
+
+.PDFLibrary-header > button {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	place-items: center;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--muted);
+}
+
+.PDFLibrary-summary {
+	display: flex;
+	gap: 1px;
+	border-bottom: 1px solid var(--border);
+	background: var(--border);
+}
+
+.PDFLibrary-summary > div {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	align-items: baseline;
+	gap: 6px;
+	background: var(--sidebar);
+	padding: 12px 18px;
+}
+
+.PDFLibrary-summary strong {
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+}
+
+.PDFLibrary-summary span {
+	color: var(--faint);
+	font-size: 10.5px;
+}
+
+.PDFLibrary-list {
+	min-height: 180px;
+	overflow-y: auto;
+	padding: 10px;
+}
+
+.PDFLibrary-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	border-radius: 11px;
+	padding: 11px 10px;
+	transition: background-color 140ms var(--ease-swift);
+}
+
+.PDFLibrary-row + .PDFLibrary-row {
+	border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.PDFLibrary-fileIcon {
+	display: grid;
+	width: 38px;
+	height: 44px;
+	place-items: center;
+	border: 1px solid color-mix(in srgb, var(--danger) 16%, var(--border));
+	border-radius: 7px 7px 10px 7px;
+	background: color-mix(in srgb, var(--danger) 6%, var(--panel));
+	color: var(--danger);
+}
+
+.PDFLibrary-copy {
+	display: grid;
+	min-width: 0;
+	gap: 3px;
+}
+
+.PDFLibrary-copy strong,
+.PDFLibrary-copy > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.PDFLibrary-copy strong {
+	font-size: 12.5px;
+	font-weight: 630;
+}
+
+.PDFLibrary-copy > span {
+	color: var(--faint);
+	font-size: 10.5px;
+}
+
+.PDFLibrary-copy small {
+	display: inline-flex;
+	width: fit-content;
+	align-items: center;
+	gap: 4px;
+	color: var(--faint);
+	font-size: 10.5px;
+}
+
+.PDFLibrary-copy small[data-status='ready'] { color: var(--success); }
+.PDFLibrary-copy small[data-status='failed'] { color: var(--danger); }
+
+.PDFLibrary-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.PDFLibrary-actions button,
+.PDFLibrary-actions a {
+	display: inline-flex;
+	min-height: 32px;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	padding: 0 8px;
+	color: var(--muted);
+	font: inherit;
+	font-size: 10.5px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.PDFLibrary-actions a,
+.PDFLibrary-actions .PDFLibrary-delete {
+	width: 32px;
+	padding: 0;
+}
+
+.PDFLibrary-actions button:disabled {
+	opacity: .42;
+}
+
+.PDFLibrary-error {
+	margin: 0;
+	border-top: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+	background: var(--danger-soft);
+	padding: 10px 18px;
+	color: var(--danger);
+	font-size: 11.5px;
+}
+
+.PDFLibrary-empty {
+	display: grid;
+	min-height: 220px;
+	place-items: center;
+	align-content: center;
+	gap: 6px;
+	margin: 0;
+	color: var(--faint);
+	font-size: 11.5px;
+	text-align: center;
+}
+
+.PDFLibrary-empty strong {
+	color: var(--muted);
+	font-size: 13px;
+}
+
+@media (hover: hover) {
+	.PDFLibrary-header > button:hover,
+	.PDFLibrary-actions button:hover,
+	.PDFLibrary-actions a:hover,
+	.PDFLibrary-row:hover {
+		background: var(--surface-hover);
+		color: var(--ink);
+	}
+
+	.PDFLibrary-actions .PDFLibrary-delete:hover {
+		background: var(--danger-soft);
+		color: var(--danger);
+	}
+}
+
+@media (max-width: 720px) {
+	.PDFLibrary-backdrop {
+		align-items: end;
+		padding: 0;
+	}
+
+	.PDFLibrary-dialog {
+		width: 100%;
+		max-height: 88vh;
+		border-radius: 18px 18px 0 0;
+	}
+
+	.PDFLibrary-row {
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+
+	.PDFLibrary-actions {
+		grid-column: 1 / -1;
+		justify-content: flex-end;
+	}
+}

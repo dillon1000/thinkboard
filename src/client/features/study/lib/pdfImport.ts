@@ -256,6 +256,66 @@ export async function listBoardDocuments(boardID: string) {
 	return requestJSON<{ documents: DocumentSummary[] }>(apiRoutes.boardDocuments(boardID))
 }
 
+export async function deleteBoardDocument(boardID: string, documentID: string) {
+	await requestJSON<{ ok: true }>(apiRoutes.boardDocument(boardID, documentID), {
+		method: 'DELETE',
+	})
+}
+
+/**
+ * Removes every canvas page for one stored PDF. A frame is removed with the pages when all of its
+ * children belong to that PDF; mixed frames keep their other content.
+ */
+export function removePDFDocumentShapes(editor: Editor, documentID: string) {
+	const pageShapes = editor.getPages().flatMap((page) =>
+		[...editor.getPageShapeIds(page)].flatMap((shapeID) => {
+			const shape = editor.getShape(shapeID)
+			return shape?.type === 'pdf-page' &&
+				Reflect.get(shape.props, 'documentId') === documentID
+				? [shape]
+				: []
+		})
+	)
+	const pageShapeIDs = new Set(pageShapes.map(({ id }) => id))
+	const frames = [...new Map(pageShapes.flatMap((shape) => {
+		const parent = editor.getShape(shape.parentId)
+		if (
+			parent?.type !== 'frame' ||
+			!editor.getSortedChildIdsForParent(parent.id).every((id) => pageShapeIDs.has(id))
+		) return []
+		return [[parent.id, parent] as const]
+	})).values()]
+	const frameIDs = new Set(frames.map(({ id }) => id))
+	const shapeIDs = [
+		...frameIDs,
+		...pageShapes
+			.filter(({ parentId }) => !isShapeId(parentId) || !frameIDs.has(parentId))
+			.map(({ id }) => id),
+	]
+	if (!shapeIDs.length) return 0
+	editor.markHistoryStoppingPoint('remove pdf')
+	editor.deleteShapes(shapeIDs)
+	return pageShapes.length
+}
+
+/** Selects the first page for a PDF and moves the camera to it, even when it is on another page. */
+export function locatePDFDocument(editor: Editor, documentID: string) {
+	for (const page of editor.getPages()) {
+		for (const shapeID of editor.getPageShapeIds(page)) {
+			const shape = editor.getShape(shapeID)
+			if (
+				shape?.type !== 'pdf-page' ||
+				Reflect.get(shape.props, 'documentId') !== documentID
+			) continue
+			editor.setCurrentPage(page.id)
+			editor.setSelectedShapes([shape.id])
+			editor.zoomToSelection({ animation: { duration: 300 } })
+			return true
+		}
+	}
+	return false
+}
+
 export function findMatchingPDFDocument(
 	documents: readonly DocumentSummary[],
 	file: Pick<File, 'name' | 'size'>,

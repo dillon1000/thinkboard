@@ -7,6 +7,7 @@ import {
 	findMatchingPDFDocument,
 	getPDFRenderScale,
 	hasCompletePDFPageShapeSet,
+	locatePDFDocument,
 	placePDFPages,
 	readPDFTextItems,
 	yieldToBrowser,
@@ -122,6 +123,33 @@ describe('placePDFPages', () => {
 
 		const createdPages = createShapes.mock.calls[0]?.[0] as Array<{ id: string }>
 		expect(setSelectedShapes).toHaveBeenCalledWith([createdPages[0]?.id])
+		expect(zoomToSelection).toHaveBeenCalledWith({ animation: { duration: 300 } })
+	})
+})
+
+describe('locatePDFDocument', () => {
+	it('opens the page that contains the PDF and focuses its first page shape', () => {
+		const setCurrentPage = vi.fn()
+		const setSelectedShapes = vi.fn()
+		const zoomToSelection = vi.fn()
+		const page = { id: 'page:notes' }
+		const shape = {
+			id: 'shape:pdf-page-1',
+			props: { documentId: 'document-1' },
+			type: 'pdf-page',
+		}
+		const editor = {
+			getPageShapeIds: () => new Set([shape.id]),
+			getPages: () => [page],
+			getShape: () => shape,
+			setCurrentPage,
+			setSelectedShapes,
+			zoomToSelection,
+		} as unknown as Editor
+
+		expect(locatePDFDocument(editor, 'document-1')).toBe(true)
+		expect(setCurrentPage).toHaveBeenCalledWith(page.id)
+		expect(setSelectedShapes).toHaveBeenCalledWith([shape.id])
 		expect(zoomToSelection).toHaveBeenCalledWith({ animation: { duration: 300 } })
 	})
 })

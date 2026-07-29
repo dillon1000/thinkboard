@@ -4,6 +4,7 @@ import {
 	IconCheck,
 	IconCopy,
 	IconFileTypePdf,
+	IconLibrary,
 	IconRefresh,
 	IconX,
 } from '@tabler/icons-react'
@@ -23,6 +24,7 @@ import {
 } from '../lib/pdfImportError'
 import { useZenMode } from '../../boards/lib/ZenModeProvider'
 import { openCraftDocuments } from '../../craft/craftPreviewEvent'
+import { PDFDocumentLibrary } from './PDFDocumentLibrary'
 
 interface PDFImportControlProps {
 	boardID: string
@@ -34,6 +36,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const [error, setError] = useState<PDFImportFailure | null>(null)
 	const [failedDocuments, setFailedDocuments] = useState<DocumentSummary[]>([])
 	const [processingDocumentCount, setProcessingDocumentCount] = useState(0)
+	const [isLibraryOpen, setIsLibraryOpen] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const zen = useZenMode()
 
@@ -135,9 +138,20 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				</span>
 				<span aria-live="polite">{progressLabel ?? 'Import PDF'}</span>
 			</button>
-			<button
-				className="RibbonMenu-item CraftDocuments-trigger"
-				onClick={openCraftDocuments}
+				<button
+					className="RibbonMenu-item CraftDocuments-trigger"
+					onClick={() => setIsLibraryOpen(true)}
+					title="Manage PDFs on this board"
+					type="button"
+				>
+					<span aria-hidden="true" className="RibbonMenu-itemIcon">
+						<IconLibrary size={17} stroke={1.7} />
+					</span>
+					<span>PDF library</span>
+				</button>
+				<button
+					className="RibbonMenu-item CraftDocuments-trigger"
+					onClick={openCraftDocuments}
 				title="Link Craft documents to this board"
 				type="button"
 			>
@@ -146,7 +160,15 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				</span>
 				<span>Craft documents</span>
 			</button>
-			{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
+				{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
+				{isLibraryOpen ? (
+					<PDFDocumentLibrary
+						boardID={boardID}
+						editor={editor}
+						onClose={() => setIsLibraryOpen(false)}
+						onDocumentsChanged={() => void refreshDocuments()}
+					/>
+				) : null}
 			{/* The ribbon has no room for a stack of notices, so they float clear of it. */}
 			{failedDocuments.length ? (
 				<div className="PDFImportNotices">
