@@ -102,6 +102,7 @@ import type { FlashcardShape } from '../shapes/studyShapeUtils'
 import { LockInPanel } from '../../lock-in/LockInPanel'
 import { useLockIn } from '../../lock-in/LockInProvider'
 import { openCraftDocumentPreview } from '../../craft/craftPreviewEvent'
+import './studyChat.css'
 
 interface StudyPanelProps {
 	boardID: string
