@@ -358,7 +358,9 @@ export class StudyAgent extends DurableObject<Env> {
 				: Promise.resolve(undefined),
 		])
 		const agentProfilePrompt = buildAgentProfilePrompt(agentProfile, memories)
-		const spotifyContext = formatSpotifyContextForModel(spotifyPlayback)
+		const spotifyContext = agentProfile.promptSources.connectedServices
+			? formatSpotifyContextForModel(spotifyPlayback)
+			: ''
 		const userTools = userID
 			? {
 					...proposalTools,
