@@ -7,6 +7,7 @@ import {
 	IconCards,
 	IconChevronDown,
 	IconDots,
+	IconEyeOff,
 	IconLayoutBoard,
 	IconLayoutSidebarLeftCollapse,
 	IconLayoutSidebarLeftExpand,
@@ -47,8 +48,11 @@ export function Component() {
 	const [isListOpen, setIsListOpen] = useState(true)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(readSidebarPreference)
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
+	const [isDueReviewMenuOpen, setIsDueReviewMenuOpen] = useState(false)
 	const [isCraftWhiteboardImportOpen, setIsCraftWhiteboardImportOpen] = useState(false)
 	const composerInputRef = useRef<HTMLInputElement>(null)
+	const dueReviewMenuTriggerRef = useRef<HTMLButtonElement>(null)
+	const dueReviewHideButtonRef = useRef<HTMLButtonElement>(null)
 	const session = authClient.useSession()
 	const navigate = useNavigate()
 
@@ -60,6 +64,10 @@ export function Component() {
 	useEffect(() => {
 		if (isComposerOpen) composerInputRef.current?.focus()
 	}, [isComposerOpen])
+
+	useEffect(() => {
+		if (isDueReviewMenuOpen) dueReviewHideButtonRef.current?.focus()
+	}, [isDueReviewMenuOpen])
 
 	useEffect(() => {
 		const compactLayout = window.matchMedia('(max-width: 840px)')
@@ -125,6 +133,7 @@ export function Component() {
 	}
 
 	function hideDueReviews() {
+		setIsDueReviewMenuOpen(false)
 		setShowDueReviews(false)
 		writeDueReviewVisibility(false)
 	}
@@ -241,9 +250,39 @@ export function Component() {
 						<div className="SectionHeading">
 							<span className="SectionHeading-toggle" id="due-reviews-heading"><IconCards aria-hidden="true" size={14} /> Due today</span>
 							<span className="SectionHeading-count">{dueReviews.length || ''}</span>
-							<button aria-label="Hide Due Today" className="SectionHeading-hide" onClick={hideDueReviews} title="Hide Due Today" type="button">
-								<IconDots aria-hidden="true" size={16} stroke={1.8} />
-							</button>
+							<div
+								className="SectionHeading-menu"
+								onBlur={(event) => {
+									if (!event.currentTarget.contains(event.relatedTarget)) setIsDueReviewMenuOpen(false)
+								}}
+								onKeyDown={(event) => {
+									if (event.key !== 'Escape') return
+									event.preventDefault()
+									setIsDueReviewMenuOpen(false)
+									dueReviewMenuTriggerRef.current?.focus()
+								}}
+							>
+								<button
+									aria-expanded={isDueReviewMenuOpen}
+									aria-haspopup="menu"
+									aria-label="More Due Today actions"
+									className="SectionHeading-menuTrigger"
+									onClick={() => setIsDueReviewMenuOpen((isOpen) => !isOpen)}
+									ref={dueReviewMenuTriggerRef}
+									title="More actions"
+									type="button"
+								>
+									<IconDots aria-hidden="true" size={16} stroke={1.8} />
+								</button>
+								{isDueReviewMenuOpen ? (
+									<div aria-label="Due Today actions" className="SectionHeading-menuContent" role="menu">
+										<button onClick={hideDueReviews} ref={dueReviewHideButtonRef} role="menuitem" type="button">
+											<IconEyeOff aria-hidden="true" size={15} stroke={1.8} />
+											Hide Due Today
+										</button>
+									</div>
+								) : null}
+							</div>
 						</div>
 						{dueReviews.length ? <div className="DueReviewList scroll-fade-x">{dueReviews.map((review) => {
 							const revealed = revealedReviewID === review.reviewID

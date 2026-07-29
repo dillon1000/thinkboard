@@ -296,7 +296,11 @@ img { max-width: 100%; }
 .SectionHeading-toggle > svg { color: var(--faint); transition: rotate 200ms var(--ease-swift); }
 .SectionHeading-toggle[aria-expanded='false'] > svg { rotate: -90deg; }
 .SectionHeading-count { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
-.SectionHeading-hide { display: grid; width: 26px; height: 26px; margin-left: auto; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.SectionHeading-menu { position: relative; margin-left: auto; }
+.SectionHeading-menuTrigger { display: grid; width: 26px; height: 26px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.SectionHeading-menuContent { position: absolute; top: calc(100% + 4px); right: 0; width: 164px; border-radius: 7px; background: var(--panel); padding: 4px; box-shadow: var(--shadow-pop); animation: pop-in 160ms var(--ease-swift) backwards; }
+.SectionHeading-menuContent button { display: flex; width: 100%; min-height: 32px; align-items: center; gap: 8px; border: 0; border-radius: 5px; background: transparent; padding: 0 8px; color: var(--muted); font-size: 12px; text-align: left; }
+.SectionHeading-menuContent button > svg { flex: 0 0 auto; color: var(--faint); }
 .SectionHeading-new { display: inline-flex; min-height: 26px; align-items: center; gap: 4px; margin-left: auto; border: 0; border-radius: 5px; background: transparent; padding: 0 7px; color: var(--muted); font-size: 12.5px; font-weight: 500; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
 
 .NewBoard { display: flex; gap: 6px; overflow: hidden; margin: 4px 0 8px; border-radius: 6px; background: var(--panel); padding: 4px; box-shadow: var(--shadow-border); animation: pop-in 200ms var(--ease-swift) backwards; }
@@ -1109,7 +1113,7 @@ img { max-width: 100%; }
 @media (hover: hover) and (pointer: fine) {
 	.Button--primary:hover:not(:disabled) { background: var(--accent-hover); }
 	.Button--oauth:hover:not(:disabled) { box-shadow: var(--shadow-border-hover); }
-	.TextButton:hover, .IconButton:hover, .ThemeToggle:hover, .BoardRow-actions button:hover, .SectionHeading-toggle:hover, .SectionHeading-hide:hover, .SectionHeading-new:hover { background: var(--surface-hover); color: var(--ink); }
+	.TextButton:hover, .IconButton:hover, .ThemeToggle:hover, .BoardRow-actions button:hover, .SectionHeading-toggle:hover, .SectionHeading-menuTrigger:hover, .SectionHeading-menuContent button:hover, .SectionHeading-new:hover { background: var(--surface-hover); color: var(--ink); }
 	.Dashboard-nav a:hover, .Dashboard-user:hover { background: var(--surface-hover); color: var(--ink); }
 	.BoardRow:hover { background: var(--surface-hover); }
 	.BoardRow-actions button:hover { background: var(--surface-active); }
@@ -1233,7 +1237,7 @@ img { max-width: 100%; }
 	.Dashboard-user { grid-template-columns: 32px minmax(0, 1fr) 40px 40px; min-height: 52px; }
 	.Dashboard-sidebarTop { min-height: 48px; padding-bottom: 10px; }
 	.SectionHeading-toggle, .SectionHeading-new { min-height: 40px; }
-	.SectionHeading-hide { width: 40px; height: 40px; }
+	.SectionHeading-menuTrigger { width: 40px; height: 40px; }
 	.NewBoard input { min-height: 40px; }
 	.BoardRow { min-height: 52px; }
 	.BoardRow-actions { gap: 0; padding-right: 2px; }
