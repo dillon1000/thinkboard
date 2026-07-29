@@ -26,6 +26,7 @@ import {
 import { handleSpotifyPlayerAction, handleSpotifyPlayerGet } from './routes/spotify'
 import { handleInlineAgentRequest, handleStudyConversationMessages } from './routes/studyChat'
 import { handleLockInReview } from './routes/lockIn'
+import { handleAgentActions, handleAgentActionUndo } from './routes/agentActions'
 import {
 	handleBoardMemoryCreate,
 	handleBoardMistakes,
@@ -105,6 +106,10 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.studyAgentProfile, handleAgentProfileGet)
 	.put(apiRoutePatterns.studyAgentProfile, handleAgentProfilePut)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
+	.get(apiRoutePatterns.boardAgentActions, handleAgentActions)
+	.post(apiRoutePatterns.boardAgentActions, handleAgentActions)
+	.post(apiRoutePatterns.boardAgentActionUndo, handleAgentActionUndo)
+	.patch(apiRoutePatterns.boardAgentActionUndo, handleAgentActionUndo)
 	.post(apiRoutePatterns.boardMemories, handleBoardMemoryCreate)
 	.get(apiRoutePatterns.boardMistakes, handleBoardMistakes)
 	.post(apiRoutePatterns.boardMistakes, handleBoardMistakes)

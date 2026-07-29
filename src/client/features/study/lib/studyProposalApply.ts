@@ -55,6 +55,7 @@ export interface ProposalEffect {
 	/** Empty for proposals that write to the student's history rather than the board. */
 	shapeIDs: TLShapeId[]
 	flashcards?: Array<{ back: string; front: string; shapeID: string }>
+	planID?: string
 }
 
 interface ApplyProposalOptions {

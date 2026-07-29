@@ -1,5 +1,14 @@
 export { apiRoutePatterns, apiRoutes, appRoutes } from './routes'
 export {
+	agentActionCreateSchema,
+	agentActionUndoResultSchema,
+} from './agentActions'
+export type {
+	AgentActionCreate,
+	AgentActionSummary,
+	AgentActionUndoPayload,
+} from './agentActions'
+export {
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,

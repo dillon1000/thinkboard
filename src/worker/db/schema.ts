@@ -171,6 +171,30 @@ export const flashcardReviewEvent = sqliteTable(
 	]
 )
 
+export const agentAction = sqliteTable(
+	'agentAction',
+	{
+		id: text('id').primaryKey(),
+		boardID: text('boardID').notNull().references(() => board.id, { onDelete: 'cascade' }),
+		userID: text('userID').notNull().references(() => user.id, { onDelete: 'cascade' }),
+		conversationID: text('conversationID'),
+		toolName: text('toolName').notNull(),
+		planID: text('planID'),
+		baseDocumentClock: integer('baseDocumentClock'),
+		recordIDs: text('recordIDs').notNull(),
+		beforeRecords: text('beforeRecords').notNull(),
+		afterRecords: text('afterRecords').notNull(),
+		status: text('status', { enum: ['accepted', 'undoing', 'undone'] }).notNull().default('accepted'),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+		undoStartedAt: integer('undoStartedAt', { mode: 'timestamp' }),
+		undoneAt: integer('undoneAt', { mode: 'timestamp' }),
+	},
+	(table) => [
+		index('agentAction_boardID_createdAt_idx').on(table.boardID, table.createdAt),
+		index('agentAction_userID_createdAt_idx').on(table.userID, table.createdAt),
+	]
+)
+
 export const studyMistake = sqliteTable(
 	'studyMistake',
 	{

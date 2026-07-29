@@ -20,6 +20,7 @@ import {
 	type SpotifyAgentPlayOutput,
 	type StudyConversation,
 	type StudyContextReceipt,
+	type AgentActionSummary,
 	type StudyMessageContextChip,
 	type StudyMessageMetadata,
 	type StudyModelMode,
@@ -32,6 +33,7 @@ import { useChat, type UseChatHelpers } from '@ai-sdk/react'
 import { MessageScroller } from '@shadcn/react/message-scroller'
 import {
 	IconArrowDown,
+	IconArrowBackUp,
 	IconArrowUp,
 	IconBolt,
 	IconBrain,
@@ -53,6 +55,7 @@ import {
 	IconRefresh,
 	IconSparkles,
 	IconX,
+	IconVersions,
 } from '@tabler/icons-react'
 import {
 	convertFileListToFileUIParts,
@@ -70,6 +73,14 @@ import { Editor } from 'tldraw'
 import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
 import { ReasoningTrail } from './ReasoningTrail'
+import {
+	captureCanvasRecords,
+	createAgentAction,
+	listAgentActions,
+	persistAgentAction,
+	rollbackUnpersistedAgentAction,
+	undoAgentAction,
+} from '../lib/agentActionLedger'
 import {
 	readStudyMode,
 	readStudyModelMode,
@@ -123,6 +134,11 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [conversations, setConversations] = useState<StudyConversation[] | null>(null)
 	const [currentConversationID, setCurrentConversationID] = useState<string | null>(null)
 	const [historyOpen, setHistoryOpen] = useState(false)
+	const [actionLedgerOpen, setActionLedgerOpen] = useState(false)
+	const [agentActions, setAgentActions] = useState<AgentActionSummary[] | null>(null)
+	const [agentActionError, setAgentActionError] = useState<string | null>(null)
+	const [undoingActionID, setUndoingActionID] = useState<string | null>(null)
+	const [actionLedgerVersion, setActionLedgerVersion] = useState(0)
 	const [conversationError, setConversationError] = useState<string | null>(null)
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false)
 	const [selectionCount, setSelectionCount] = useState(0)
@@ -130,6 +146,11 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [showLockInPanel, setShowLockInPanel] = useState(true)
 	const { session: lockInSession } = useLockIn()
 	const currentConversation = conversations?.find(({ id }) => id === currentConversationID) ?? null
+
+	useEffect(() => {
+		if (!actionLedgerOpen) return
+		void loadAgentActionLedger()
+	}, [actionLedgerOpen, actionLedgerVersion, boardID])
 
 	useEffect(() => {
 		if (lockInSession) setShowLockInPanel(true)
@@ -242,6 +263,30 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		}
 	}
 
+	async function loadAgentActionLedger() {
+		try {
+			const response = await listAgentActions(boardID)
+			setAgentActions(response.actions)
+			setAgentActionError(null)
+		} catch (error) {
+			setAgentActionError(getErrorMessage(error))
+		}
+	}
+
+	async function undoAcceptedAction(action: AgentActionSummary) {
+		if (!editor || undoingActionID) return
+		setUndoingActionID(action.id)
+		setAgentActionError(null)
+		try {
+			await undoAgentAction(editor, boardID, action.id)
+			await loadAgentActionLedger()
+		} catch (error) {
+			setAgentActionError(getErrorMessage(error))
+		} finally {
+			setUndoingActionID(null)
+		}
+	}
+
 	function updateConversation(message: string) {
 		if (!currentConversation) return
 		const conversationID = currentConversation.id
@@ -294,7 +339,8 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 					{!lockInSession || !showLockInPanel ? (
 						<>
 							<button aria-label="New conversation" disabled={isCreatingConversation} onClick={() => void createConversation()} title="New conversation" type="button"><IconPlus aria-hidden="true" size={16} /></button>
-							<button aria-controls="study-history" aria-expanded={historyOpen} aria-label="Conversation history" onClick={() => setHistoryOpen((open) => !open)} title="Conversation history" type="button"><IconHistory aria-hidden="true" size={16} /></button>
+							<button aria-controls="study-action-ledger" aria-expanded={actionLedgerOpen} aria-label="AI change history" onClick={() => { setActionLedgerOpen((open) => !open); setHistoryOpen(false) }} title="AI change history" type="button"><IconVersions aria-hidden="true" size={16} /></button>
+							<button aria-controls="study-history" aria-expanded={historyOpen} aria-label="Conversation history" onClick={() => { setHistoryOpen((open) => !open); setActionLedgerOpen(false) }} title="Conversation history" type="button"><IconHistory aria-hidden="true" size={16} /></button>
 						</>
 					) : null}
 				</div>
@@ -314,6 +360,28 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 						))}
 					</nav>
 				) : null}
+				{actionLedgerOpen ? (
+					<section aria-label="AI change history" className="AgentActionLedger" id="study-action-ledger">
+						<div><strong>AI changes</strong><span>Safe undo checks current records</span></div>
+						{agentActionError ? <p role="alert">{agentActionError}</p> : null}
+						{agentActions === null && !agentActionError ? <p role="status">Loading changes…</p> : null}
+						{agentActions?.length === 0 ? <p>No accepted canvas changes yet.</p> : null}
+						{agentActions?.map((action) => (
+							<article key={action.id}>
+								<div>
+									<strong>{formatAgentActionName(action.toolName)}</strong>
+									<small>{action.recordIDs.length} {action.recordIDs.length === 1 ? 'record' : 'records'} · {formatConversationDate(action.createdAt)}</small>
+								</div>
+								{action.status === 'accepted' ? (
+									<button disabled={!editor || Boolean(undoingActionID)} onClick={() => void undoAcceptedAction(action)} type="button">
+										<IconArrowBackUp aria-hidden="true" size={14} />
+										{undoingActionID === action.id ? 'Undoing…' : 'Undo'}
+									</button>
+								) : <span>{action.status === 'undone' ? 'Undone' : 'Undo in progress'}</span>}
+							</article>
+						))}
+					</section>
+				) : null}
 				{conversationError ? <p className="StudyPanel-error" role="alert">{conversationError}</p> : null}
 				{currentConversation ? (
 					<StudyConversationSession
@@ -322,6 +390,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 						editor={editor}
 						key={currentConversation.agentName}
 						onActivity={updateConversation}
+						onAgentAction={() => setActionLedgerVersion((version) => version + 1)}
 						hasPDFTextSelection={hasPDFTextSelection}
 						selectionCount={selectionCount}
 					/>
@@ -343,6 +412,7 @@ interface StudyConversationSessionProps {
 	editor: Editor | null
 	hasPDFTextSelection: boolean
 	onActivity: (message: string) => void
+	onAgentAction: () => void
 	selectionCount: number
 }
 
@@ -352,6 +422,7 @@ function StudyConversationSession({
 	editor,
 	hasPDFTextSelection,
 	onActivity,
+	onAgentAction,
 	selectionCount,
 }: StudyConversationSessionProps) {
 	const [initialMessages, setInitialMessages] = useState<StudyUIMessage[] | null>(null)
@@ -384,6 +455,7 @@ function StudyConversationSession({
 			hasPDFTextSelection={hasPDFTextSelection}
 			initialMessages={initialMessages}
 			onActivity={onActivity}
+			onAgentAction={onAgentAction}
 			selectionCount={selectionCount}
 		/>
 	)
@@ -421,6 +493,7 @@ function StudyConversationChat({
 	hasPDFTextSelection,
 	initialMessages,
 	onActivity,
+	onAgentAction,
 	selectionCount,
 }: StudyConversationChatProps) {
 	const [input, setInput] = useState('')
@@ -574,9 +647,29 @@ function StudyConversationChat({
 					await recordProposedMistake(boardID, proposal)
 				} else {
 					if (!editor) throw new Error('The canvas is not ready')
+					const beforeRecords = captureCanvasRecords(editor)
 					const effect = applyProposal(editor, toolName, proposal, {
 						documentClock: canvasContextRef.current?.documentClock,
 					})
+					const action = createAgentAction(
+						beforeRecords,
+						captureCanvasRecords(editor),
+						{
+							baseDocumentClock: canvasContextRef.current?.documentClock,
+							conversationID: conversation.id,
+							planID: effect.planID,
+							toolName,
+						}
+					)
+					if (action) {
+						try {
+							await persistAgentAction(boardID, action)
+							onAgentAction()
+						} catch (ledgerError) {
+							rollbackUnpersistedAgentAction(editor, action)
+							throw ledgerError
+						}
+					}
 					await persistProposalEffect(boardID, effect)
 				}
 			}
@@ -653,9 +746,11 @@ function StudyConversationChat({
 													return (
 														<LeakedProposalCall
 															boardID={boardID}
+															conversationID={conversation.id}
 															documentClock={canvasContextRef.current?.documentClock}
 															editor={editor}
 															key={index}
+															onAgentAction={onAgentAction}
 															proposal={leakedProposal}
 														/>
 													)
@@ -1270,13 +1365,17 @@ function addProposalError(
 
 function LeakedProposalCall({
 	boardID,
+	conversationID,
 	documentClock,
 	editor,
+	onAgentAction,
 	proposal,
 }: {
 	boardID: string
+	conversationID: string
 	documentClock?: number
 	editor: Editor | null
+	onAgentAction: () => void
 	proposal: LeakedProposal
 }) {
 	const [status, setStatus] = useState<ProposalCallStatus>('ready')
@@ -1289,10 +1388,24 @@ function LeakedProposalCall({
 				await recordProposedMistake(boardID, proposal.input)
 			} else {
 				if (!editor) return
-				await persistProposalEffect(
-					boardID,
-					applyProposal(editor, proposal.toolName, proposal.input, { documentClock })
-				)
+				const beforeRecords = captureCanvasRecords(editor)
+				const effect = applyProposal(editor, proposal.toolName, proposal.input, { documentClock })
+				const action = createAgentAction(beforeRecords, captureCanvasRecords(editor), {
+					baseDocumentClock: documentClock,
+					conversationID,
+					planID: effect.planID,
+					toolName: proposal.toolName,
+				})
+				if (action) {
+					try {
+						await persistAgentAction(boardID, action)
+						onAgentAction()
+					} catch (ledgerError) {
+						rollbackUnpersistedAgentAction(editor, action)
+						throw ledgerError
+					}
+				}
+				await persistProposalEffect(boardID, effect)
 			}
 			setStatus('accepted')
 		} catch {
@@ -1323,6 +1436,21 @@ function createConversationTitle(message: string) {
 
 function formatConversationDate(value: string) {
 	return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(value))
+}
+
+function formatAgentActionName(toolName: string) {
+	const labels: Record<string, string> = {
+		addReviewNote: 'Review note',
+		composeCanvas: 'Canvas plan',
+		createConceptMap: 'Concept map',
+		createFlashcards: 'Flashcards',
+		createPracticeSet: 'Practice set',
+		createQuiz: 'Quiz',
+		createStudyPack: 'Cited study pack',
+		createWalkthrough: 'Walkthrough',
+		writeEquation: 'Equation',
+	}
+	return labels[toolName] ?? 'AI canvas change'
 }
 
 function getErrorMessage(error: unknown) {

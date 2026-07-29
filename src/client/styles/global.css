@@ -926,6 +926,18 @@ img { max-width: 100%; }
 .StudyHistory > button span { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .StudyHistory > button time { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
 .StudyHistory > button.is-current { background: var(--accent-soft); color: var(--accent-text); }
+.AgentActionLedger { position: absolute; z-index: 6; top: 6px; right: 6px; left: 6px; max-height: min(420px, calc(100% - 12px)); overflow-y: auto; border-radius: 8px; background: color-mix(in srgb, var(--panel) 97%, transparent); padding: 5px; box-shadow: var(--shadow-pop); backdrop-filter: blur(16px); animation: pop-in 180ms var(--ease-swift) backwards; }
+.AgentActionLedger > div:first-child { display: grid; gap: 2px; padding: 7px 8px 9px; }
+.AgentActionLedger > div:first-child strong { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.AgentActionLedger > div:first-child span { color: var(--faint); font-size: 10.5px; }
+.AgentActionLedger > p { margin: 4px; border-radius: 6px; background: var(--surface); padding: 9px; color: var(--faint); font-size: 11.5px; line-height: 1.45; }
+.AgentActionLedger > p[role='alert'] { background: var(--danger-soft); color: var(--danger); }
+.AgentActionLedger article { display: flex; min-height: 48px; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding: 6px 7px 6px 9px; }
+.AgentActionLedger article > div { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.AgentActionLedger article strong { overflow: hidden; font-size: 12.5px; font-weight: 570; text-overflow: ellipsis; white-space: nowrap; }
+.AgentActionLedger article small { color: var(--faint); font-size: 10.5px; }
+.AgentActionLedger article > button { display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 4px; border: 0; border-radius: 6px; background: var(--surface); padding: 0 8px; color: var(--muted); font-size: 11px; }
+.AgentActionLedger article > span { color: var(--faint); font-size: 10.5px; }
 .StudyMessageScroller { position: relative; display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
 .StudyMessageScroller::before, .StudyMessageScroller::after { position: absolute; z-index: 2; right: 0; left: 0; height: 18px; opacity: 0; pointer-events: none; content: ''; transition: opacity 140ms var(--ease-swift); }
 .StudyMessageScroller::before { top: 0; background: linear-gradient(var(--chrome), transparent); }

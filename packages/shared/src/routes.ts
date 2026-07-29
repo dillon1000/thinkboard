@@ -4,6 +4,8 @@ export const apiRoutePatterns = {
 	boardInlineAgent: '/api/boards/:boardID/inline',
 	boardLockInReview: '/api/boards/:boardID/lock-in/review',
 	boardFlashcards: '/api/boards/:boardID/flashcards',
+	boardAgentActions: '/api/boards/:boardID/agent-actions',
+	boardAgentActionUndo: '/api/boards/:boardID/agent-actions/:actionID/undo',
 	boardMistakes: '/api/boards/:boardID/mistakes',
 	boardMemories: '/api/boards/:boardID/memories',
 	boardDocuments: '/api/boards/:boardID/documents',
@@ -56,6 +58,10 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/lock-in/review`,
 	boardFlashcards: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/flashcards`,
+	boardAgentActions: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/agent-actions`,
+	boardAgentActionUndo: (boardID: string, actionID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/agent-actions/${encodeURIComponent(actionID)}/undo`,
 	boardMistakes: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/mistakes`,
 	boardMemories: (boardID: string) =>
