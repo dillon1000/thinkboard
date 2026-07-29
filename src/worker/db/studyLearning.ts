@@ -5,10 +5,19 @@ import type {
 	FlashcardReviewRating,
 	MistakeProposal,
 	StudyMistake,
+	StudyTodayDashboard,
+	StudyTodayPattern,
+	StudyTodayTrendDay,
 } from '@agentboard/shared'
-import { and, desc, eq, isNull, lte } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, lte } from 'drizzle-orm'
 import type { Database } from './client'
-import { board, boardMember, flashcardReview, studyMistake } from './schema'
+import {
+	board,
+	boardMember,
+	flashcardReview,
+	flashcardReviewEvent,
+	studyMistake,
+} from './schema'
 
 const DAY_MS = 86_400_000
 
@@ -91,15 +100,147 @@ export async function reviewFlashcard(
 		repetition: current.repetition,
 	}, rating)
 	const nextReviewAt = new Date(now.getTime() + schedule.intervalDays * DAY_MS)
-	await database.update(flashcardReview).set({
-		...schedule,
-		lastReviewedAt: now,
-		nextReviewAt,
-		reviewCount: current.reviewCount + 1,
-		updatedAt: now,
-	}).where(and(eq(flashcardReview.id, reviewID), eq(flashcardReview.userID, userID)))
+	await database.batch([
+		database.update(flashcardReview).set({
+			...schedule,
+			lastReviewedAt: now,
+			nextReviewAt,
+			reviewCount: current.reviewCount + 1,
+			updatedAt: now,
+		}).where(and(eq(flashcardReview.id, reviewID), eq(flashcardReview.userID, userID))),
+		// This insert is the durable history. Later schedule updates never replace it.
+		database.insert(flashcardReviewEvent).values({
+			id: crypto.randomUUID(),
+			userID,
+			boardID: current.boardID,
+			reviewID,
+			rating,
+			intervalDays: schedule.intervalDays,
+			easeFactor: schedule.easeFactor,
+			reviewedAt: now,
+		}),
+	])
 
 	return { nextReviewAt: nextReviewAt.toISOString(), ...schedule }
+}
+
+/**
+ * Builds the signed-in student's current session and seven-day review trend.
+ * Review events are immutable inputs, so later schedule changes do not alter
+ * the trend. Archived boards do not add cards or patterns to the session.
+ */
+export async function getStudyTodayDashboard(
+	database: Database,
+	userID: string,
+	now = new Date()
+): Promise<StudyTodayDashboard> {
+	const trendStart = startOfUTCDay(new Date(now.getTime() - 6 * DAY_MS))
+	const [dueReviews, events, mistakeRows] = await Promise.all([
+		listDueFlashcards(database, userID, now),
+		database.select({
+			rating: flashcardReviewEvent.rating,
+			reviewedAt: flashcardReviewEvent.reviewedAt,
+		}).from(flashcardReviewEvent)
+			.innerJoin(board, eq(board.id, flashcardReviewEvent.boardID))
+			.where(and(
+				eq(flashcardReviewEvent.userID, userID),
+				gte(flashcardReviewEvent.reviewedAt, trendStart),
+				isNull(board.archivedAt)
+			))
+			.orderBy(flashcardReviewEvent.reviewedAt),
+		database.select({
+			boardID: studyMistake.boardID,
+			concept: studyMistake.concept,
+			createdAt: studyMistake.createdAt,
+			description: studyMistake.description,
+			patternKey: studyMistake.patternKey,
+			title: studyMistake.title,
+		}).from(studyMistake)
+			.innerJoin(board, eq(board.id, studyMistake.boardID))
+			.where(and(
+				eq(studyMistake.userID, userID),
+				eq(studyMistake.kind, 'learning-pattern'),
+				isNull(board.archivedAt)
+			))
+			.orderBy(desc(studyMistake.createdAt))
+			.limit(200),
+	])
+
+	return {
+		dueReviews,
+		patterns: groupStudyPatterns(mistakeRows).slice(0, 5),
+		streakDays: calculateReviewStreak(events.map(({ reviewedAt }) => reviewedAt), now),
+		trend: buildReviewTrend(events, now),
+	}
+}
+
+export function buildReviewTrend(
+	events: ReadonlyArray<{ rating: FlashcardReviewRating; reviewedAt: Date }>,
+	now = new Date()
+): StudyTodayTrendDay[] {
+	const totals = new Map<string, { remembered: number; reviewed: number }>()
+	for (const event of events) {
+		const day = toUTCDateKey(event.reviewedAt)
+		const total = totals.get(day) ?? { remembered: 0, reviewed: 0 }
+		total.reviewed += 1
+		if (event.rating === 'good' || event.rating === 'easy') total.remembered += 1
+		totals.set(day, total)
+	}
+	return Array.from({ length: 7 }, (_, index) => {
+		const day = toUTCDateKey(new Date(now.getTime() - (6 - index) * DAY_MS))
+		return { day, ...(totals.get(day) ?? { remembered: 0, reviewed: 0 }) }
+	})
+}
+
+export function calculateReviewStreak(reviewDates: readonly Date[], now = new Date()) {
+	const reviewedDays = new Set(reviewDates.map(toUTCDateKey))
+	let cursor = startOfUTCDay(now)
+	if (!reviewedDays.has(toUTCDateKey(cursor))) cursor = new Date(cursor.getTime() - DAY_MS)
+	let streak = 0
+	while (reviewedDays.has(toUTCDateKey(cursor))) {
+		streak += 1
+		cursor = new Date(cursor.getTime() - DAY_MS)
+	}
+	return streak
+}
+
+function groupStudyPatterns(rows: ReadonlyArray<{
+	boardID: string | null
+	concept: string
+	createdAt: Date
+	description: string
+	patternKey: string
+	title: string
+}>): StudyTodayPattern[] {
+	const patterns = new Map<string, StudyTodayPattern>()
+	for (const row of rows) {
+		if (!row.boardID) continue
+		const current = patterns.get(row.patternKey)
+		if (current) {
+			current.count += 1
+			continue
+		}
+		patterns.set(row.patternKey, {
+			boardID: row.boardID,
+			concept: row.concept,
+			count: 1,
+			description: row.description,
+			lastSeenAt: row.createdAt.toISOString(),
+			patternKey: row.patternKey,
+			title: row.title,
+		})
+	}
+	return [...patterns.values()].sort((left, right) =>
+		right.count - left.count || right.lastSeenAt.localeCompare(left.lastSeenAt)
+	)
+}
+
+function startOfUTCDay(value: Date) {
+	return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()))
+}
+
+function toUTCDateKey(value: Date) {
+	return value.toISOString().slice(0, 10)
 }
 
 export function calculateReviewSchedule(

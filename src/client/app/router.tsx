@@ -34,6 +34,10 @@ export const router = createBrowserRouter([
 				path: '/memory',
 				lazy: () => import('../features/memory/routes/MemoryRoute'),
 			},
+			{
+				path: '/today',
+				lazy: () => import('../features/today/routes/TodayRoute'),
+			},
 		],
 	},
 	{

@@ -102,6 +102,29 @@ export interface StudyMistake {
 	title: string
 }
 
+export interface StudyTodayPattern {
+	boardID: string
+	concept: string
+	count: number
+	description: string
+	lastSeenAt: string
+	patternKey: string
+	title: string
+}
+
+export interface StudyTodayTrendDay {
+	day: string
+	remembered: number
+	reviewed: number
+}
+
+export interface StudyTodayDashboard {
+	dueReviews: DueFlashcard[]
+	patterns: StudyTodayPattern[]
+	streakDays: number
+	trend: StudyTodayTrendDay[]
+}
+
 export interface AgentMemory {
 	content: string
 	count: number

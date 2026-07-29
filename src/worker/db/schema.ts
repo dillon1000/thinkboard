@@ -153,6 +153,24 @@ export const flashcardReview = sqliteTable(
 	]
 )
 
+export const flashcardReviewEvent = sqliteTable(
+	'flashcardReviewEvent',
+	{
+		id: text('id').primaryKey(),
+		userID: text('userID').notNull().references(() => user.id, { onDelete: 'cascade' }),
+		boardID: text('boardID').notNull().references(() => board.id, { onDelete: 'cascade' }),
+		reviewID: text('reviewID').notNull(),
+		rating: text('rating', { enum: ['again', 'hard', 'good', 'easy'] }).notNull(),
+		intervalDays: integer('intervalDays').notNull(),
+		easeFactor: real('easeFactor').notNull(),
+		reviewedAt: integer('reviewedAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('flashcardReviewEvent_userID_reviewedAt_idx').on(table.userID, table.reviewedAt),
+		index('flashcardReviewEvent_boardID_reviewedAt_idx').on(table.boardID, table.reviewedAt),
+	]
+)
+
 export const studyMistake = sqliteTable(
 	'studyMistake',
 	{

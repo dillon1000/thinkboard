@@ -17,6 +17,7 @@ import {
 	IconRestore,
 	IconSettings,
 	IconSparkles,
+	IconSun,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -222,6 +223,7 @@ export function Component() {
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<Link to={appRoutes.today}><IconSun aria-hidden="true" size={16} stroke={1.7} /> Today</Link>
 					<Link to={appRoutes.memory}><IconBrain aria-hidden="true" size={16} stroke={1.7} /> Memory</Link>
 					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
 				</nav>

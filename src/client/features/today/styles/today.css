@@ -1,0 +1,49 @@
+.Today { width: min(860px, calc(100% - clamp(40px, 7vw, 96px))); margin: 0 auto; padding: clamp(24px, 4vw, 40px) 0 max(64px, calc(48px + env(safe-area-inset-bottom))); }
+.Today-heading { animation: rise-in 340ms var(--ease-out) backwards; }
+.Today-heading h1 { margin: 0; font-size: 29px; font-weight: 720; letter-spacing: -.03em; }
+.Today-heading > p:last-child { max-width: 560px; margin: 8px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.Today-loading { margin-top: 30px; color: var(--muted); font-size: 13px; }
+.Today-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 28px; animation: rise-in 340ms var(--ease-out) 40ms backwards; }
+.Today-metric { display: grid; min-height: 112px; grid-template-columns: 28px 1fr; align-content: center; border-radius: 10px; background: var(--sidebar); padding: 16px; box-shadow: var(--shadow-border); }
+.Today-metric > span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 7px; background: var(--panel); color: var(--muted); box-shadow: var(--shadow-border); }
+.Today-metric strong { align-self: center; font-size: 24px; font-weight: 700; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.Today-metric small { grid-column: 2; color: var(--faint); font-size: 11.5px; }
+.Today-section { margin-top: 34px; animation: rise-in 340ms var(--ease-out) 80ms backwards; }
+.Today-sectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.Today-sectionHeading .Eyebrow { margin-bottom: 3px; }
+.Today-sectionHeading h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.012em; }
+.Today-sectionHeading > span { color: var(--faint); font-size: 11.5px; }
+.Today-card { display: grid; min-height: 286px; align-content: start; gap: 16px; border-radius: 12px; background: var(--sidebar); padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow-border); }
+.Today-cardMeta { display: flex; justify-content: space-between; gap: 12px; }
+.Today-cardMeta a, .Today-cardMeta span { color: var(--faint); font-size: 11.5px; text-decoration: none; }
+.Today-cardFront { max-width: 620px; font-size: 19px; font-weight: 650; line-height: 1.45; }
+.Today-cardBack { border-radius: 8px; background: var(--panel); padding: 14px; color: var(--muted); font-size: 14px; line-height: 1.55; box-shadow: inset 0 0 0 1px var(--line); }
+.Today-cardFront > :first-child, .Today-cardBack > :first-child { margin-top: 0; }
+.Today-cardFront > :last-child, .Today-cardBack > :last-child { margin-bottom: 0; }
+.Today-card > .Button { justify-self: start; margin-top: auto; }
+.Today-ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: auto; }
+.Today-ratings button { min-height: 38px; border: 0; border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; }
+.Today-complete { display: grid; min-height: 210px; place-content: center; justify-items: center; border-radius: 12px; background: var(--sidebar); box-shadow: var(--shadow-border); text-align: center; }
+.Today-complete > span { display: grid; width: 42px; height: 42px; margin-bottom: 10px; place-items: center; border-radius: 10px; background: var(--panel); color: var(--muted); box-shadow: var(--shadow-border); }
+.Today-complete strong { font-size: 14px; }
+.Today-complete p { margin: 4px 0 0; color: var(--faint); font-size: 12.5px; }
+.Today-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 26px; }
+.Today-trend { display: grid; height: 154px; grid-template-columns: repeat(7, 1fr); align-items: end; gap: 6px; border-radius: 10px; background: var(--sidebar); padding: 16px 14px 10px; box-shadow: var(--shadow-border); }
+.Today-trend > div { display: grid; height: 100%; grid-template-rows: 1fr 14px; justify-items: center; gap: 5px; }
+.Today-trendBar { position: relative; display: flex; width: min(24px, 70%); height: max(5px, calc(var(--review-count) * 8%)); align-self: end; align-items: end; overflow: hidden; border-radius: 5px 5px 3px 3px; background: var(--surface-active); }
+.Today-trendBar i { display: block; width: 100%; background: var(--accent); opacity: .72; }
+.Today-trend small { color: var(--faint); font-size: 10px; }
+.Today-patterns { display: grid; gap: 5px; }
+.Today-patterns a { display: flex; min-height: 49px; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px; background: var(--sidebar); padding: 8px 10px 8px 12px; color: var(--ink); text-decoration: none; box-shadow: var(--shadow-border); }
+.Today-patterns a > span { display: grid; min-width: 0; gap: 2px; }
+.Today-patterns strong { overflow: hidden; font-size: 12.5px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; }
+.Today-patterns small { overflow: hidden; color: var(--faint); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.Today-patterns em { flex: 0 0 auto; border-radius: 999px; background: var(--surface); padding: 3px 7px; color: var(--muted); font-size: 10.5px; font-style: normal; }
+.Today-patternsEmpty { min-height: 88px; margin: 0; border-radius: 8px; background: var(--sidebar); padding: 14px; color: var(--faint); font-size: 12px; line-height: 1.5; box-shadow: var(--shadow-border); }
+@media (max-width: 700px) {
+	.Today { width: calc(100% - 32px); padding-top: 20px; }
+	.Today-metrics { grid-template-columns: 1fr; }
+	.Today-metric { min-height: 76px; }
+	.Today-grid { grid-template-columns: 1fr; }
+	.Today-card { min-height: 250px; }
+}

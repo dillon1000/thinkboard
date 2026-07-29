@@ -15,6 +15,7 @@ import {
 	listBoardMistakes,
 	listDueFlashcards,
 	listAgentMemories,
+	getStudyTodayDashboard,
 	recordAgentMemory,
 	recordStudyMistake,
 	removeAgentMemory,
@@ -47,6 +48,16 @@ export async function handleDueFlashcards(request: IRequest, env: Env) {
 		authentication.session.user.id
 	)
 	return Response.json({ reviews })
+}
+
+export async function handleStudyToday(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const dashboard = await getStudyTodayDashboard(
+		createDatabase(env),
+		authentication.session.user.id
+	)
+	return Response.json(dashboard)
 }
 
 /**

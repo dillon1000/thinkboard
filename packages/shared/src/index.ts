@@ -233,6 +233,9 @@ export type {
 	MistakeProposal,
 	StudyMistake,
 	StudyMode,
+	StudyTodayDashboard,
+	StudyTodayPattern,
+	StudyTodayTrendDay,
 } from './studyLearning'
 export {
 	DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,

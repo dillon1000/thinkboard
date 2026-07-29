@@ -37,6 +37,7 @@ import {
 	handleStudyMemory,
 	handleStudyMemoryCreate,
 	handleStudyMemoryDelete,
+	handleStudyToday,
 } from './routes/studyLearning'
 import {
 	handleDocumentComplete,
@@ -97,6 +98,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.post(apiRoutePatterns.studyConversationTitle, handleStudyConversationTitle)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)
+	.get(apiRoutePatterns.studyToday, handleStudyToday)
 	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
 	.post(apiRoutePatterns.studyMemory, handleStudyMemoryCreate)
 	.delete(apiRoutePatterns.studyMemoryItem, handleStudyMemoryDelete)
