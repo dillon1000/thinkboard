@@ -6,6 +6,7 @@ import {
 } from '@agentboard/shared'
 import {
 	IconBrandSpotify,
+	IconCards,
 	IconCheck,
 	IconExternalLink,
 	IconLock,
@@ -18,6 +19,10 @@ import {
 	readSpotifyStatusVisibility,
 	writeSpotifyStatusVisibility,
 } from '../../spotify/lib/spotifyPreferences'
+import {
+	readDueReviewVisibility,
+	writeDueReviewVisibility,
+} from '../../boards/lib/dueReviewPreferences'
 import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
 export function Component() {
@@ -25,6 +30,7 @@ export function Component() {
 	const [isSpotifyConnected, setIsSpotifyConnected] = useState(false)
 	const [spotifyScopes, setSpotifyScopes] = useState<string[]>([])
 	const [showSpotifyStatus, setShowSpotifyStatus] = useState(readSpotifyStatusVisibility)
+	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [isLoading, setIsLoading] = useState(true)
 	const [isLinking, setIsLinking] = useState(false)
 	const [isUnlinking, setIsUnlinking] = useState(false)
@@ -194,6 +200,42 @@ export function Component() {
 					<a className="Settings-docLink" href="https://www.spotify.com/account/apps/" rel="noreferrer" target="_blank">
 						Manage authorized apps on Spotify <IconExternalLink aria-hidden="true" size={13} stroke={1.8} />
 					</a>
+				</section>
+
+				<section aria-labelledby="homepage-heading" className="Settings-section">
+					<div className="Settings-sectionHeading">
+						<h2 id="homepage-heading">Homepage</h2>
+						<p>Choose which study tools appear above your recent boards.</p>
+					</div>
+
+					<div className="ConnectionList">
+						<article className="ConnectionCard">
+							<div className="ConnectionCard-icon ConnectionCard-icon--identity">
+								<IconCards aria-hidden="true" size={20} stroke={1.8} />
+							</div>
+							<div className="ConnectionCard-copy">
+								<div>
+									<h3>Due Today reviews</h3>
+								</div>
+								<p>Show due flashcards in a horizontal row on your homepage.</p>
+								<label className="SpotifyPreference">
+									<span>
+										<strong>Show on homepage</strong>
+										<small>Turn this on to restore the section after hiding it.</small>
+									</span>
+									<input
+										checked={showDueReviews}
+										onChange={(event) => {
+											setShowDueReviews(event.target.checked)
+											writeDueReviewVisibility(event.target.checked)
+										}}
+										type="checkbox"
+									/>
+									<span aria-hidden="true" className="SpotifyPreference-control"><span /></span>
+								</label>
+							</div>
+						</article>
+					</div>
 				</section>
 			</div>
 		</WorkspaceShell>

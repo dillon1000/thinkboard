@@ -6,6 +6,7 @@ import {
 	IconBrain,
 	IconCards,
 	IconChevronDown,
+	IconDots,
 	IconLayoutBoard,
 	IconLayoutSidebarLeftCollapse,
 	IconLayoutSidebarLeftExpand,
@@ -21,6 +22,10 @@ import { Streamdown } from 'streamdown'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
+import {
+	readDueReviewVisibility,
+	writeDueReviewVisibility,
+} from '../lib/dueReviewPreferences'
 import { studyMarkdownPlugins } from '../../study/lib/studyMath'
 import { ThemeToggle } from '../../theme/ThemeToggle'
 import {
@@ -41,6 +46,7 @@ export function Component() {
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
 	const [isListOpen, setIsListOpen] = useState(true)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(readSidebarPreference)
+	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [isCraftWhiteboardImportOpen, setIsCraftWhiteboardImportOpen] = useState(false)
 	const composerInputRef = useRef<HTMLInputElement>(null)
 	const session = authClient.useSession()
@@ -48,7 +54,7 @@ export function Component() {
 
 	useEffect(() => {
 		void loadBoards()
-		void loadDueReviews()
+		if (showDueReviews) void loadDueReviews()
 	}, [])
 
 	useEffect(() => {
@@ -116,6 +122,11 @@ export function Component() {
 	function openComposer() {
 		setIsListOpen(true)
 		setIsComposerOpen(true)
+	}
+
+	function hideDueReviews() {
+		setShowDueReviews(false)
+		writeDueReviewVisibility(false)
 	}
 
 	async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -226,10 +237,13 @@ export function Component() {
 
 					{error ? <p className="FormError" role="alert">{error}</p> : null}
 
-					<section aria-labelledby="due-reviews-heading" className="DueReviews">
+					{showDueReviews ? <section aria-labelledby="due-reviews-heading" className="DueReviews">
 						<div className="SectionHeading">
 							<span className="SectionHeading-toggle" id="due-reviews-heading"><IconCards aria-hidden="true" size={14} /> Due today</span>
 							<span className="SectionHeading-count">{dueReviews.length || ''}</span>
+							<button aria-label="Hide Due Today" className="SectionHeading-hide" onClick={hideDueReviews} title="Hide Due Today" type="button">
+								<IconDots aria-hidden="true" size={16} stroke={1.8} />
+							</button>
 						</div>
 						{dueReviews.length ? <div className="DueReviewList">{dueReviews.map((review) => {
 							const revealed = revealedReviewID === review.reviewID
@@ -242,7 +256,7 @@ export function Component() {
 								</div> : null}
 							</article>
 						})}</div> : <p className="DueReviews-empty">You’re caught up. New flashcards appear here when they’re ready to review.</p>}
-					</section>
+					</section> : null}
 
 					<section className="BoardLibrary" id="board-library" aria-labelledby="recent-boards-heading">
 						<div className="SectionHeading">
