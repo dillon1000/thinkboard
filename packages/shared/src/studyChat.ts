@@ -53,6 +53,25 @@ export interface StudyMessageContextChip {
 	meta?: string
 }
 
+export interface StudyContextReceipt {
+	board?: {
+		selectedShapeTypes: string[]
+		visibleShapeCount: number
+	}
+	craftDocuments: string[]
+	memories: number
+	pdfSources: Array<{
+		documentID: string
+		documentTitle: string
+		pageNumber: number
+	}>
+	profileFields: Array<'about-you' | 'custom-instructions' | 'personality'>
+	spotify: {
+		detail?: string
+		state: 'excluded' | 'idle' | 'paused' | 'playing' | 'unavailable'
+	}
+}
+
 export interface StudyMessageMetadata {
 	contextTokens?: number
 	contextWindowTokens?: number
@@ -60,4 +79,5 @@ export interface StudyMessageMetadata {
 	modelMode?: StudyModelMode
 	reasoningEffort?: StudyReasoningEffort
 	contextChips?: StudyMessageContextChip[]
+	contextReceipt?: StudyContextReceipt
 }

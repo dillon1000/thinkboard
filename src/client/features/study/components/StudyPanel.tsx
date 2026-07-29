@@ -19,6 +19,7 @@ import {
 	type SpotifyAgentPlayInput,
 	type SpotifyAgentPlayOutput,
 	type StudyConversation,
+	type StudyContextReceipt,
 	type StudyMessageContextChip,
 	type StudyMessageMetadata,
 	type StudyModelMode,
@@ -43,6 +44,7 @@ import {
 	IconFileText,
 	IconFocus2,
 	IconHistory,
+	IconInfoCircle,
 	IconLock,
 	IconPaperclip,
 	IconPhoto,
@@ -681,6 +683,9 @@ function StudyConversationChat({
 												/>
 											)
 										})}
+										{message.role === 'assistant' && message.metadata?.contextReceipt ? (
+											<ResponseContextReceipt receipt={message.metadata.contextReceipt} />
+										) : null}
 										{message.role === 'assistant'
 											&& !hasReadableReasoning
 											&& message.metadata?.reasoningEffort ? (
@@ -851,6 +856,55 @@ function MessageContextChips({
 			))}
 		</div>
 	)
+}
+
+/** Shows the source metadata that reached one response without exposing source text. */
+function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
+	const selectedTypes = summarizeShapeTypes(receipt.board?.selectedShapeTypes ?? [])
+	const profileLabels = receipt.profileFields.map((field) => ({
+		'about-you': 'About you',
+		'custom-instructions': 'Custom instructions',
+		personality: 'Personality',
+	})[field])
+
+	return (
+		<details className="ContextReceipt">
+			<summary><IconInfoCircle aria-hidden="true" size={13} /> Context used</summary>
+			<dl>
+				{receipt.board ? (
+					<div>
+						<dt>Board</dt>
+						<dd>{selectedTypes || 'No selected shapes'} · {receipt.board.visibleShapeCount} visible</dd>
+					</div>
+				) : null}
+				<div>
+					<dt>PDFs</dt>
+					<dd>{receipt.pdfSources.length
+						? receipt.pdfSources.map((source) => `${source.documentTitle}, p. ${source.pageNumber}`).join(' · ')
+						: 'None'}</dd>
+				</div>
+				<div><dt>Memories</dt><dd>{receipt.memories}</dd></div>
+				<div><dt>Profile</dt><dd>{profileLabels.join(' · ') || 'None'}</dd></div>
+				<div><dt>Craft</dt><dd>{receipt.craftDocuments.join(' · ') || 'None'}</dd></div>
+				<div>
+					<dt>Spotify</dt>
+					<dd>{receipt.spotify.detail ?? ({
+						excluded: 'Excluded',
+						idle: 'Connected, idle',
+						paused: 'Paused',
+						playing: 'Playing',
+						unavailable: 'Unavailable',
+					})[receipt.spotify.state]}</dd>
+				</div>
+			</dl>
+		</details>
+	)
+}
+
+function summarizeShapeTypes(types: readonly string[]) {
+	const counts = new Map<string, number>()
+	for (const type of types) counts.set(type, (counts.get(type) ?? 0) + 1)
+	return [...counts].map(([type, count]) => `${count} ${type}`).join(', ')
 }
 
 function AssistantMarkdown({

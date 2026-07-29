@@ -99,6 +99,7 @@ import {
 	getStudyChatErrorLog,
 } from './studyChatError'
 import { buildAgentProfilePrompt } from './agentProfilePrompt'
+import { buildContextReceipt } from './contextReceipt'
 
 const MAX_PERSISTED_MESSAGES = 100
 const proposalOutputSchema = z.object({ applied: z.boolean() })
@@ -369,6 +370,14 @@ export class StudyAgent extends DurableObject<Env> {
 		const spotifyContext = agentProfile.promptSources.connectedServices
 			? formatSpotifyContextForModel(spotifyPlayback)
 			: ''
+		const contextReceipt = buildContextReceipt({
+			canvasContext,
+			craftContext,
+			memories,
+			profile: agentProfile,
+			retrieval,
+			spotifyPlayback,
+		})
 		const userTools = userID
 			? {
 					...proposalTools,
@@ -503,6 +512,7 @@ ${requestedTool ? `- The latest request requires ${requestedTool}. Call the avai
 				return {
 					contextTokens: inputTokens + outputTokens,
 					contextWindowTokens: model.contextWindowTokens,
+					contextReceipt,
 					model: modelID,
 					modelMode,
 					reasoningEffort: model.supportsReasoning ? reasoningEffort : undefined,

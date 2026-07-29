@@ -201,6 +201,7 @@ export {
 	studyReasoningEffortSchema,
 } from './studyChat'
 export type {
+	StudyContextReceipt,
 	StudyMessageContextChip,
 	StudyMessageMetadata,
 	StudyModelMode,

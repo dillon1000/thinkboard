@@ -967,6 +967,14 @@ img { max-width: 100%; }
 .ContextChip-meta { flex: 0 0 auto; color: var(--faint); font-variant-numeric: tabular-nums; }
 .ContextChip > button { display: grid; width: 16px; height: 16px; flex: 0 0 auto; place-items: center; margin-left: 1px; border: 0; border-radius: 5px; background: transparent; color: var(--faint); transition: background-color 120ms var(--ease-swift), color 120ms var(--ease-swift); }
 .ContextChip > button:hover { background: var(--surface-active); color: var(--ink); }
+.ContextReceipt { width: fit-content; max-width: 100%; margin-top: 10px; color: var(--faint); font-size: 11px; }
+.ContextReceipt summary { display: inline-flex; min-height: 26px; align-items: center; gap: 5px; border-radius: 6px; padding: 0 6px; cursor: pointer; list-style: none; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.ContextReceipt summary::-webkit-details-marker { display: none; }
+.ContextReceipt summary:hover { background: var(--surface-hover); color: var(--muted); }
+.ContextReceipt dl { display: grid; gap: 5px; width: min(430px, 100%); margin: 5px 0 0; border-radius: 8px; background: var(--sidebar); padding: 9px 10px; box-shadow: var(--shadow-border); }
+.ContextReceipt dl > div { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; }
+.ContextReceipt dt { color: var(--faint); font-weight: 560; }
+.ContextReceipt dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--muted); line-height: 1.4; }
 .ChatMessage-actions { position: absolute; bottom: -28px; left: -4px; display: flex; gap: 8px; opacity: 1; transform-origin: left center; transition: opacity 180ms var(--ease-swift), filter 180ms var(--ease-swift), scale 180ms var(--ease-swift); }
 .ChatMessage-actions button { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--faint); transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), scale 100ms var(--ease-swift); }
 .ChatMessage-actions button::after { position: absolute; inset: -4px; content: ''; }
