@@ -223,12 +223,17 @@ export function Component() {
 		<WorkspaceShell activePage="memory" skipTargetID="memory-content" title="Agent">
 			<div className="MemoryPage" id="memory-content">
 				<header className="MemoryHeading">
-					<div>
+					<div className="MemoryHeading-copy">
 						<p className="MemoryEyebrow">Agent controls</p>
 						<h1>What your agent knows</h1>
 						<p>Set its voice, give it context, and choose what reaches each prompt.</p>
 					</div>
-					{!isLoading && !loadError ? <span>{memories.length} memories</span> : null}
+					{!isLoading && !loadError ? (
+						<div className="MemoryHeading-metric">
+							<strong>{memories.length}</strong>
+							<span>{memories.length === 1 ? 'saved memory' : 'saved memories'}</span>
+						</div>
+					) : null}
 				</header>
 
 				{loadError ? (
@@ -243,13 +248,21 @@ export function Component() {
 				) : (
 					<div className="AgentControlLayout">
 						<aside className="AgentControlIndex">
-							<p>Prompt map</p>
-							<a href="#agent-voice">Voice</a>
-							<a href="#agent-about">About you</a>
-							<a href="#agent-instructions">Instructions</a>
-							<a href="#agent-sources">Sources</a>
-							<a href="#agent-memory">Memories</a>
-							<small>Changes apply to the next agent response.</small>
+							<div className="AgentControlIndex-heading">
+								<span aria-hidden="true" />
+								<div>
+									<p>Context stack</p>
+									<small>Built for every turn</small>
+								</div>
+							</div>
+							<nav aria-label="Agent control sections">
+								<a href="#agent-voice"><span>Voice</span><code>personality</code></a>
+								<a href="#agent-about"><span>About you</span><code>user-profile</code></a>
+								<a href="#agent-instructions"><span>Instructions</span><code>user-instructions</code></a>
+								<a href="#agent-sources"><span>Sources</span><code>context</code></a>
+								<a href="#agent-memory"><span>Memories</span><code>user-memory</code></a>
+							</nav>
+							<p className="AgentControlIndex-note">Changes apply to the next agent response.</p>
 						</aside>
 
 						<main className="AgentControlMain">
@@ -374,7 +387,10 @@ export function Component() {
 									</div>
 								</PromptSection>
 
-								<div className="AgentProfileSave">
+								<div
+									className="AgentProfileSave"
+									data-floating={hasProfileChanges || isSavingProfile || profileSaved || Boolean(profileError)}
+								>
 									<div aria-live="polite">
 										{profileError ? <span className="AgentProfileSave-error">{profileError}</span> : null}
 										{profileSaved ? <span className="AgentProfileSave-success"><IconCheck size={14} /> Saved</span> : null}
