@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+	DEFAULT_AGENT_PROFILE,
 	agentMemoryProposalSchema,
+	agentProfileSchema,
 	flashcardReviewRatingSchema,
+	manualAgentMemorySchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
 	studyModeSchema,
@@ -45,6 +48,20 @@ describe('study learning contracts', () => {
 			memoryKey: 'Invalid Key',
 			title: 'Invalid',
 			topic: 'Study style',
+		}).success).toBe(false)
+	})
+
+	it('validates manual memories and agent profiles', () => {
+		expect(manualAgentMemorySchema.safeParse({
+			content: 'I am preparing for an organic chemistry exam.',
+			kind: 'goal',
+			title: 'Organic chemistry exam',
+			topic: 'Chemistry',
+		}).success).toBe(true)
+		expect(agentProfileSchema.parse(DEFAULT_AGENT_PROFILE)).toEqual(DEFAULT_AGENT_PROFILE)
+		expect(agentProfileSchema.safeParse({
+			...DEFAULT_AGENT_PROFILE,
+			personality: 'comedian',
 		}).success).toBe(false)
 	})
 })

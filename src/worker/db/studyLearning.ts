@@ -171,7 +171,7 @@ export async function recordStudyMistake(
 export async function recordAgentMemory(
 	database: Database,
 	userID: string,
-	boardID: string,
+	boardID: string | null,
 	proposal: AgentMemoryProposal,
 	now = new Date()
 ) {
@@ -246,6 +246,7 @@ export async function listBoardMistakes(
 }
 
 function toStudyMistake(value: typeof studyMistake.$inferSelect): StudyMistake {
+	if (!value.boardID) throw new Error('Study mistake is missing its source board')
 	return {
 		boardID: value.boardID,
 		concept: value.concept,

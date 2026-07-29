@@ -1,7 +1,9 @@
 import {
+	agentProfileSchema,
 	agentMemoryKeySchema,
 	agentMemoryProposalSchema,
 	flashcardReviewRatingSchema,
+	manualAgentMemorySchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
 } from '@agentboard/shared'
@@ -19,6 +21,7 @@ import {
 	registerFlashcards,
 	reviewFlashcard,
 } from '../db/studyLearning'
+import { getAgentProfile, saveAgentProfile } from '../db/agentProfile'
 
 export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 	const authorized = await authorizeBoard(request, env)
@@ -58,6 +61,54 @@ export async function handleStudyMemory(request: IRequest, env: Env) {
 		authentication.session.user.id
 	)
 	return Response.json({ memories })
+}
+
+/**
+ * Saves a memory entered directly on the Memory page. Manual memories have no
+ * source board, and a generated key gives each entry an independent delete target.
+ */
+export async function handleStudyMemoryCreate(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const body: unknown = await request.json().catch(() => null)
+	const parsed = manualAgentMemorySchema.safeParse(body)
+	if (!parsed.success) return Response.json({ error: 'Invalid memory' }, { status: 400 })
+	const memoryKey = `manual-${crypto.randomUUID()}`
+	await recordAgentMemory(
+		createDatabase(env),
+		authentication.session.user.id,
+		null,
+		{ ...parsed.data, memoryKey }
+	)
+	return Response.json({ memoryKey, saved: true }, { status: 201 })
+}
+
+export async function handleAgentProfileGet(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const profile = await getAgentProfile(
+		createDatabase(env),
+		authentication.session.user.id
+	)
+	return Response.json({ profile })
+}
+
+/**
+ * Replaces the signed-in user's agent profile after validating all prompt
+ * switches and bounded instruction fields.
+ */
+export async function handleAgentProfilePut(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const body: unknown = await request.json().catch(() => null)
+	const parsed = agentProfileSchema.safeParse(body)
+	if (!parsed.success) return Response.json({ error: 'Invalid agent profile' }, { status: 400 })
+	const profile = await saveAgentProfile(
+		createDatabase(env),
+		authentication.session.user.id,
+		parsed.data
+	)
+	return Response.json({ profile })
 }
 
 /**

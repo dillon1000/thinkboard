@@ -8,6 +8,13 @@ export const agentMemoryKindSchema = z.enum([
 	'learning-pattern',
 	'preference',
 ])
+export const agentPersonalitySchema = z.enum([
+	'balanced',
+	'encouraging',
+	'precise',
+	'challenging',
+	'custom',
+])
 export const agentMemoryKeySchema = z.string()
 	.trim()
 	.min(1)
@@ -40,6 +47,38 @@ export const agentMemoryProposalSchema = z.object({
 	title: z.string().trim().min(1).max(120).describe('Short label shown to the student.'),
 	topic: z.string().trim().min(1).max(100).describe('Subject or area this memory applies to.'),
 })
+
+export const manualAgentMemorySchema = agentMemoryProposalSchema.omit({ memoryKey: true })
+
+export const agentPromptSourcesSchema = z.object({
+	aboutUser: z.boolean(),
+	boardContext: z.boolean(),
+	connectedServices: z.boolean(),
+	customInstructions: z.boolean(),
+	memories: z.boolean(),
+})
+
+export const agentProfileSchema = z.object({
+	aboutUser: z.string().trim().max(2_000),
+	customInstructions: z.string().trim().max(4_000),
+	customPersonality: z.string().trim().max(1_000),
+	personality: agentPersonalitySchema,
+	promptSources: agentPromptSourcesSchema,
+})
+
+export const DEFAULT_AGENT_PROFILE: AgentProfile = {
+	aboutUser: '',
+	customInstructions: '',
+	customPersonality: '',
+	personality: 'balanced',
+	promptSources: {
+		aboutUser: true,
+		boardContext: true,
+		connectedServices: true,
+		customInstructions: true,
+		memories: true,
+	},
+}
 
 export interface DueFlashcard {
 	back: string
@@ -75,6 +114,10 @@ export interface AgentMemory {
 
 export type AgentMemoryKind = z.infer<typeof agentMemoryKindSchema>
 export type AgentMemoryProposal = z.infer<typeof agentMemoryProposalSchema>
+export type AgentPersonality = z.infer<typeof agentPersonalitySchema>
+export type AgentProfile = z.infer<typeof agentProfileSchema>
+export type AgentPromptSources = z.infer<typeof agentPromptSourcesSchema>
 export type FlashcardReviewRating = z.infer<typeof flashcardReviewRatingSchema>
+export type ManualAgentMemory = z.infer<typeof manualAgentMemorySchema>
 export type MistakeProposal = z.infer<typeof mistakeProposalSchema>
 export type StudyMode = z.infer<typeof studyModeSchema>

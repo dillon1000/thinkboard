@@ -55,6 +55,7 @@ describe('route builders', () => {
 		expect(apiRoutes.studyMemoryItem('preferred pace')).toBe(
 			'/api/study/memory/preferred%20pace'
 		)
+		expect(apiRoutes.studyAgentProfile).toBe('/api/study/agent-profile')
 		expect(appRoutes.memory).toBe('/memory')
 	})
 

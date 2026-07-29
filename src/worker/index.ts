@@ -30,7 +30,10 @@ import {
 	handleDueFlashcards,
 	handleFlashcardRegistration,
 	handleFlashcardReview,
+	handleAgentProfileGet,
+	handleAgentProfilePut,
 	handleStudyMemory,
+	handleStudyMemoryCreate,
 	handleStudyMemoryDelete,
 } from './routes/studyLearning'
 import {
@@ -92,7 +95,10 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)
 	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
+	.post(apiRoutePatterns.studyMemory, handleStudyMemoryCreate)
 	.delete(apiRoutePatterns.studyMemoryItem, handleStudyMemoryDelete)
+	.get(apiRoutePatterns.studyAgentProfile, handleAgentProfileGet)
+	.put(apiRoutePatterns.studyAgentProfile, handleAgentProfilePut)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
 	.post(apiRoutePatterns.boardMemories, handleBoardMemoryCreate)
 	.get(apiRoutePatterns.boardMistakes, handleBoardMistakes)

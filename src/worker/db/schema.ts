@@ -158,7 +158,7 @@ export const studyMistake = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		userID: text('userID').notNull().references(() => user.id, { onDelete: 'cascade' }),
-		boardID: text('boardID').notNull().references(() => board.id, { onDelete: 'cascade' }),
+		boardID: text('boardID').references(() => board.id, { onDelete: 'cascade' }),
 		concept: text('concept').notNull(),
 		title: text('title').notNull(),
 		description: text('description').notNull(),
@@ -178,6 +178,22 @@ export const studyMistake = sqliteTable(
 		index('studyMistake_userID_patternKey_idx').on(table.userID, table.patternKey),
 	]
 )
+
+export const agentProfile = sqliteTable('agentProfile', {
+	userID: text('userID').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+	personality: text('personality', {
+		enum: ['balanced', 'encouraging', 'precise', 'challenging', 'custom'],
+	}).notNull().default('balanced'),
+	customPersonality: text('customPersonality').notNull().default(''),
+	customInstructions: text('customInstructions').notNull().default(''),
+	aboutUser: text('aboutUser').notNull().default(''),
+	includeMemories: integer('includeMemories', { mode: 'boolean' }).notNull().default(true),
+	includeAboutUser: integer('includeAboutUser', { mode: 'boolean' }).notNull().default(true),
+	includeCustomInstructions: integer('includeCustomInstructions', { mode: 'boolean' }).notNull().default(true),
+	includeBoardContext: integer('includeBoardContext', { mode: 'boolean' }).notNull().default(true),
+	includeConnectedServices: integer('includeConnectedServices', { mode: 'boolean' }).notNull().default(true),
+	updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+})
 
 export const document = sqliteTable(
 	'documents',
@@ -275,7 +291,7 @@ export const craftDocumentLink = sqliteTable(
 	]
 )
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
 	sessions: many(session),
 	accounts: many(account),
 	ownedBoards: many(board),
@@ -283,6 +299,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	studyConversations: many(studyConversation),
 	flashcardReviews: many(flashcardReview),
 	studyMistakes: many(studyMistake),
+	agentProfile: one(agentProfile),
 	documents: many(document),
 	documentProcessingUsage: many(documentProcessingUsage),
 	craftDocumentLinks: many(craftDocumentLink),
@@ -324,6 +341,10 @@ export const flashcardReviewRelations = relations(flashcardReview, ({ one }) => 
 export const studyMistakeRelations = relations(studyMistake, ({ one }) => ({
 	board: one(board, { fields: [studyMistake.boardID], references: [board.id] }),
 	user: one(user, { fields: [studyMistake.userID], references: [user.id] }),
+}))
+
+export const agentProfileRelations = relations(agentProfile, ({ one }) => ({
+	user: one(user, { fields: [agentProfile.userID], references: [user.id] }),
 }))
 
 export const documentRelations = relations(document, ({ one, many }) => ({
