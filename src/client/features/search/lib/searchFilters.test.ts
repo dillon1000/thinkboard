@@ -1,7 +1,6 @@
 import type { GlobalSearchResult } from '@agentboard/shared'
 import { describe, expect, it } from 'vitest'
 import {
-	countGlobalSearchResults,
 	filterGlobalSearchResults,
 	getGlobalSearchFilter,
 } from './searchFilters'
@@ -63,15 +62,5 @@ describe('global search filters', () => {
 		expect(filterGlobalSearchResults(results, 'all')).toEqual(results)
 		expect(filterGlobalSearchResults(results, 'pdfs')).toEqual([results[2]])
 		expect(filterGlobalSearchResults(results, 'canvas')).toEqual([results[0]])
-	})
-
-	it('counts all results and each source group', () => {
-		expect(countGlobalSearchResults(results)).toEqual({
-			all: 4,
-			canvas: 1,
-			flashcards: 1,
-			pdfs: 1,
-			lectures: 1,
-		})
 	})
 })

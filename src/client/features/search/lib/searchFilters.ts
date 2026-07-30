@@ -26,15 +26,3 @@ export function filterGlobalSearchResults(
 	if (filter === 'all') return results
 	return results.filter((result) => getGlobalSearchFilter(result) === filter)
 }
-
-export function countGlobalSearchResults(results: GlobalSearchResult[]) {
-	const counts: Record<GlobalSearchFilter, number> = {
-		all: results.length,
-		canvas: 0,
-		flashcards: 0,
-		pdfs: 0,
-		lectures: 0,
-	}
-	for (const result of results) counts[getGlobalSearchFilter(result)] += 1
-	return counts
-}

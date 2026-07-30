@@ -28,7 +28,6 @@ import {
 import { useLocation, useNavigate } from 'react-router'
 import { apiRequest } from '../../../lib/api'
 import {
-	countGlobalSearchResults,
 	filterGlobalSearchResults,
 	GLOBAL_SEARCH_FILTERS,
 	type GlobalSearchFilter,
@@ -54,7 +53,6 @@ export function GlobalSearch() {
 		() => filterGlobalSearchResults(results, filter),
 		[filter, results],
 	)
-	const filterCounts = useMemo(() => countGlobalSearchResults(results), [results])
 
 	useEffect(() => {
 		const openSearch = (event: KeyboardEvent) => {
@@ -215,8 +213,7 @@ export function GlobalSearch() {
 									}}
 									type="button"
 								>
-									<span>{option.label}</span>
-									{results.length ? <small>{filterCounts[option.id]}</small> : null}
+									{option.label}
 								</button>
 							))}
 						</nav>
@@ -225,7 +222,6 @@ export function GlobalSearch() {
 								<button
 									aria-selected={index === activeIndex}
 									className={index === activeIndex ? 'is-active' : ''}
-									data-source={getResultSource(result)}
 									key={resultKey(result)}
 									onClick={() => openResult(result)}
 									onMouseEnter={() => setActiveIndex(index)}
@@ -238,14 +234,14 @@ export function GlobalSearch() {
 									<span className="GlobalSearch-resultBody">
 										<span className="GlobalSearch-resultTitle">
 											<strong>{result.title}</strong>
-											<span>{getResultTypeLabel(result)}</span>
+											<span className="GlobalSearch-resultType">{getResultTypeLabel(result)}</span>
 										</span>
 										<small>{result.boardTitle}<i aria-hidden="true" />{getResultLocation(result)}</small>
 										<em>{result.snippet}</em>
 									</span>
 								</button>
 							)) : null}
-							{isLoading ? <SearchLoadingRows /> : null}
+							{isLoading ? <SearchLoadingState /> : null}
 							{error ? <p className="FormError" role="alert">{error}</p> : null}
 							{!isLoading && !error && query.trim().length >= 2 && !filteredResults.length ? (
 								<p>
@@ -294,12 +290,6 @@ function formatKind(value: string) {
 		.replace(/\b\w/g, (letter) => letter.toLocaleUpperCase())
 }
 
-function getResultSource(result: GlobalSearchResult) {
-	if (result.kind === 'document-page') return 'pdf'
-	if (result.kind === 'lecture-segment') return 'lecture'
-	return result.artifactKind === 'flashcard' ? 'flashcard' : 'canvas'
-}
-
 function getResultTypeLabel(result: GlobalSearchResult) {
 	if (result.kind === 'document-page') return 'PDF'
 	if (result.kind === 'lecture-segment') return 'Lecture'
@@ -337,19 +327,11 @@ function ResultIcon({ result }: { result: GlobalSearchResult }) {
 	}
 }
 
-function SearchLoadingRows() {
+function SearchLoadingState() {
 	return (
 		<div aria-label="Searching your spaces" className="GlobalSearch-loading" role="status">
-			{[0, 1, 2].map((index) => (
-				<div className="GlobalSearch-skeleton" key={index} style={{ '--row': index } as React.CSSProperties}>
-					<span />
-					<div>
-						<i />
-						<i />
-						<i />
-					</div>
-				</div>
-			))}
+			<span aria-hidden="true" />
+			<p>Searching all spaces…</p>
 		</div>
 	)
 }
