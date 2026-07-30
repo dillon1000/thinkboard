@@ -96,6 +96,47 @@ describe('flashcard answer grading', () => {
 		})
 	})
 
+	it('tells AI to accept answers that omit optional accepted-answer context', async () => {
+		let receivedInput: unknown = null
+		const ai = {
+			run: (_model: string, input: unknown) => {
+				receivedInput = input
+				return Promise.resolve({
+					response: {
+						matchedAnswerIndex: 0,
+						reason: 'The student identified the person asked for.',
+						verdict: 'correct',
+					},
+				})
+			},
+		}
+
+		await expect(gradeFlashcardAnswer({
+			acceptedAnswers: ['Abraham Lincoln (1861–1865)'],
+			ai,
+			answer: 'Abraham Lincoln',
+			front: 'Who was president during the Civil War?',
+			model: 'llama',
+		})).resolves.toMatchObject({
+			gradingMethod: 'ai',
+			verdict: 'correct',
+		})
+		expect(receivedInput).toMatchObject({
+			messages: [
+				{
+					content: expect.stringContaining(
+						'Do not require optional context from an accepted answer'
+					),
+					role: 'system',
+				},
+				{
+					content: expect.stringContaining('"studentAnswer":"Abraham Lincoln"'),
+					role: 'user',
+				},
+			],
+		})
+	})
+
 	it('does not call AI for a deterministic match', async () => {
 		const ai = { run: () => Promise.reject(new Error('AI should not run')) }
 		await expect(gradeFlashcardAnswer({
