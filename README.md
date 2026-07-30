@@ -37,6 +37,8 @@ The study agent's [Search](https://exa.ai/docs/reference/search-api-guide), [Ans
 
 The Quicker and Smarter study modes use GPT-5.6 Luna and Grok 4.5 through OpenRouter. Set `OPENROUTER_API_KEY` in `infra/cloudflare/.dev.vars` for local development and as a Worker secret in production. The Worker returns a service-unavailable response for study-model requests when this key is missing.
 
+AI calls from chat, inline canvas actions, flashcard grading, Focus Coach, conversation titles, document OCR, and document embeddings send PostHog AI observability events through the Worker. Set `POSTHOG_PROJECT_TOKEN` in `infra/cloudflare/.dev.vars` for local development and as a Worker secret in production. `POSTHOG_HOST` defaults to the US ingestion host; use `https://eu.i.posthog.com` for an EU project. Set `POSTHOG_AI_PRIVACY_MODE=true` to keep prompts and model outputs out of captured events. Capture is disabled when the project token is missing, and a capture failure does not fail the AI request.
+
 The local app is served by Vite and the Cloudflare Vite plugin. Useful commands:
 
 ```bash
@@ -68,6 +70,7 @@ wrangler secret put OAUTH_CLIENT_ID --config infra/cloudflare/wrangler.jsonc
 wrangler secret put OAUTH_CLIENT_SECRET --config infra/cloudflare/wrangler.jsonc
 wrangler secret put SPOTIFY_CLIENT_SECRET --config infra/cloudflare/wrangler.jsonc
 wrangler secret put EXA_API_KEY --config infra/cloudflare/wrangler.jsonc
+wrangler secret put POSTHOG_PROJECT_TOKEN --config infra/cloudflare/wrangler.jsonc
 pnpm db:migrate:remote
 pnpm deploy
 ```

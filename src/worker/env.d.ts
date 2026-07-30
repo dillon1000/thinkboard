@@ -9,6 +9,9 @@ interface Env {
 	SPOTIFY_CLIENT_SECRET?: string
 	EXA_API_KEY?: string
 	OPENROUTER_API_KEY?: string
+	POSTHOG_PROJECT_TOKEN?: string
+	POSTHOG_HOST?: string
+	POSTHOG_AI_PRIVACY_MODE?: string
 	TLDRAW_LICENSE_KEY?: string
 	AI_GATEWAY_ID?: string
 	LOCK_IN_MODEL?: string

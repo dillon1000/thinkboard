@@ -13,6 +13,7 @@ import {
 	generateConversationTitle,
 } from '../agents/conversationTitle'
 import type { AIRunner } from './lockIn'
+import { observeAIRunner } from '../observability/posthogAI'
 
 const MAX_TITLE_LENGTH = 80
 const MAX_TITLE_SOURCE_LENGTH = 2_000
@@ -59,7 +60,11 @@ export async function handleStudyConversationUpdate(request: IRequest, env: Env)
 	return Response.json({ conversation })
 }
 
-export async function handleStudyConversationTitle(request: IRequest, env: Env) {
+export async function handleStudyConversationTitle(
+	request: IRequest,
+	env: Env,
+	ctx: ExecutionContext
+) {
 	const authorized = await authorize(request, env)
 	if ('response' in authorized) return authorized.response
 
@@ -71,7 +76,15 @@ export async function handleStudyConversationTitle(request: IRequest, env: Env) 
 	let title: string | null = null
 	try {
 		title = await generateConversationTitle(
-			env.AI as AIRunner,
+			observeAIRunner(env.AI as AIRunner, env, {
+				defer: (capture) => ctx.waitUntil(capture),
+				distinctID: authorized.userID,
+				properties: { board_id: boardID, surface: 'conversation-title' },
+				provider: 'cloudflare',
+				sessionID: conversationID,
+				spanName: 'conversation-title',
+				traceID: crypto.randomUUID(),
+			}),
 			env.CONVERSATION_TITLE_MODEL?.trim() || DEFAULT_CONVERSATION_TITLE_MODEL,
 			message,
 			{

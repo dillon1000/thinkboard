@@ -10,6 +10,10 @@ import {
 	updateDocumentPageText,
 } from '../db/documents'
 import { getDocumentAIConfig } from '../config'
+import {
+	observeAIRunner,
+	type AIRunner,
+} from '../observability/posthogAI'
 import type { DocumentPipelineMessage } from './types'
 
 const DEFAULT_DAILY_PDF_PAGE_QUOTA = 1_000
@@ -17,10 +21,6 @@ const MIN_USEFUL_TEXT_CHARACTERS = 40
 const CHUNK_TARGET_CHARACTERS = 2_600
 const CHUNK_MAX_CHARACTERS = 3_200
 const EMBEDDING_BATCH_SIZE = 50
-
-interface AIRunner {
-	run(model: string, input: unknown, options?: unknown): Promise<unknown>
-}
 
 interface PipelineChunk {
 	pageNumber: number
@@ -30,11 +30,12 @@ interface PipelineChunk {
 
 export async function processDocumentBatch(
 	batch: MessageBatch<DocumentPipelineMessage>,
-	env: Env
+	env: Env,
+	ctx?: ExecutionContext
 ) {
 	for (const message of batch.messages) {
 		try {
-			await processDocument(message.body, env)
+			await processDocument(message.body, env, ctx)
 			message.ack()
 		} catch (error) {
 			const reason = getErrorMessage(error).slice(0, 500)
@@ -49,7 +50,11 @@ export async function processDocumentBatch(
 	}
 }
 
-export async function processDocument(message: DocumentPipelineMessage, env: Env) {
+export async function processDocument(
+	message: DocumentPipelineMessage,
+	env: Env,
+	ctx?: ExecutionContext
+) {
 	const startedAt = performance.now()
 	const database = createDatabase(env)
 	const documentRow = await getDocumentRow(database, message.boardID, message.documentID)
@@ -76,7 +81,22 @@ export async function processDocument(message: DocumentPipelineMessage, env: Env
 			},
 		},
 	}
-	const ai = env.AI as AIRunner
+	const ai = observeAIRunner(env.AI as AIRunner, env, {
+		defer: (capture) => {
+			if (ctx) ctx.waitUntil(capture)
+			else void capture
+		},
+		distinctID: message.ownerID,
+		properties: {
+			board_id: message.boardID,
+			document_id: message.documentID,
+			surface: 'pdf-import',
+		},
+		provider: 'cloudflare',
+		sessionID: message.documentID,
+		spanName: 'pdf-import',
+		traceID: crypto.randomUUID(),
+	})
 	const ocrStartedAt = performance.now()
 	const pageTexts: Array<{ pageNumber: number; text: string }> = []
 	let ocrPageCount = 0

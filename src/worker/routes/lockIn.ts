@@ -10,6 +10,12 @@ import type { IRequest } from 'itty-router'
 import { requireSession } from '../auth/session'
 import { getBoardAccess } from '../db/boards'
 import { createDatabase } from '../db/client'
+import {
+	observeAIRunner,
+	type AIRunner,
+} from '../observability/posthogAI'
+
+export type { AIRunner } from '../observability/posthogAI'
 
 const DEFAULT_LOCK_IN_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct'
 
@@ -45,11 +51,11 @@ const LOCK_IN_REVIEW_JSON_SCHEMA = {
 	type: 'object',
 } as const
 
-export interface AIRunner {
-	run(model: string, input: unknown, options?: unknown): Promise<unknown>
-}
-
-export async function handleLockInReview(request: IRequest, env: Env) {
+export async function handleLockInReview(
+	request: IRequest,
+	env: Env,
+	ctx: ExecutionContext
+) {
 	const authentication = await requireSession(request, env)
 	if ('response' in authentication) return authentication.response
 
@@ -79,8 +85,17 @@ export async function handleLockInReview(request: IRequest, env: Env) {
 			},
 			tags: ['agentboard', 'lock-in-review'],
 		}
+		const traceID = crypto.randomUUID()
 		const review = await generateLockInReview(
-			env.AI as AIRunner,
+			observeAIRunner(env.AI as AIRunner, env, {
+				defer: (capture) => ctx.waitUntil(capture),
+				distinctID: authentication.session.user.id,
+				properties: { board_id: boardID, surface: 'lock-in' },
+				provider: 'cloudflare',
+				sessionID: parsed.data.sessionID,
+				spanName: 'lock-in-review',
+				traceID,
+			}),
 			env.LOCK_IN_MODEL ?? DEFAULT_LOCK_IN_MODEL,
 			parsed.data,
 			aiOptions

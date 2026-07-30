@@ -26,7 +26,11 @@ export async function handleStudyConversationMessages(request: IRequest, env: En
 	return forwardStudyAgentRequest(
 		env.StudyAgent.getByName(conversation.agentName),
 		request,
-		{ boardID: request.params.boardID, userID }
+		{
+			boardID: request.params.boardID,
+			sessionID: request.params.conversationID,
+			userID,
+		}
 	)
 }
 
@@ -48,7 +52,7 @@ export async function handleInlineAgentRequest(request: IRequest, env: Env) {
 	return forwardStudyAgentRequest(
 		env.StudyAgent.getByName(`inline:${boardID}:${userID}`),
 		request,
-		{ boardID, userID }
+		{ boardID, sessionID: `inline:${boardID}:${userID}`, userID }
 	)
 }
 
@@ -59,12 +63,15 @@ interface StudyAgentFetcher {
 export function forwardStudyAgentRequest(
 	stub: StudyAgentFetcher,
 	request: Request,
-	identity?: { boardID: string; userID: string }
+	identity?: { boardID: string; sessionID?: string; userID: string }
 ) {
 	const headers = new Headers(request.headers)
 	if (identity) {
 		headers.set('x-agentboard-board-id', identity.boardID)
 		headers.set('x-agentboard-user-id', identity.userID)
+		if (identity.sessionID) {
+			headers.set('x-agentboard-ai-session-id', identity.sessionID)
+		}
 	}
 	return stub.fetch(request.url, {
 		method: request.method,

@@ -29,10 +29,15 @@ describe('forwardStudyAgentRequest', () => {
 		const request = new Request('https://board.example/messages', {
 			headers: { 'x-agentboard-user-id': 'forged' },
 		})
-		await forwardStudyAgentRequest({ fetch }, request, { boardID: 'board-1', userID: 'user-1' })
+		await forwardStudyAgentRequest(
+			{ fetch },
+			request,
+			{ boardID: 'board-1', sessionID: 'conversation-1', userID: 'user-1' }
+		)
 		const init = fetch.mock.calls[0]?.[1]
 		const headers = new Headers(init?.headers)
 		expect(headers.get('x-agentboard-user-id')).toBe('user-1')
 		expect(headers.get('x-agentboard-board-id')).toBe('board-1')
+		expect(headers.get('x-agentboard-ai-session-id')).toBe('conversation-1')
 	})
 })

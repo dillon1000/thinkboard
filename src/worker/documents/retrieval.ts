@@ -2,11 +2,18 @@ import type { ModelMessage, UserModelMessage } from 'ai'
 import { getDocumentAIConfig } from '../config'
 import type { Database } from '../db/client'
 import { isBoardActive } from '../db/boards'
+import {
+	observeAIRunner,
+	type AIRunner,
+} from '../observability/posthogAI'
 
 const MAX_RETRIEVAL_RESULTS = 6
 
-interface AIRunner {
-	run(model: string, input: unknown, options?: unknown): Promise<unknown>
+interface DocumentRetrievalTelemetry {
+	defer: (capture: Promise<void>) => void
+	distinctID: string
+	sessionID?: string
+	traceID: string
 }
 
 interface VectorQueryOptions {
@@ -29,11 +36,21 @@ export async function retrieveBoardDocuments(
 	env: Env,
 	database: Database,
 	boardID: string,
-	queryText: string
+	queryText: string,
+	telemetry?: DocumentRetrievalTelemetry
 ) {
 	if (!queryText.trim() || !(await isBoardActive(database, boardID))) return []
 	const config = getDocumentAIConfig(env)
-	const response = await (env.AI as AIRunner).run(
+	const baseAI = env.AI as AIRunner
+	const ai = telemetry
+		? observeAIRunner(baseAI, env, {
+				...telemetry,
+				properties: { board_id: boardID, surface: 'pdf-retrieval' },
+				provider: 'cloudflare',
+				spanName: 'pdf-retrieval',
+			})
+		: baseAI
+	const response = await ai.run(
 		config.embeddingModel,
 		{ text: [queryText.slice(0, 8_000)] },
 		{

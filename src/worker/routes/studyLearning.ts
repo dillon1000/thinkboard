@@ -37,6 +37,7 @@ import {
 	gradeFlashcardAnswer,
 	type AIRunner,
 } from '../flashcards/answerGrading'
+import { observeAIRunner } from '../observability/posthogAI'
 
 const DEFAULT_FLASHCARD_GRADING_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'
 
@@ -56,7 +57,11 @@ export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 	return Response.json({ registered: parsed.data.cards.length }, { status: 201 })
 }
 
-export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) {
+export async function handleFlashcardAnswerAttempt(
+	request: IRequest,
+	env: Env,
+	ctx: ExecutionContext
+) {
 	const authentication = await requireSession(request, env)
 	if ('response' in authentication) return authentication.response
 	const body: unknown = await request.json().catch(() => null)
@@ -71,6 +76,7 @@ export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) 
 	if (!card) return Response.json({ error: 'Flashcard not found' }, { status: 404 })
 
 	const gradingModel = env.FLASHCARD_GRADING_MODEL?.trim() || DEFAULT_FLASHCARD_GRADING_MODEL
+	const traceID = crypto.randomUUID()
 	const grade = parsed.data.action === 'skip'
 		? {
 				feedback: null,
@@ -81,7 +87,19 @@ export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) 
 			}
 		: await gradeFlashcardAnswer({
 				acceptedAnswers: [card.review.back, ...card.review.alternateAnswers],
-				ai: env.AI as AIRunner,
+				ai: observeAIRunner(env.AI as AIRunner, env, {
+					defer: (capture) => ctx.waitUntil(capture),
+					distinctID: userID,
+					properties: {
+						board_id: card.review.boardID,
+						shape_id: card.review.shapeID,
+						surface: 'flashcard-answer',
+					},
+					provider: 'cloudflare',
+					sessionID: card.review.boardID,
+					spanName: 'flashcard-answer',
+					traceID,
+				}),
 				answer: parsed.data.answer,
 				front: card.review.front,
 				model: gradingModel,

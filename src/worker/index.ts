@@ -209,8 +209,8 @@ export default {
 
 		return router.fetch(request, env, ctx)
 	},
-	async queue(batch, env) {
-		await processDocumentBatch(batch, env)
+	async queue(batch, env, ctx) {
+		await processDocumentBatch(batch, env, ctx)
 	},
 } satisfies ExportedHandler<Env, DocumentPipelineMessage>
 
