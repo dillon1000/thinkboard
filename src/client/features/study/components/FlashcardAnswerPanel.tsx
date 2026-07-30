@@ -6,6 +6,7 @@ import {
 	type FlashcardFinalVerdict,
 	type FlashcardReviewRating,
 } from '@agentboard/shared'
+import { usePostHog } from '@posthog/react'
 import { IconArrowRight, IconCheck, IconX } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Streamdown } from 'streamdown'
@@ -38,6 +39,7 @@ export function FlashcardAnswerPanel({
 	const [isChecking, setIsChecking] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const posthog = usePostHog()
 
 	async function checkAnswer(action: 'answer' | 'skip') {
 		setIsChecking(true)
@@ -53,6 +55,12 @@ export function FlashcardAnswerPanel({
 				}
 			)
 			const initialVerdict = checked.attempt.finalVerdict
+			posthog?.capture('flashcard_answer_checked', {
+				action,
+				verdict: initialVerdict,
+				source_kind: source.kind,
+				is_due: checked.isDue,
+			})
 			setResult(checked)
 			setFinalVerdict(initialVerdict)
 			setRating(initialVerdict === 'correct' ? 'good' : 'again')
@@ -83,6 +91,12 @@ export function FlashcardAnswerPanel({
 					method: 'POST',
 				}
 			)
+			posthog?.capture('flashcard_review_completed', {
+				final_verdict: finalVerdict,
+				...(result.isDue ? { rating } : {}),
+				is_due: result.isDue,
+				source_kind: source.kind,
+			})
 			await onCompleted?.(completed)
 			setAnswer('')
 			setResult(null)

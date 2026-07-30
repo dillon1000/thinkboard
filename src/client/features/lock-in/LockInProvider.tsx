@@ -2,6 +2,7 @@ import {
 	apiRoutes,
 	type LockInReviewResponse,
 } from '@agentboard/shared'
+import { usePostHog } from '@posthog/react'
 import {
 	useCallback,
 	createContext,
@@ -64,6 +65,7 @@ interface LockInProviderProps {
 }
 
 export function LockInProvider({ boardID, children, editor }: LockInProviderProps) {
+	const posthog = usePostHog()
 	const [session, setSession] = useState<LockInSession | null>(() => readLockInSession(boardID))
 	const [isSetupOpen, setIsSetupOpen] = useState(false)
 	const [currentSelectionIDs, setCurrentSelectionIDs] = useState<TLShapeId[]>([])
@@ -172,6 +174,10 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 			setReviewState('idle')
 			const completedSession = createLockInCompletion(currentSession, nextReview)
 			if (completedSession) {
+				posthog?.capture('lock_in_session_completed', {
+					duration_minutes: currentSession.durationMinutes,
+					elapsed_ms: getLockInElapsedMS(currentSession),
+				})
 				setCompletion(completedSession)
 				setSession(null)
 				setIsSetupOpen(false)
@@ -221,6 +227,10 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 		dismissCompletion: () => setCompletion(null),
 		editor,
 		endSession: () => {
+			posthog?.capture('lock_in_session_ended', {
+				duration_minutes: sessionRef.current?.durationMinutes,
+				elapsed_ms: sessionRef.current ? getLockInElapsedMS(sessionRef.current) : undefined,
+			})
 			setSession(null)
 			setIsSetupOpen(false)
 			setReview(null)
@@ -241,6 +251,12 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 		resumeSession: () => setSession((current) => current ? resumeLockInSession(current) : current),
 		session,
 		startSession: (config) => {
+			posthog?.capture('lock_in_session_started', {
+				duration_minutes: config.durationMinutes,
+				redirect_when_drifting: config.redirectWhenDrifting,
+				playlist_enabled: config.playlistEnabled,
+				has_scope: config.scopeShapeIDs.length > 0,
+			})
 			setSession(createLockInSession(config))
 			setCompletion(null)
 			setReview(null)
@@ -262,6 +278,7 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 		isSetupOpen,
 		nextReviewAt,
 		now,
+		posthog,
 		requestReview,
 		review,
 		reviewError,

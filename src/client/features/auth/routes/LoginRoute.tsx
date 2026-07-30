@@ -1,5 +1,6 @@
 import type { PublicConfig } from '@agentboard/shared'
 import { apiRoutes, appRoutes } from '@agentboard/shared'
+import { usePostHog } from '@posthog/react'
 import {
 	IconArrowRight,
 	IconBrandOauth,
@@ -20,6 +21,7 @@ export function Component() {
 	const [isStarting, setIsStarting] = useState(false)
 	const session = authClient.useSession()
 	const location = useLocation()
+	const posthog = usePostHog()
 
 	useEffect(() => {
 		void apiRequest<PublicConfig>(apiRoutes.config)
@@ -33,6 +35,7 @@ export function Component() {
 		if (!config?.oAuth.enabled) return
 		setError(null)
 		setIsStarting(true)
+		posthog?.capture('oauth_sign_in_started', { provider: config.oAuth.providerName })
 
 		const result = await authClient.signIn.oauth2({
 			providerId: config.oAuth.providerID,

@@ -2,6 +2,7 @@ packages:
   - 'packages/*'
 
 allowBuilds:
+  core-js: true
   core-js-pure: false
   esbuild: true
   sharp: true
@@ -9,3 +10,9 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@cloudflare/workers-types@5.20260719.1'
+
+# @inkjs/ui imports React but does not declare it, which breaks isolated pnpx installs.
+packageExtensions:
+  '@inkjs/ui@2':
+    dependencies:
+      react: '^19.2.4'

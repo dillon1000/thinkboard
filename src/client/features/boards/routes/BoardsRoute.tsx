@@ -1,5 +1,6 @@
 import type { Board, DueFlashcard } from '@agentboard/shared'
 import { apiRoutes, appRoutes } from '@agentboard/shared'
+import { usePostHog } from '@posthog/react'
 import {
 	IconArchive,
 	IconBrandCraft,
@@ -59,6 +60,7 @@ export function Component() {
 	const dueReviewHideButtonRef = useRef<HTMLButtonElement>(null)
 	const session = authClient.useSession()
 	const navigate = useNavigate()
+	const posthog = usePostHog()
 
 	useEffect(() => {
 		void loadBoards()
@@ -134,6 +136,7 @@ export function Component() {
 				method: 'POST',
 				body: JSON.stringify({ title }),
 			})
+			posthog?.capture('board_created')
 			navigate(appRoutes.board(response.board.id))
 		} catch (createError) {
 			setError(createError instanceof Error ? createError.message : 'Unable to create space')
@@ -142,6 +145,8 @@ export function Component() {
 	}
 
 	async function handleSignOut() {
+		posthog?.capture('user_signed_out')
+		posthog?.reset()
 		await authClient.signOut()
 		navigate(appRoutes.login, { replace: true })
 	}
@@ -166,6 +171,7 @@ export function Component() {
 			await fetch(apiRoutes.board(board.id), { method: 'DELETE' }).then((response) => {
 				if (!response.ok) throw new Error('Unable to archive space')
 			})
+				posthog?.capture('board_archived')
 				setBoards((current) => current.filter((item) => item.id !== board.id))
 				setArchivedBoards((current) => [board, ...current])
 		} catch (archiveError) {
@@ -179,6 +185,7 @@ export function Component() {
 			const response = await apiRequest<{ board: Board }>(apiRoutes.boardRestore(board.id), {
 				method: 'POST',
 			})
+			posthog?.capture('board_restored')
 			setArchivedBoards((current) => current.filter(({ id }) => id !== board.id))
 			setBoards((current) => [response.board, ...current])
 		} catch (restoreError) {
@@ -394,6 +401,7 @@ export function Component() {
 					boards={boards}
 					onClose={() => setIsCraftWhiteboardImportOpen(false)}
 					onImport={(request) => {
+						posthog?.capture('craft_whiteboard_imported')
 						navigate(addCraftWhiteboardImportParameters(
 							appRoutes.board(request.boardID),
 							request

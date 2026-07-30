@@ -1,4 +1,5 @@
 import { apiRoutes, type CanvasAnchor } from '@agentboard/shared'
+import { usePostHog } from '@posthog/react'
 import { useChat } from '@ai-sdk/react'
 import { IconArrowUp, IconCheck, IconPlayerStop, IconSparkles, IconX } from '@tabler/icons-react'
 import {
@@ -72,6 +73,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 	const acceptRef = useRef<HTMLButtonElement>(null)
 	const stagedToolCallIDs = useRef(new Set<string>())
 	const documentClockRef = useRef<number | undefined>(undefined)
+	const posthog = usePostHog()
 
 	const transport = useMemo(() => new DefaultChatTransport<UIMessage>({
 		api: apiRoutes.boardInlineAgent(boardID),
@@ -175,6 +177,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 		event.preventDefault()
 		const text = input.trim()
 		if (!text || chat.status !== 'ready') return
+		posthog?.capture('inline_prompt_submitted')
 		setInput('')
 		setError(null)
 		// Asking again replaces the staged artifact rather than stacking a second one beside it.
