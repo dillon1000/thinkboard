@@ -752,21 +752,18 @@ img { max-width: 100%; }
 	bottom: 50%;
 	left: 50%;
 	display: block;
+	width: 2px;
+	margin-left: -1px;
 	border-radius: 999px;
 	background: #fff;
+	opacity: .88;
 	transform-origin: 50% 100%;
 }
 .ProjectorAnalogClock-hour {
-	width: 2px;
 	height: 9px;
-	margin-left: -1px;
-	opacity: .92;
 }
 .ProjectorAnalogClock-minute {
-	width: 1px;
 	height: 12px;
-	margin-left: -.5px;
-	opacity: .72;
 }
 .ProjectorAnalogClock-pin {
 	position: absolute;
