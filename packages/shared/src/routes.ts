@@ -3,6 +3,7 @@ export const apiRoutePatterns = {
 	boardContext: '/api/boards/:boardID/context',
 	boardInlineAgent: '/api/boards/:boardID/inline',
 	boardLockInReview: '/api/boards/:boardID/lock-in/review',
+	boardActiveRecallGrade: '/api/boards/:boardID/active-recall/grade',
 	boardFlashcards: '/api/boards/:boardID/flashcards',
 	boardFlashcard: '/api/boards/:boardID/flashcards/:shapeID',
 	boardAgentActions: '/api/boards/:boardID/agent-actions',
@@ -78,6 +79,8 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/inline`,
 	boardLockInReview: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/lock-in/review`,
+	boardActiveRecallGrade: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/active-recall/grade`,
 	boardFlashcards: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/flashcards`,
 	boardFlashcard: (boardID: string, shapeID: string) =>

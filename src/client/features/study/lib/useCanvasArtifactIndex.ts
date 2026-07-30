@@ -4,6 +4,7 @@ import {
 	MATH_SHAPE_TYPE,
 	QUIZ_SHAPE_TYPE,
 	REVIEW_SHAPE_TYPE,
+	TEACH_BACK_SHAPE_TYPE,
 	WALKTHROUGH_SHAPE_TYPE,
 	apiRoutes,
 	type StudyArtifactInput,
@@ -22,6 +23,7 @@ const INDEXED_KINDS = [
 	'note',
 	'quiz',
 	'review-note',
+	'teach-back',
 	'walkthrough',
 ] as const satisfies readonly StudyArtifactKind[]
 
@@ -132,6 +134,14 @@ function toArtifact(editor: Editor, shape: TLShape): StudyArtifactInput | null {
 	}
 	if (shape.type === MATH_SHAPE_TYPE) {
 		return artifact('equation', shape, 'Equation', text)
+	}
+	if (shape.type === TEACH_BACK_SHAPE_TYPE) {
+		return artifact(
+			'teach-back',
+			shape,
+			readString(props, 'topic') || firstLine(text),
+			text
+		)
 	}
 	return null
 }

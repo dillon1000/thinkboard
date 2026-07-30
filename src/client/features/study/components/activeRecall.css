@@ -1,0 +1,44 @@
+.ActiveRecall-backdrop { position: fixed; z-index: 2200; inset: 0; display: grid; place-items: center; background: rgb(12 15 20 / 38%); padding: 18px; backdrop-filter: blur(6px); }
+.ActiveRecall-dialog { display: grid; width: min(620px, 100%); max-height: min(760px, calc(100vh - 36px)); gap: 16px; overflow: auto; border-radius: 14px; background: var(--panel); padding: 20px; box-shadow: var(--shadow-border), 0 26px 84px rgb(8 12 18 / 28%); }
+.ActiveRecall-dialog > header { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+.ActiveRecall-dialog > header h2 { margin: 2px 0 0; font-size: 18px; }
+.ActiveRecall-dialog > header p:last-child { max-width: 480px; margin: 6px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.ActiveRecall-dialog > header button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 7px; background: var(--surface); color: var(--muted); }
+.ActiveRecall-loading { display: flex; min-height: 130px; align-items: center; justify-content: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; }
+.ActiveRecall-loading svg { animation: active-recall-spin 900ms linear infinite; }
+@keyframes active-recall-spin { to { rotate: 360deg; } }
+.ActiveRecall-score { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 12px; border-radius: 10px; background: var(--sidebar); padding: 14px; box-shadow: var(--shadow-border); }
+.ActiveRecall-score > strong { font-size: 25px; font-variant-numeric: tabular-nums; }
+.ActiveRecall-score > span { display: grid; gap: 3px; }
+.ActiveRecall-score b { font-size: 12.5px; }
+.ActiveRecall-score small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.ActiveRecall-score.is-correct > strong { color: var(--success); }
+.ActiveRecall-score.is-incorrect > strong, .ActiveRecall-score.is-partial > strong { color: var(--danger); }
+.ActiveRecall-steps { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ActiveRecall-steps li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; border-radius: 8px; background: var(--sidebar); padding: 10px; box-shadow: var(--shadow-border); }
+.ActiveRecall-steps li > span { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.ActiveRecall-steps li.is-correct > span { color: var(--success); }
+.ActiveRecall-steps li.is-incorrect > span { color: var(--danger); }
+.ActiveRecall-steps li div { display: grid; gap: 3px; }
+.ActiveRecall-steps strong { font-size: 11.5px; }
+.ActiveRecall-steps p { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.ActiveRecall-dialog > footer { display: flex; justify-content: end; gap: 7px; }
+.ActiveRecall-dialog > footer button { min-height: 38px; border: 0; border-radius: 7px; background: var(--surface); padding: 0 12px; color: var(--muted); box-shadow: var(--shadow-border); }
+.ActiveRecall-dialog > footer button:last-child { background: var(--ink); color: var(--panel); }
+.StudyShape--teachBack { background: #fbfaf6; }
+.StudyShape--teachBack .StudyShape-heading { background: #f0ede2; color: #6f653f; }
+.TeachBack-content { display: grid; gap: 10px; padding: 12px; pointer-events: all; }
+.TeachBack-content label { display: grid; gap: 4px; color: var(--muted); font-size: 9.5px; font-weight: 600; text-transform: uppercase; }
+.TeachBack-content input, .TeachBack-content textarea { width: 100%; min-width: 0; resize: vertical; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 7px 8px; color: var(--ink); font-size: 11px; font-weight: 450; line-height: 1.4; text-transform: none; }
+.TeachBack-feedback { display: grid; gap: 5px; border-radius: 7px; background: var(--surface); padding: 9px; }
+.TeachBack-feedback strong { font-size: 10.5px; }
+.TeachBack-feedback.is-correct strong { color: var(--success); }
+.TeachBack-feedback.is-incorrect strong, .TeachBack-feedback.is-partial strong { color: var(--danger); }
+.TeachBack-feedbackText { color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.TeachBack-feedbackText > :first-child { margin-top: 0; }
+.TeachBack-feedbackText > :last-child { margin-bottom: 0; }
+.TeachBack-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.TeachBack-actions button { display: inline-flex; min-height: 34px; align-items: center; gap: 5px; border: 0; border-radius: 6px; background: var(--surface); padding: 0 9px; color: var(--muted); font-size: 10px; box-shadow: var(--shadow-border); }
+.TeachBack-actions button:first-child { background: var(--ink); color: var(--panel); }
+:root[data-theme='dark'] .StudyShape--teachBack { background: #211f19; }
+:root[data-theme='dark'] .StudyShape--teachBack .StudyShape-heading { background: #2b2820; color: #c7b875; }

@@ -1,5 +1,19 @@
 export { apiRoutePatterns, apiRoutes, appRoutes } from './routes'
 export {
+	activeRecallGradeRequestSchema,
+	activeRecallGradeResponseSchema,
+	activeRecallModeSchema,
+	activeRecallRegionSchema,
+	activeRecallStepStatusSchema,
+	activeRecallVerdictSchema,
+} from './activeRecall'
+export type {
+	ActiveRecallGradeRequest,
+	ActiveRecallGradeResponse,
+	ActiveRecallRegion,
+	ActiveRecallVerdict,
+} from './activeRecall'
+export {
 	agentActionCreateSchema,
 	agentActionUndoResultSchema,
 } from './agentActions'
@@ -161,6 +175,7 @@ export {
 	WALKTHROUGH_SHAPE_TYPE,
 	MATH_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
+	TEACH_BACK_SHAPE_TYPE,
 	conceptMapProposalSchema,
 	conceptMapShapeProps,
 	conceptMapShapeValidator,
@@ -189,6 +204,8 @@ export {
 	pdfPageShapeMigrations,
 	pdfPageShapeProps,
 	pdfPageShapeValidator,
+	teachBackShapeProps,
+	teachBackShapeValidator,
 } from './studyShapes'
 export type {
 	ConceptMapProposal,
@@ -207,6 +224,7 @@ export type {
 	WalkthroughProposal,
 	WalkthroughShapeProps,
 	PDFPageShapeProps,
+	TeachBackShapeProps,
 } from './studyShapes'
 export type { Board, PublicConfig, StudyConversation } from './types'
 export {

@@ -7,6 +7,7 @@ import {
 	REVIEW_SHAPE_TYPE,
 	WALKTHROUGH_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
+	TEACH_BACK_SHAPE_TYPE,
 	apiRoutes,
 	conceptMapShapeProps,
 	flashcardShapeMigrations,
@@ -22,8 +23,11 @@ import {
 	pdfPageShapeMigrations,
 	pdfPageShapeProps,
 	pdfSourceReferenceSchema,
+	teachBackShapeProps,
+	type ActiveRecallGradeResponse,
 	type PDFPageShapeProps,
 	type PDFSourceReference,
+	type TeachBackShapeProps,
 } from '@agentboard/shared'
 import {
 	IconCards,
@@ -32,6 +36,7 @@ import {
 	IconMessageCircleCheck,
 	IconPencil,
 	IconQuestionMark,
+	IconSchool,
 	IconX,
 } from '@tabler/icons-react'
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
@@ -50,6 +55,9 @@ import { readBoardFlashcardDirectReveal } from '../lib/boardFlashcardPreferences
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { focusPDFCitation } from '../lib/pdfCitation'
 import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
+import { apiRequest } from '../../../lib/api'
+import { captureCanvasContext } from '../lib/canvasContextCapture'
+import '../components/activeRecall.css'
 
 declare module '@tldraw/tlschema' {
 	interface TLGlobalShapePropsMap {
@@ -59,6 +67,7 @@ declare module '@tldraw/tlschema' {
 		[REVIEW_SHAPE_TYPE]: ReviewShapeProps
 		[WALKTHROUGH_SHAPE_TYPE]: WalkthroughShapeProps
 		[PDF_PAGE_SHAPE_TYPE]: PDFPageShapeProps
+		[TEACH_BACK_SHAPE_TYPE]: TeachBackShapeProps
 	}
 }
 
@@ -68,6 +77,7 @@ export type QuizShape = TLShape<typeof QUIZ_SHAPE_TYPE>
 export type ReviewShape = TLShape<typeof REVIEW_SHAPE_TYPE>
 export type WalkthroughShape = TLShape<typeof WALKTHROUGH_SHAPE_TYPE>
 export type PDFPageShape = TLShape<typeof PDF_PAGE_SHAPE_TYPE>
+export type TeachBackShape = TLShape<typeof TEACH_BACK_SHAPE_TYPE>
 
 const STUDY_SHAPE_HEADING_HEIGHT = 30
 
@@ -81,7 +91,7 @@ function stopCanvasInteraction(event: { stopPropagation: () => void }) {
 	event.stopPropagation()
 }
 
-type AutoFitShape = FlashcardShape | QuizShape | ReviewShape | WalkthroughShape
+type AutoFitShape = FlashcardShape | QuizShape | ReviewShape | WalkthroughShape | TeachBackShape
 
 // Keeps the shape's height matched to its rendered content: the returned ref
 // goes on an inner wrapper whose natural height (content + padding) is
@@ -610,6 +620,193 @@ export class ConceptMapShapeUtil extends BaseBoxShapeUtil<ConceptMapShape> {
 	override getIndicatorPath(shape: ConceptMapShape) { return getBoxIndicator(shape.props.w, shape.props.h) }
 }
 
+export class TeachBackShapeUtil extends BaseBoxShapeUtil<TeachBackShape> {
+	static override type = TEACH_BACK_SHAPE_TYPE
+	static override props = teachBackShapeProps
+	override canResize() { return true }
+	override isAspectRatioLocked() { return false }
+	override getDefaultProps(): TeachBackShape['props'] {
+		return {
+			w: 430,
+			h: 500,
+			topic: 'Explain this concept in your own words',
+			sourceText: '',
+			response: '',
+			feedback: '',
+			score: 0,
+			verdict: 'ungraded',
+			schemaVersion: 1,
+		}
+	}
+	override getText(shape: TeachBackShape) {
+		return [
+			`Teach back: ${shape.props.topic}`,
+			`Source: ${shape.props.sourceText}`,
+			`Student explanation: ${shape.props.response}`,
+			shape.props.feedback ? `Feedback: ${shape.props.feedback}` : '',
+		].filter(Boolean).join('\n')
+	}
+	override component(shape: TeachBackShape) {
+		return <TeachBackComponent shape={shape} />
+	}
+	override getIndicatorPath(shape: TeachBackShape) {
+		return getBoxIndicator(shape.props.w, shape.props.h)
+	}
+}
+
+function TeachBackComponent({ shape }: { shape: TeachBackShape }) {
+	const editor = useEditor()
+	const chrome = useBoardChrome()
+	const fitRef = useAutoFitHeight(shape, 360)
+	const [isGrading, setIsGrading] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+
+	function update(props: Partial<TeachBackShape['props']>) {
+		editor.updateShape<TeachBackShape>({
+			id: shape.id,
+			type: TEACH_BACK_SHAPE_TYPE,
+			props,
+		})
+	}
+
+	async function grade(kind: 'ink' | 'typed') {
+		setIsGrading(true)
+		setError(null)
+		const previousSelection = editor.getSelectedShapeIds()
+		try {
+			const inkShapeIDs = previousSelection.filter((shapeID) => shapeID !== shape.id)
+			if (kind === 'ink' && !inkShapeIDs.length) {
+				throw new Error('Select the ink shapes that contain your explanation first')
+			}
+			if (!shape.props.sourceText.trim()) {
+				throw new Error('Add source material before grading this explanation')
+			}
+			if (kind === 'ink') editor.setSelectedShapes(inkShapeIDs)
+			const canvasContext = kind === 'ink'
+				? await captureCanvasContext(chrome.boardID, editor)
+				: {
+						boardID: chrome.boardID,
+						relatedShapes: [],
+						relationships: [],
+						selection: [],
+					}
+			if (kind === 'ink') editor.setSelectedShapes(previousSelection)
+			const result = await apiRequest<ActiveRecallGradeResponse>(
+				apiRoutes.boardActiveRecallGrade(chrome.boardID),
+				{
+					body: JSON.stringify({
+						canvasContext,
+						explanation: kind === 'typed' ? shape.props.response : '',
+						mode: 'teach-back',
+						sourceText: shape.props.sourceText,
+						topic: shape.props.topic,
+					}),
+					method: 'POST',
+				}
+			)
+			update({
+				feedback: `${result.summary}\n\nNext: ${result.nextStep}`,
+				score: result.score,
+				verdict: result.verdict,
+			})
+		} catch (gradeError) {
+			editor.setSelectedShapes(previousSelection)
+			setError(gradeError instanceof Error ? gradeError.message : 'Unable to grade this explanation')
+		} finally {
+			setIsGrading(false)
+		}
+	}
+
+	return (
+		<HTMLContainer className="StudyShape StudyShape--teachBack">
+			<div className="StudyShape-heading">
+				<span>Teach back</span>
+				<span>{shape.props.verdict === 'ungraded' ? 'Feynman check' : `${shape.props.score}%`}</span>
+			</div>
+			<div className="TeachBack-content" ref={fitRef} {...canvasInteractionHandlers}>
+				<label>
+					<span>Concept</span>
+					<input
+						disabled={chrome.role === 'viewer'}
+						maxLength={300}
+						onChange={(event) => update({
+							feedback: '',
+							topic: event.target.value,
+							verdict: 'ungraded',
+						})}
+						placeholder="What are you explaining?"
+						value={shape.props.topic}
+					/>
+				</label>
+				<label>
+					<span>Source material</span>
+					<textarea
+						disabled={chrome.role === 'viewer'}
+						maxLength={24_000}
+						onChange={(event) => update({
+							feedback: '',
+							sourceText: event.target.value,
+							verdict: 'ungraded',
+						})}
+						placeholder="Paste the source or create this shape while PDF text is selected."
+						rows={3}
+						value={shape.props.sourceText}
+					/>
+				</label>
+				<label>
+					<span>Your explanation</span>
+					<textarea
+						disabled={chrome.role === 'viewer'}
+						maxLength={12_000}
+						onChange={(event) => update({
+							feedback: '',
+							response: event.target.value,
+							verdict: 'ungraded',
+						})}
+						placeholder="Explain it simply, without copying the source."
+						rows={5}
+						value={shape.props.response}
+					/>
+				</label>
+				{error ? <p className="FormError" role="alert">{error}</p> : null}
+				{shape.props.feedback ? (
+					<div className={`TeachBack-feedback is-${shape.props.verdict}`}>
+						<strong>{formatTeachBackVerdict(shape.props.verdict)} · {shape.props.score}%</strong>
+						<StudyMath className="TeachBack-feedbackText">{shape.props.feedback}</StudyMath>
+					</div>
+				) : null}
+				{chrome.role !== 'viewer' ? (
+					<div className="TeachBack-actions">
+						<button
+							disabled={isGrading || !shape.props.response.trim()}
+							onClick={() => void grade('typed')}
+							type="button"
+						>
+							<IconSchool aria-hidden="true" size={14} />
+							{isGrading ? 'Grading…' : 'Grade typed response'}
+						</button>
+						<button
+							disabled={isGrading}
+							onClick={() => void grade('ink')}
+							type="button"
+						>
+							Grade selected ink
+						</button>
+					</div>
+				) : null}
+			</div>
+		</HTMLContainer>
+	)
+}
+
+function formatTeachBackVerdict(verdict: TeachBackShape['props']['verdict']) {
+	if (verdict === 'correct') return 'Clear explanation'
+	if (verdict === 'partial') return 'Partly complete'
+	if (verdict === 'incorrect') return 'Needs correction'
+	if (verdict === 'unclear') return 'Needs more evidence'
+	return 'Not graded'
+}
+
 export class PDFPageShapeUtil extends BaseBoxShapeUtil<PDFPageShape> {
 	static override type = PDF_PAGE_SHAPE_TYPE
 	static override props = pdfPageShapeProps
@@ -741,5 +938,6 @@ export const studyShapeUtils = [
 	ReviewShapeUtil,
 	WalkthroughShapeUtil,
 	ConceptMapShapeUtil,
+	TeachBackShapeUtil,
 	PDFPageShapeUtil,
 ] as const

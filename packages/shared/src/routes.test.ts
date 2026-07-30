@@ -43,6 +43,12 @@ describe('route builders', () => {
 		)
 	})
 
+	it('scopes active recall grading to its board', () => {
+		expect(apiRoutes.boardActiveRecallGrade('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/active-recall/grade'
+		)
+	})
+
 	it('builds course and sharing routes', () => {
 		expect(apiRoutes.course('organic chemistry')).toBe('/api/courses/organic%20chemistry')
 		expect(apiRoutes.boardMembers('biology/week 1')).toBe(

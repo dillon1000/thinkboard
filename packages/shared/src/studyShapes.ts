@@ -12,6 +12,7 @@ export const REVIEW_SHAPE_TYPE = 'agentboard-review' as const
 export const WALKTHROUGH_SHAPE_TYPE = 'agentboard-walkthrough' as const
 export const MATH_SHAPE_TYPE = 'agentboard-math' as const
 export const PDF_PAGE_SHAPE_TYPE = 'pdf-page' as const
+export const TEACH_BACK_SHAPE_TYPE = 'agentboard-teach-back' as const
 
 export const pdfSourceReferenceSchema = z.object({
 	documentID: z.string().trim().min(1).max(120),
@@ -86,6 +87,18 @@ export interface PDFPageShapeProps {
 	h: number
 }
 
+export interface TeachBackShapeProps {
+	w: number
+	h: number
+	topic: string
+	sourceText: string
+	response: string
+	feedback: string
+	score: number
+	verdict: 'ungraded' | 'correct' | 'partial' | 'incorrect' | 'unclear'
+	schemaVersion: number
+}
+
 export const flashcardShapeProps = {
 	w: T.number,
 	h: T.number,
@@ -153,6 +166,18 @@ export const pdfPageShapeProps = {
 	h: T.number,
 }
 
+export const teachBackShapeProps = {
+	w: T.number,
+	h: T.number,
+	topic: T.string,
+	sourceText: T.string,
+	response: T.string,
+	feedback: T.string,
+	score: T.number,
+	verdict: T.literalEnum('ungraded', 'correct', 'partial', 'incorrect', 'unclear'),
+	schemaVersion: T.positiveInteger,
+}
+
 export const pdfPageShapeMigrations = createShapePropsMigrationSequence({
 	sequence: [{
 		id: 'com.tldraw.shape.pdf-page/1',
@@ -199,6 +224,7 @@ export const walkthroughShapeValidator = T.object(walkthroughShapeProps)
 export const conceptMapShapeValidator = T.object(conceptMapShapeProps)
 export const mathShapeValidator = T.object(mathShapeProps)
 export const pdfPageShapeValidator = T.object(pdfPageShapeProps)
+export const teachBackShapeValidator = T.object(teachBackShapeProps)
 
 export const studyShapeSchemas = {
 	[FLASHCARD_SHAPE_TYPE]: { migrations: flashcardShapeMigrations, props: flashcardShapeProps },
@@ -208,6 +234,7 @@ export const studyShapeSchemas = {
 	[WALKTHROUGH_SHAPE_TYPE]: { props: walkthroughShapeProps },
 	[MATH_SHAPE_TYPE]: { props: mathShapeProps },
 	[PDF_PAGE_SHAPE_TYPE]: { migrations: pdfPageShapeMigrations, props: pdfPageShapeProps },
+	[TEACH_BACK_SHAPE_TYPE]: { props: teachBackShapeProps },
 } as const
 
 const proposalPositionSchema = {

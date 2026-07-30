@@ -1,4 +1,7 @@
-import { appRoutes } from '@agentboard/shared'
+import {
+	TEACH_BACK_SHAPE_TYPE,
+	appRoutes,
+} from '@agentboard/shared'
 import {
 	IconAdjustmentsHorizontal,
 	IconArrowBackUp,
@@ -31,8 +34,10 @@ import {
 	IconShape,
 	IconSquare,
 	IconSun,
+	IconSchool,
 	IconTrash,
 	IconUsers,
+	IconWriting,
 	IconX,
 } from '@tabler/icons-react'
 import { type CSSProperties, type ReactNode, useState } from 'react'
@@ -55,6 +60,7 @@ import {
 	useTools,
 	useUnlockedSelectedShapesCount,
 	useValue,
+	createShapeId,
 } from 'tldraw'
 import { ThinkspaceIcon, ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { useTheme } from '../../theme/ThemeProvider'
@@ -78,6 +84,8 @@ import {
 import { CanvasTimer } from './CanvasTimer'
 import { DockablePanel } from './DockablePanel'
 import { RibbonSection } from './RibbonSection'
+import { HandwritingCheckDialog } from '../../study/components/HandwritingCheckDialog'
+import { capturePDFTextSelection } from '../../study/lib/pdfTextSelection'
 
 const ZOOM_ANIMATION = { animation: { duration: 140 } } as const
 
@@ -155,9 +163,16 @@ const NAMED_TOOL_IDS = new Set(TOOL_GROUPS.flatMap((group) => group.tools).map((
  */
 export function CanvasRibbon({ boardID }: { boardID: string }) {
 	const chrome = useBoardChrome()
+	const editor = useEditor()
 	const { session } = useLockIn()
 	const [openMenu, setOpenMenu] = useState<RibbonMenuID | null>(null)
+	const [isHandwritingCheckOpen, setIsHandwritingCheckOpen] = useState(false)
 	const colour = useCurrentColourValue()
+	const selectedShapeCount = useValue(
+		'selected shape count',
+		() => editor.getSelectedShapeIds().length,
+		[editor]
+	)
 
 	/* Once one menu is open the bar behaves like a navigation menu: hovering another switches. */
 	const menuProps = (id: RibbonMenuID) => ({
@@ -223,6 +238,26 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 					{chrome.isOnline ? 'Live' : 'Offline'}
 				</span>
 				<button
+					className="Ribbon-studyToggle"
+					disabled={chrome.role === 'viewer' || selectedShapeCount === 0}
+					onClick={() => setIsHandwritingCheckOpen(true)}
+					title="Read and check selected handwriting"
+					type="button"
+				>
+					<IconWriting aria-hidden="true" size={15} stroke={1.8} />
+					<span>Check ink</span>
+				</button>
+				<button
+					className="Ribbon-studyToggle"
+					disabled={chrome.role === 'viewer'}
+					onClick={() => createTeachBackShape(editor)}
+					title="Create a Feynman teach-back card"
+					type="button"
+				>
+					<IconSchool aria-hidden="true" size={15} stroke={1.8} />
+					<span>Teach back</span>
+				</button>
+				<button
 					aria-controls="study-panel"
 					aria-expanded={chrome.isStudyOpen}
 					className="Ribbon-studyToggle"
@@ -236,8 +271,42 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 					<span>Study</span>
 				</button>
 			</div>
+			{isHandwritingCheckOpen ? (
+				<HandwritingCheckDialog
+					boardID={boardID}
+					editor={editor}
+					onClose={() => setIsHandwritingCheckOpen(false)}
+				/>
+			) : null}
 		</div>
 	)
+}
+
+function createTeachBackShape(editor: ReturnType<typeof useEditor>) {
+	const sourceText = capturePDFTextSelection()?.text ?? ''
+	const viewport = editor.getViewportPageBounds()
+	const id = createShapeId()
+	editor.createShape({
+		id,
+		type: TEACH_BACK_SHAPE_TYPE,
+		x: viewport.center.x - 215,
+		y: viewport.center.y - 250,
+		props: {
+			feedback: '',
+			h: 500,
+			response: '',
+			schemaVersion: 1,
+			score: 0,
+			sourceText,
+			topic: sourceText
+				? `Explain: ${sourceText.slice(0, 100)}`
+				: 'Explain this concept in your own words',
+			verdict: 'ungraded',
+			w: 430,
+		},
+	})
+	editor.setSelectedShapes([id])
+	editor.zoomToSelection({ animation: { duration: 220 } })
 }
 
 /** A bar trigger and the menu it drops. Named menus show their label; quick pickers show an icon. */

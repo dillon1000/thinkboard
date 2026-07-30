@@ -91,6 +91,7 @@ import {
 	handleExamPractice,
 } from './routes/exams'
 import { handleGlobalSearch } from './routes/search'
+import { handleActiveRecallGrade } from './routes/activeRecall'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -125,6 +126,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.post(apiRoutePatterns.studyConversationMessages, handleStudyConversationMessages)
 	.post(apiRoutePatterns.boardInlineAgent, handleInlineAgentRequest)
 	.post(apiRoutePatterns.boardLockInReview, handleLockInReview)
+	.post(apiRoutePatterns.boardActiveRecallGrade, handleActiveRecallGrade)
 	.patch(apiRoutePatterns.studyConversation, handleStudyConversationUpdate)
 	.post(apiRoutePatterns.studyConversationTitle, handleStudyConversationTitle)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)

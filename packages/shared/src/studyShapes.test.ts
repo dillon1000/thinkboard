@@ -11,6 +11,7 @@ import {
 	normalizeEquationLatex,
 	studyShapeSchemas,
 	studyPackProposalSchema,
+	teachBackShapeValidator,
 	walkthroughProposalSchema,
 } from './studyShapes'
 
@@ -93,6 +94,20 @@ describe('study shape contracts', () => {
 		}
 
 		expect(() => flashcardShapeValidator.validate(props)).not.toThrow()
+	})
+
+	it('validates a persisted Teach Back response', () => {
+		expect(() => teachBackShapeValidator.validate({
+			feedback: 'Good core explanation.',
+			h: 500,
+			response: 'Entropy counts compatible microstates.',
+			schemaVersion: 1,
+			score: 84,
+			sourceText: 'Entropy is proportional to the logarithm of multiplicity.',
+			topic: 'Explain entropy',
+			verdict: 'partial',
+			w: 430,
+		})).not.toThrow()
 	})
 
 	it('adds an empty alternate list to existing flashcards', () => {
