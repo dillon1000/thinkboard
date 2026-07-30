@@ -81,7 +81,7 @@ export function useCraftWhiteboardSync({
 			if (result.status === 'conflict') {
 				updateState(frameID, { error: null, status: 'conflict' })
 				if (previousStatus !== 'conflict') {
-					onIssue(`“${result.title}” changed in Craft and AgentBoard. Choose which copy to keep.`)
+					onIssue(`“${result.title}” changed in Craft and Thinkspace. Choose which copy to keep.`)
 				}
 				return
 			}

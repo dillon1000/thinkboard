@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agentboard-shell-v1'
+const CACHE_NAME = 'thinkspace-shell-v1'
 const APP_SHELL = ['/', '/boards', '/manifest.webmanifest', '/thinkspace.webp', '/thinkspace-icon.webp']
 
 self.addEventListener('install', (event) => {

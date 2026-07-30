@@ -8,7 +8,7 @@ export function RouteErrorBoundary() {
 		<main className="RouteMessage">
 			<h1>Something went wrong</h1>
 			<p>{message}</p>
-			<a href="/">Reload Agentboard</a>
+			<a href="/">Reload Thinkspace</a>
 		</main>
 	)
 }

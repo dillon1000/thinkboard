@@ -91,7 +91,7 @@ export function Component() {
 	}
 
 	async function disconnectSpotify() {
-		if (!window.confirm('Disconnect Spotify from Agentboard? The canvas player will stop working until you reconnect it.')) return
+		if (!window.confirm('Disconnect Spotify from Thinkspace? The canvas player will stop working until you reconnect it.')) return
 
 		setError(null)
 		setIsUnlinking(true)
@@ -123,7 +123,7 @@ export function Component() {
 			<div className="Settings-content" id="settings-content">
 				<header className="Settings-heading">
 					<h1>Settings</h1>
-					<p>Manage the services Agentboard can use alongside your study tools.</p>
+					<p>Manage the services Thinkspace can use alongside your study tools.</p>
 				</header>
 
 				{error ? <p className="FormError Settings-error" role="alert">{error}</p> : null}
@@ -146,7 +146,7 @@ export function Component() {
 										<IconCheck aria-hidden="true" size={12} stroke={2.2} /> Connected
 									</span>
 								</div>
-								<p>Your primary sign-in for Agentboard.</p>
+								<p>Your primary sign-in for Thinkspace.</p>
 							</div>
 							<span className="ConnectionCard-primary">Primary</span>
 						</article>
@@ -165,7 +165,7 @@ export function Component() {
 								</div>
 								<p>See what’s playing and control your active Spotify device from a board.</p>
 								{spotifyConfigured ? (
-									<small>Allows Agentboard and your study partner to read playback, find music, and play, pause, or skip tracks.</small>
+									<small>Allows Thinkspace and your study partner to read playback, find music, and play, pause, or skip tracks.</small>
 								) : (
 									<small>Add Spotify app credentials to the Worker environment to enable this connection.</small>
 								)}

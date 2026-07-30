@@ -154,7 +154,7 @@ export function LockInSetup() {
 					</label>
 
 					<label className="LockInSelect LockInSelect--wide">
-						<span>How should Agentboard support you?</span>
+						<span>How should Thinkspace support you?</span>
 						<div>
 							<IconRoute aria-hidden="true" size={17} stroke={1.8} />
 							<select onChange={(event) => setRedirectWhenDrifting(event.target.value === 'redirect')} value={redirectWhenDrifting ? 'redirect' : 'quiet'}>

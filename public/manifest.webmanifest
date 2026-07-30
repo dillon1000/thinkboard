@@ -1,6 +1,6 @@
 {
-	"name": "Agentboard",
-	"short_name": "Agentboard",
+	"name": "Thinkspace",
+	"short_name": "Thinkspace",
 	"description": "A realtime study canvas with an AI tutor that understands your work.",
 	"start_url": "/boards",
 	"display": "standalone",

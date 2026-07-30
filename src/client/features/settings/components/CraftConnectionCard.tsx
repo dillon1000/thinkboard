@@ -51,7 +51,7 @@ export function CraftConnectionCard() {
 	}
 
 	async function disconnect() {
-		if (!window.confirm('Disconnect Craft from Agentboard? Linked documents will stay on boards, but Agentboard cannot read them until you reconnect.')) return
+		if (!window.confirm('Disconnect Craft from Thinkspace? Linked documents will stay on boards, but Thinkspace cannot read them until you reconnect.')) return
 		setError(null)
 		setIsDisconnecting(true)
 		try {

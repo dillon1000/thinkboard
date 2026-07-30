@@ -57,7 +57,7 @@ export function Component() {
 				</a>
 
 				<div className="AuthCard-copy">
-					<h1 id="sign-in-heading">Sign In to Agentboard</h1>
+					<h1 id="sign-in-heading">Sign In to Thinkspace</h1>
 					<p>Open your boards and continue where you left off.</p>
 				</div>
 				<div className="AuthRule" aria-hidden="true" />
