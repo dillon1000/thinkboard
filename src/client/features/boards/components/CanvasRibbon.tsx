@@ -190,7 +190,7 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 						<RibbonMenu key={id} {...menuProps(id)}>
 							{id === 'board' ? <BoardMenu boardID={boardID} /> : null}
 							{id === 'edit' ? <EditMenu /> : null}
-							{id === 'view' ? <ViewMenu /> : null}
+							{id === 'view' ? <ViewMenu closeMenu={() => setOpenMenu(null)} /> : null}
 						</RibbonMenu>
 					))}
 					<span aria-hidden="true" className="Ribbon-divider" />
@@ -382,7 +382,7 @@ function ToolMenu() {
 	)
 }
 
-function ViewMenu() {
+function ViewMenu({ closeMenu }: { closeMenu: () => void }) {
 	const editor = useEditor()
 	const zen = useZenMode()
 	const projector = useProjectorMode()
@@ -442,6 +442,7 @@ function ViewMenu() {
 					icon={<IconDeviceProjector size={17} stroke={1.7} />}
 					label="Projector mode"
 					onSelect={() => {
+						closeMenu()
 						zen.setEnabled(false)
 						chrome.setStudyOpen(false)
 						projector.enter(editor)

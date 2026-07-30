@@ -91,3 +91,12 @@ export function formatProjectorTime(date: Date, locales?: Intl.LocalesArgument) 
 		minute: '2-digit',
 	}).format(date)
 }
+
+/** Returns analog clock hand angles in degrees from the projector's local time. */
+export function getProjectorClockHandAngles(date: Date) {
+	const minutes = date.getMinutes()
+	return {
+		hour: ((date.getHours() % 12) * 30) + (minutes * .5),
+		minute: minutes * 6,
+	}
+}

@@ -643,9 +643,9 @@ img { max-width: 100%; }
 	overflow: hidden;
 	padding: max(32px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
 	background:
-		radial-gradient(80% 95% at 12% 5%, rgba(44, 205, 255, .35), transparent 70%),
-		radial-gradient(80% 100% at 92% 100%, rgba(89, 58, 225, .46), transparent 68%),
-		linear-gradient(135deg, #0878d1 0%, #0655bc 42%, #103fa3 72%, #4126a0 100%);
+		radial-gradient(90% 110% at 8% 2%, rgba(84, 202, 255, .14), transparent 72%),
+		radial-gradient(90% 115% at 96% 100%, rgba(117, 92, 225, .12), transparent 74%),
+		linear-gradient(135deg, #0874c9 0%, #0964ba 48%, #1954af 100%);
 	text-align: center;
 	isolation: isolate;
 	animation: projector-intro-field 4s ease-in-out both;
@@ -654,7 +654,7 @@ img { max-width: 100%; }
 	position: absolute;
 	z-index: -1;
 	border-radius: 50%;
-	filter: blur(10px);
+	filter: blur(32px);
 	content: '';
 }
 .ProjectorIntro::before {
@@ -662,25 +662,25 @@ img { max-width: 100%; }
 	left: -23vmax;
 	width: 72vmax;
 	height: 72vmax;
-	background: radial-gradient(circle, rgba(42, 216, 255, .44), transparent 66%);
-	animation: projector-orbit-a 8s ease-in-out infinite alternate;
+	background: radial-gradient(circle, rgba(57, 199, 247, .16), transparent 68%);
+	animation: projector-orbit-a 5s ease-in-out infinite alternate;
 }
 .ProjectorIntro::after {
 	right: -28vmax;
 	bottom: -42vmax;
 	width: 84vmax;
 	height: 84vmax;
-	background: radial-gradient(circle, rgba(154, 73, 255, .43), transparent 65%);
-	animation: projector-orbit-b 7s ease-in-out infinite alternate;
+	background: radial-gradient(circle, rgba(124, 82, 218, .14), transparent 68%);
+	animation: projector-orbit-b 4.6s ease-in-out infinite alternate;
 }
 .ProjectorIntro-aurora {
 	top: 48%;
 	left: 50%;
 	width: 38vmax;
 	height: 38vmax;
-	background: radial-gradient(circle, rgba(28, 231, 205, .2), transparent 68%);
+	background: radial-gradient(circle, rgba(52, 218, 196, .09), transparent 70%);
 	translate: -50% -50%;
-	animation: projector-aurora 5s ease-in-out infinite alternate;
+	animation: projector-aurora 3.8s ease-in-out infinite alternate;
 }
 .ProjectorIntro h1, .ProjectorIntro h2 {
 	max-width: min(1100px, 90vw);
@@ -694,35 +694,89 @@ img { max-width: 100%; }
 .ProjectorIntro h1 {
 	font-size: clamp(44px, 7.2vw, 108px);
 	line-height: 1.02;
-	animation: projector-copy-in 760ms var(--ease-enter) 100ms backwards;
+	animation: projector-title-in 980ms var(--ease-enter) 120ms backwards;
 }
 .ProjectorIntro h2 {
 	margin-top: clamp(22px, 4vh, 42px);
 	font-size: clamp(24px, 3.4vw, 50px);
 	line-height: 1.12;
 	opacity: .82;
-	animation: projector-copy-in 760ms var(--ease-enter) 360ms backwards;
+	animation: projector-subtitle-in 900ms var(--ease-enter) 760ms backwards;
+}
+.ProjectorIntro-spinner {
+	width: 38px;
+	height: 38px;
+	margin-top: clamp(34px, 6vh, 58px);
+	border: 2px solid rgba(255, 255, 255, .2);
+	border-top-color: rgba(255, 255, 255, .86);
+	border-radius: 50%;
+	box-shadow: 0 0 24px rgba(255, 255, 255, .08);
+	animation: projector-spinner-in 500ms var(--ease-enter) 1.4s backwards, projector-spinner 1.1s linear 1.4s infinite;
 }
 
 .ProjectorClock {
 	position: absolute;
 	top: max(24px, env(safe-area-inset-top));
 	right: max(28px, env(safe-area-inset-right));
-	min-width: 138px;
+	display: flex;
+	align-items: center;
+	gap: 9px;
 	border: 1px solid rgba(255, 255, 255, .16);
-	border-radius: 16px;
+	border-radius: 13px;
 	background: rgba(13, 22, 40, .76);
-	padding: 13px 17px 12px;
+	padding: 8px 11px 8px 8px;
 	color: #fff;
 	box-shadow: 0 14px 40px rgba(7, 13, 26, .22);
-	font-size: clamp(24px, 2.3vw, 38px);
+	font-size: clamp(17px, 1.55vw, 25px);
 	font-variant-numeric: tabular-nums;
 	font-weight: 440;
-	letter-spacing: -.035em;
+	letter-spacing: -.025em;
 	line-height: 1;
-	text-align: center;
 	backdrop-filter: blur(18px) saturate(140%);
 	animation: projector-float-in 360ms var(--ease-enter) backwards;
+}
+.ProjectorAnalogClock {
+	position: relative;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 34px;
+	border: 1px solid rgba(255, 255, 255, .48);
+	border-radius: 50%;
+	background:
+		radial-gradient(circle at center, rgba(255, 255, 255, .16) 0 2px, transparent 2.5px),
+		rgba(255, 255, 255, .05);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+.ProjectorAnalogClock-hour, .ProjectorAnalogClock-minute {
+	position: absolute;
+	bottom: 50%;
+	left: 50%;
+	display: block;
+	border-radius: 999px;
+	background: #fff;
+	transform-origin: 50% 100%;
+}
+.ProjectorAnalogClock-hour {
+	width: 2px;
+	height: 9px;
+	margin-left: -1px;
+	opacity: .92;
+}
+.ProjectorAnalogClock-minute {
+	width: 1px;
+	height: 12px;
+	margin-left: -.5px;
+	opacity: .72;
+}
+.ProjectorAnalogClock-pin {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: #fff;
+	translate: -50% -50%;
 }
 .ProjectorPairingCard {
 	position: absolute;
@@ -772,6 +826,20 @@ img { max-width: 100%; }
 	font-size: clamp(13px, 1.25vw, 17px);
 	line-height: 1.4;
 }
+.ProjectorPairingCard button {
+	min-height: 42px;
+	margin-top: 26px;
+	border: 1px solid rgba(255, 255, 255, .16);
+	border-radius: 10px;
+	background: rgba(255, 255, 255, .08);
+	padding: 0 15px;
+	color: rgba(255, 255, 255, .82);
+	font: 540 12px/1 var(--font-sans);
+	transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), scale 120ms var(--ease-swift);
+}
+.ProjectorPairingCard button:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.ProjectorPairingCard button:active { scale: .97; }
+.ProjectorPairingCard button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .ProjectorConnected {
 	position: absolute;
 	bottom: max(24px, env(safe-area-inset-bottom));
@@ -984,13 +1052,24 @@ img { max-width: 100%; }
 .ProjectorControllerStatus button:hover { background: var(--surface-hover); color: var(--danger); }
 
 @keyframes projector-intro-field {
-	0% { filter: saturate(.9) brightness(.92); }
-	45% { filter: saturate(1.08) brightness(1.02); }
-	100% { filter: saturate(1) brightness(.96); }
+	0% { filter: saturate(.88) brightness(.9); }
+	45% { filter: saturate(1) brightness(1); }
+	100% { filter: saturate(.96) brightness(.94); }
 }
-@keyframes projector-copy-in {
-	from { opacity: 0; transform: translateY(18px); }
-	to { opacity: 1; transform: translateY(0); }
+@keyframes projector-title-in {
+	from { filter: blur(12px); opacity: 0; transform: translateY(22px) scale(.985); }
+	to { filter: blur(0); opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes projector-subtitle-in {
+	from { filter: blur(8px); opacity: 0; transform: translateY(14px); }
+	to { filter: blur(0); opacity: .82; transform: translateY(0); }
+}
+@keyframes projector-spinner-in {
+	from { opacity: 0; transform: scale(.72); }
+	to { opacity: 1; transform: scale(1); }
+}
+@keyframes projector-spinner {
+	to { rotate: 360deg; }
 }
 @keyframes projector-orbit-a {
 	from { transform: translate3d(-5%, -4%, 0) scale(.92); }
@@ -1018,7 +1097,7 @@ img { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.ProjectorIntro, .ProjectorIntro::before, .ProjectorIntro::after, .ProjectorIntro-aurora,
-	.ProjectorIntro h1, .ProjectorIntro h2, .ProjectorClock, .ProjectorPairingCard,
+	.ProjectorIntro h1, .ProjectorIntro h2, .ProjectorIntro-spinner, .ProjectorClock, .ProjectorPairingCard,
 	.ProjectorConnected, .ProjectorPairingBackdrop, .ProjectorPairingDialog,
 	.ProjectorControllerStatus { animation: none; }
 }

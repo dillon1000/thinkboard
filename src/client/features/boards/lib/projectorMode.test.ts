@@ -3,6 +3,7 @@ import {
 	createProjectorCode,
 	formatProjectorCode,
 	formatProjectorTime,
+	getProjectorClockHandAngles,
 	isProjectorCode,
 	normalizeProjectorCode,
 	readProjectorPresenceMetadata,
@@ -41,5 +42,12 @@ describe('projector mode', () => {
 
 	it('formats clock time with locale rules', () => {
 		expect(formatProjectorTime(new Date(2026, 6, 29, 22, 42), 'en-US')).toBe('10:42 PM')
+	})
+
+	it('positions analog clock hands from local time', () => {
+		expect(getProjectorClockHandAngles(new Date(2026, 6, 29, 10, 42))).toEqual({
+			hour: 321,
+			minute: 252,
+		})
 	})
 })

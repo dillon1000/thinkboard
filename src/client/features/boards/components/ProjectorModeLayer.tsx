@@ -17,6 +17,7 @@ import { useProjectorMode } from '../lib/ProjectorModeProvider'
 import {
 	formatProjectorCode,
 	formatProjectorTime,
+	getProjectorClockHandAngles,
 	isProjectorCode,
 	normalizeProjectorCode,
 	readProjectorPresenceMetadata,
@@ -110,6 +111,7 @@ function ProjectorDisplay({
 	onExit: () => void
 }) {
 	const [now, setNow] = useState(() => new Date())
+	const clockHandAngles = getProjectorClockHandAngles(now)
 	const holdTimerRef = useRef<number | null>(null)
 	const holdOriginRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -159,12 +161,24 @@ function ProjectorDisplay({
 					<div aria-hidden="true" className="ProjectorIntro-aurora" />
 					<h1>Welcome to Projector Mode</h1>
 					<h2>Right Click or Hold to Exit</h2>
+					<span aria-hidden="true" className="ProjectorIntro-spinner" />
 				</div>
 			) : (
 				<>
-					<time className="ProjectorClock" dateTime={now.toISOString()}>
-						{formatProjectorTime(now)}
-					</time>
+					<div className="ProjectorClock">
+						<span aria-hidden="true" className="ProjectorAnalogClock">
+							<i
+								className="ProjectorAnalogClock-hour"
+								style={{ rotate: `${clockHandAngles.hour}deg` }}
+							/>
+							<i
+								className="ProjectorAnalogClock-minute"
+								style={{ rotate: `${clockHandAngles.minute}deg` }}
+							/>
+							<i className="ProjectorAnalogClock-pin" />
+						</span>
+						<time dateTime={now.toISOString()}>{formatProjectorTime(now)}</time>
+					</div>
 					{connected ? (
 						<div className="ProjectorConnected" role="status">
 							<span aria-hidden="true" />
@@ -178,6 +192,13 @@ function ProjectorDisplay({
 							<p>Pair an iPad from this board</p>
 							<strong>{formatProjectorCode(code)}</strong>
 							<small>Open View, then choose Control projector.</small>
+							<button
+								onClick={onExit}
+								onPointerDown={(event) => event.stopPropagation()}
+								type="button"
+							>
+								Exit Projector Mode
+							</button>
 						</div>
 					)}
 				</>
