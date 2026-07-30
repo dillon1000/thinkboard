@@ -49,6 +49,15 @@ describe('route builders', () => {
 		)
 	})
 
+	it('scopes lecture records and private audio to their board', () => {
+		expect(apiRoutes.boardLectures('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/lectures'
+		)
+		expect(apiRoutes.boardLectureAudio('biology/week 1', 'lecture one')).toBe(
+			'/api/boards/biology%2Fweek%201/lectures/lecture%20one/audio'
+		)
+	})
+
 	it('builds course and sharing routes', () => {
 		expect(apiRoutes.course('organic chemistry')).toBe('/api/courses/organic%20chemistry')
 		expect(apiRoutes.boardMembers('biology/week 1')).toBe(

@@ -25,4 +25,18 @@ export interface GlobalSearchShapeResult {
 	title: string
 }
 
-export type GlobalSearchResult = GlobalSearchDocumentResult | GlobalSearchShapeResult
+export interface GlobalSearchLectureResult {
+	boardID: string
+	boardTitle: string
+	kind: 'lecture-segment'
+	lectureID: string
+	score: number
+	snippet: string
+	startSecond: number
+	title: string
+}
+
+export type GlobalSearchResult =
+	| GlobalSearchDocumentResult
+	| GlobalSearchLectureResult
+	| GlobalSearchShapeResult

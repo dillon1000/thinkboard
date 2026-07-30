@@ -13,6 +13,7 @@ export const WALKTHROUGH_SHAPE_TYPE = 'agentboard-walkthrough' as const
 export const MATH_SHAPE_TYPE = 'agentboard-math' as const
 export const PDF_PAGE_SHAPE_TYPE = 'pdf-page' as const
 export const TEACH_BACK_SHAPE_TYPE = 'agentboard-teach-back' as const
+export const LECTURE_SHAPE_TYPE = 'agentboard-lecture' as const
 
 export const pdfSourceReferenceSchema = z.object({
 	documentID: z.string().trim().min(1).max(120),
@@ -99,6 +100,14 @@ export interface TeachBackShapeProps {
 	schemaVersion: number
 }
 
+export interface LectureShapeProps {
+	w: number
+	h: number
+	lectureID: string
+	title: string
+	schemaVersion: number
+}
+
 export const flashcardShapeProps = {
 	w: T.number,
 	h: T.number,
@@ -178,6 +187,14 @@ export const teachBackShapeProps = {
 	schemaVersion: T.positiveInteger,
 }
 
+export const lectureShapeProps = {
+	w: T.number,
+	h: T.number,
+	lectureID: T.string,
+	title: T.string,
+	schemaVersion: T.positiveInteger,
+}
+
 export const pdfPageShapeMigrations = createShapePropsMigrationSequence({
 	sequence: [{
 		id: 'com.tldraw.shape.pdf-page/1',
@@ -225,6 +242,7 @@ export const conceptMapShapeValidator = T.object(conceptMapShapeProps)
 export const mathShapeValidator = T.object(mathShapeProps)
 export const pdfPageShapeValidator = T.object(pdfPageShapeProps)
 export const teachBackShapeValidator = T.object(teachBackShapeProps)
+export const lectureShapeValidator = T.object(lectureShapeProps)
 
 export const studyShapeSchemas = {
 	[FLASHCARD_SHAPE_TYPE]: { migrations: flashcardShapeMigrations, props: flashcardShapeProps },
@@ -235,6 +253,7 @@ export const studyShapeSchemas = {
 	[MATH_SHAPE_TYPE]: { props: mathShapeProps },
 	[PDF_PAGE_SHAPE_TYPE]: { migrations: pdfPageShapeMigrations, props: pdfPageShapeProps },
 	[TEACH_BACK_SHAPE_TYPE]: { props: teachBackShapeProps },
+	[LECTURE_SHAPE_TYPE]: { props: lectureShapeProps },
 } as const
 
 const proposalPositionSchema = {

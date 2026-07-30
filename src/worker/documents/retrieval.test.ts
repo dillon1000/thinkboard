@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { queryBoardDocumentVectors } from './retrieval'
+import type { ModelMessage } from 'ai'
+import {
+	attachDocumentRetrieval,
+	queryBoardDocumentVectors,
+} from './retrieval'
 
 describe('queryBoardDocumentVectors', () => {
 	it('returns nothing when Vectorize only yields another board', async () => {
@@ -58,5 +62,51 @@ describe('queryBoardDocumentVectors', () => {
 			pageNumber: 2,
 		})])
 		expect(JSON.stringify(results)).not.toContain('Private content')
+	})
+
+	it('returns a timestamped lecture result from the same board index', async () => {
+		const results = await queryBoardDocumentVectors(async () => ({
+			matches: [{
+				metadata: {
+					boardId: 'board-a',
+					chunkText: 'The lecturer explains entropy here.',
+					endSecond: 104,
+					lectureId: 'lecture-a',
+					lectureTitle: 'Thermodynamics review',
+					resultKind: 'lecture',
+					startSecond: 92,
+				},
+				score: 0.95,
+			}],
+		}), [0.1, 0.2], 'board-a')
+
+		expect(results).toEqual([{
+			chunkText: 'The lecturer explains entropy here.',
+			endSecond: 104,
+			lectureID: 'lecture-a',
+			lectureTitle: 'Thermodynamics review',
+			score: 0.95,
+			sourceKind: 'lecture',
+			startSecond: 92,
+		}])
+	})
+})
+
+describe('attachDocumentRetrieval', () => {
+	it('adds a seekable lecture citation to the user context', () => {
+		const messages: ModelMessage[] = [{ content: 'Explain entropy', role: 'user' }]
+		const attached = attachDocumentRetrieval(messages, [{
+			chunkText: 'Entropy counts compatible microstates.',
+			endSecond: 104,
+			lectureID: 'lecture-a',
+			lectureTitle: 'Thermodynamics review',
+			score: 0.95,
+			sourceKind: 'lecture',
+			startSecond: 92,
+		}])
+
+		expect(JSON.stringify(attached)).toContain(
+			'[Thermodynamics review, 1:32](#lecture=lecture-a&t=92)'
+		)
 	})
 })

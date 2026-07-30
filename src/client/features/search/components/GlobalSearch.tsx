@@ -3,7 +3,13 @@ import {
 	appRoutes,
 	type GlobalSearchResult,
 } from '@agentboard/shared'
-import { IconFileText, IconSearch, IconShape, IconX } from '@tabler/icons-react'
+import {
+	IconFileText,
+	IconHeadphones,
+	IconSearch,
+	IconShape,
+	IconX,
+} from '@tabler/icons-react'
 import {
 	useEffect,
 	useRef,
@@ -84,6 +90,9 @@ export function GlobalSearch() {
 		const parameters = new URLSearchParams()
 		if (result.kind === 'shape') {
 			parameters.set('focusShape', result.shapeID)
+		} else if (result.kind === 'lecture-segment') {
+			parameters.set('focusLecture', result.lectureID)
+			parameters.set('focusTime', String(Math.floor(result.startSecond)))
 		} else {
 			parameters.set('focusDocument', result.documentID)
 			parameters.set('focusPage', String(result.pageNumber))
@@ -167,7 +176,9 @@ export function GlobalSearch() {
 									<span className="GlobalSearch-resultIcon">
 										{result.kind === 'shape'
 											? <IconShape aria-hidden="true" size={16} />
-											: <IconFileText aria-hidden="true" size={16} />}
+											: result.kind === 'lecture-segment'
+												? <IconHeadphones aria-hidden="true" size={16} />
+												: <IconFileText aria-hidden="true" size={16} />}
 									</span>
 									<span className="GlobalSearch-resultBody">
 										<strong>{result.title}</strong>
@@ -175,7 +186,9 @@ export function GlobalSearch() {
 											{result.boardTitle}
 											{result.kind === 'document-page'
 												? ` · page ${result.pageNumber}`
-												: ` · ${formatKind(result.artifactKind)}`}
+												: result.kind === 'lecture-segment'
+													? ` · ${formatTimestamp(result.startSecond)}`
+													: ` · ${formatKind(result.artifactKind)}`}
 										</small>
 										<em>{result.snippet}</em>
 									</span>
@@ -205,7 +218,14 @@ export function GlobalSearch() {
 function resultKey(result: GlobalSearchResult) {
 	return result.kind === 'shape'
 		? `${result.boardID}:${result.shapeID}`
+		: result.kind === 'lecture-segment'
+			? `${result.boardID}:${result.lectureID}:${result.startSecond}`
 		: `${result.boardID}:${result.documentID}:${result.pageNumber}`
+}
+
+function formatTimestamp(value: number) {
+	const seconds = Math.max(0, Math.floor(value))
+	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 function formatKind(value: string) {

@@ -92,6 +92,11 @@ import {
 } from './routes/exams'
 import { handleGlobalSearch } from './routes/search'
 import { handleActiveRecallGrade } from './routes/activeRecall'
+import {
+	handleLecture,
+	handleLectureAudio,
+	handleLectures,
+} from './routes/lectures'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -166,6 +171,11 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.put(apiRoutePatterns.boardDocumentPage, authorizeBoardRequest(handleDocumentPageUpload))
 	.get(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentGet))
 	.delete(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentDelete))
+	.get(apiRoutePatterns.boardLectures, authorizeBoardRequest(handleLectures))
+	.post(apiRoutePatterns.boardLectures, authorizeBoardRequest(handleLectures))
+	.get(apiRoutePatterns.boardLectureAudio, authorizeBoardRequest(handleLectureAudio))
+	.get(apiRoutePatterns.boardLecture, authorizeBoardRequest(handleLecture))
+	.delete(apiRoutePatterns.boardLecture, authorizeBoardRequest(handleLecture))
 	.patch(apiRoutePatterns.boardCourse, handleBoardCourse)
 	.get(apiRoutePatterns.boardMembers, handleBoardMembers)
 	.patch(apiRoutePatterns.boardMember, handleBoardMember)

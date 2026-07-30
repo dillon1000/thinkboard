@@ -24,13 +24,26 @@ interface VectorQueryOptions {
 
 type VectorQuery = (vector: number[], options: VectorQueryOptions) => Promise<unknown>
 
-export interface DocumentRetrievalResult {
+export interface PDFRetrievalResult {
 	chunkText: string
 	documentID: string
 	documentTitle: string
 	pageNumber: number
 	score: number
+	sourceKind: 'pdf'
 }
+
+export interface LectureRetrievalResult {
+	chunkText: string
+	endSecond: number
+	lectureID: string
+	lectureTitle: string
+	score: number
+	sourceKind: 'lecture'
+	startSecond: number
+}
+
+export type DocumentRetrievalResult = LectureRetrievalResult | PDFRetrievalResult
 
 export async function retrieveBoardDocuments(
 	env: Env,
@@ -88,12 +101,33 @@ export async function queryBoardDocumentVectors(
 		if (!metadata || typeof metadata !== 'object') return []
 		const matchBoardID = Reflect.get(metadata, 'boardId')
 		const chunkText = Reflect.get(metadata, 'chunkText')
+		const resultKind = Reflect.get(metadata, 'resultKind')
+		if (matchBoardID !== boardID || typeof chunkText !== 'string') return []
+		if (resultKind === 'lecture') {
+			const lectureID = Reflect.get(metadata, 'lectureId')
+			const lectureTitle = Reflect.get(metadata, 'lectureTitle')
+			const startSecond = Reflect.get(metadata, 'startSecond')
+			const endSecond = Reflect.get(metadata, 'endSecond')
+			if (
+				typeof lectureID !== 'string' ||
+				typeof lectureTitle !== 'string' ||
+				typeof startSecond !== 'number' ||
+				typeof endSecond !== 'number'
+			) return []
+			return [{
+				chunkText: chunkText.slice(0, 4_000),
+				endSecond,
+				lectureID,
+				lectureTitle,
+				score: typeof score === 'number' ? score : 0,
+				sourceKind: 'lecture',
+				startSecond,
+			}]
+		}
 		const documentID = Reflect.get(metadata, 'documentId')
 		const documentTitle = Reflect.get(metadata, 'documentTitle')
 		const pageNumber = Reflect.get(metadata, 'pageNumber')
 		if (
-			matchBoardID !== boardID ||
-			typeof chunkText !== 'string' ||
 			typeof documentID !== 'string' ||
 			typeof documentTitle !== 'string' ||
 			typeof pageNumber !== 'number'
@@ -104,6 +138,7 @@ export async function queryBoardDocumentVectors(
 			documentTitle,
 			pageNumber,
 			score: typeof score === 'number' ? score : 0,
+			sourceKind: 'pdf',
 		}]
 	})
 }
@@ -120,6 +155,13 @@ export function attachDocumentRetrieval(
 		? [{ type: 'text' as const, text: userMessage.content }]
 		: userMessage.content
 	const sources = results.map((result, index) => {
+		if (result.sourceKind === 'lecture') {
+			const href = `#lecture=${encodeURIComponent(result.lectureID)}&t=${Math.floor(result.startSecond)}`
+			return [
+				`Source ${index + 1}: [${result.lectureTitle}, ${formatTimestamp(result.startSecond)}](${href})`,
+				result.chunkText,
+			].join('\n')
+		}
 		const href = `#pdf-page=${encodeURIComponent(result.documentID)}&page=${result.pageNumber}`
 		return [
 			`Source ${index + 1}: [${result.documentTitle}, page ${result.pageNumber}](${href})`,
@@ -135,6 +177,12 @@ export function attachDocumentRetrieval(
 		}],
 	}
 	return nextMessages
+}
+
+function formatTimestamp(value: number) {
+	const seconds = Math.max(0, Math.floor(value))
+	const minutes = Math.floor(seconds / 60)
+	return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 function readFirstEmbedding(value: unknown) {

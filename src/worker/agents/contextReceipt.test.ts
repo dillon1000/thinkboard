@@ -32,6 +32,7 @@ describe('buildContextReceipt', () => {
 				documentTitle: 'Biology',
 				pageNumber: 7,
 				score: 0.9,
+				sourceKind: 'pdf',
 			}],
 			spotifyPlayback: null,
 		})
@@ -40,6 +41,7 @@ describe('buildContextReceipt', () => {
 			board: { selectedShapeTypes: ['note'], visibleShapeCount: 0 },
 			craftDocuments: ['Lab notes'],
 			memories: 1,
+			lectureSources: [],
 			pdfSources: [{ documentID: 'pdf-1', documentTitle: 'Biology', pageNumber: 7 }],
 			profileFields: ['personality', 'about-you'],
 			spotify: { state: 'idle' },

@@ -29,6 +29,7 @@ import { getProjectorUserPresence } from '../lib/projectorMode'
 import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
 import { ExamPracticeImport } from '../components/ExamPracticeImport'
 import { useCanvasArtifactIndex } from '../../study/lib/useCanvasArtifactIndex'
+import { focusLectureCitation } from '../../study/lib/lectureCitation'
 
 export function Component() {
 	const { boardID } = useParams<{ boardID: string }>()
@@ -45,6 +46,8 @@ export function Component() {
 	const focusShapeID = searchParameters.get('focusShape')
 	const focusDocumentID = searchParameters.get('focusDocument')
 	const focusPage = Number(searchParameters.get('focusPage'))
+	const focusLectureID = searchParameters.get('focusLecture')
+	const focusTime = Number(searchParameters.get('focusTime'))
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
 	useCanvasArtifactIndex(editor, resolvedBoardID, role !== 'viewer')
@@ -86,8 +89,22 @@ export function Component() {
 	}, [editor, role])
 
 	useEffect(() => {
-		if (!editor || (!focusShapeID && (!focusDocumentID || !Number.isInteger(focusPage)))) return
+		if (
+			!editor ||
+			(!focusShapeID &&
+				!focusLectureID &&
+				(!focusDocumentID || !Number.isInteger(focusPage)))
+		) return
 		const focusTarget = () => {
+			if (focusLectureID) {
+				const focused = focusLectureCitation(editor, {
+					lectureID: focusLectureID,
+					startSecond: Number.isFinite(focusTime) && focusTime >= 0 ? focusTime : 0,
+				})
+				if (!focused) return false
+				clearFocusParameters()
+				return true
+			}
 			const target = focusShapeID
 				? editor.getShape(focusShapeID as TLShapeId)
 				: findPDFPageShape(editor, focusDocumentID ?? '', focusPage)
@@ -96,12 +113,17 @@ export function Component() {
 			if (pageID && pageID !== editor.getCurrentPageId()) editor.setCurrentPage(pageID)
 			editor.setSelectedShapes([target.id])
 			editor.zoomToSelection({ animation: { duration: 280 } })
+			clearFocusParameters()
+			return true
+		}
+		const clearFocusParameters = () => {
 			const nextParameters = new URLSearchParams(searchParameters)
 			nextParameters.delete('focusShape')
 			nextParameters.delete('focusDocument')
 			nextParameters.delete('focusPage')
+			nextParameters.delete('focusLecture')
+			nextParameters.delete('focusTime')
 			setSearchParameters(nextParameters, { replace: true })
-			return true
 		}
 		if (focusTarget()) return
 		const stopListening = editor.store.listen(() => {
@@ -115,8 +137,10 @@ export function Component() {
 	}, [
 		editor,
 		focusDocumentID,
+		focusLectureID,
 		focusPage,
 		focusShapeID,
+		focusTime,
 		setSearchParameters,
 	])
 

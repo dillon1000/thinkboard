@@ -41,9 +41,21 @@ export {
 export { globalSearchQuerySchema } from './search'
 export type {
 	GlobalSearchDocumentResult,
+	GlobalSearchLectureResult,
 	GlobalSearchResult,
 	GlobalSearchShapeResult,
 } from './search'
+export {
+	MAX_AUDIO_BYTES,
+	lectureSegmentSchema,
+	lectureStatusSchema,
+} from './lectures'
+export type {
+	Lecture,
+	LectureSegment,
+	LectureStatus,
+	LectureSummary,
+} from './lectures'
 export type {
 	ExamDeckStatus,
 	ExamPattern,
@@ -176,6 +188,7 @@ export {
 	MATH_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	TEACH_BACK_SHAPE_TYPE,
+	LECTURE_SHAPE_TYPE,
 	conceptMapProposalSchema,
 	conceptMapShapeProps,
 	conceptMapShapeValidator,
@@ -206,6 +219,8 @@ export {
 	pdfPageShapeValidator,
 	teachBackShapeProps,
 	teachBackShapeValidator,
+	lectureShapeProps,
+	lectureShapeValidator,
 } from './studyShapes'
 export type {
 	ConceptMapProposal,
@@ -225,6 +240,7 @@ export type {
 	WalkthroughShapeProps,
 	PDFPageShapeProps,
 	TeachBackShapeProps,
+	LectureShapeProps,
 } from './studyShapes'
 export type { Board, PublicConfig, StudyConversation } from './types'
 export {

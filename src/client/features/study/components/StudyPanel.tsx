@@ -46,6 +46,7 @@ import {
 	IconFileText,
 	IconFocus2,
 	IconHistory,
+	IconHeadphones,
 	IconInfoCircle,
 	IconLock,
 	IconPaperclip,
@@ -92,6 +93,10 @@ import {
 import { captureCanvasContext } from '../lib/canvasContextCapture'
 import { resolveCanvasContextForRequest } from '../lib/canvasContextRequest'
 import { focusPDFCitation, parsePDFCitationHref } from '../lib/pdfCitation'
+import {
+	focusLectureCitation,
+	parseLectureCitationHref,
+} from '../lib/lectureCitation'
 import {
 	capturePDFTextSelection,
 	clearPDFTextSelection,
@@ -979,6 +984,14 @@ function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
 						? receipt.pdfSources.map((source) => `${source.documentTitle}, p. ${source.pageNumber}`).join(' · ')
 						: 'None'}</dd>
 				</div>
+				<div>
+					<dt>Lectures</dt>
+					<dd>{receipt.lectureSources.length
+						? receipt.lectureSources
+							.map((source) => `${source.lectureTitle}, ${formatLectureTime(source.startSecond)}`)
+							.join(' · ')
+						: 'None'}</dd>
+				</div>
 				<div><dt>Memories</dt><dd>{receipt.memories}</dd></div>
 				<div><dt>Profile</dt><dd>{profileLabels.join(' · ') || 'None'}</dd></div>
 				<div><dt>Craft</dt><dd>{receipt.craftDocuments.join(' · ') || 'None'}</dd></div>
@@ -995,6 +1008,11 @@ function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
 			</dl>
 		</details>
 	)
+}
+
+function formatLectureTime(value: number) {
+	const seconds = Math.max(0, Math.floor(value))
+	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 function summarizeShapeTypes(types: readonly string[]) {
@@ -1050,6 +1068,7 @@ function AssistantMarkdownLink({
 	...props
 }: AssistantMarkdownLinkProps) {
 	const citation = parsePDFCitationHref(href)
+	const lectureCitation = parseLectureCitationHref(href)
 	const craftLinkID = parseCraftDocumentCitationHref(href)
 	if (craftLinkID) {
 		return (
@@ -1066,6 +1085,26 @@ function AssistantMarkdownLink({
 		)
 	}
 	if (!citation) {
+		if (lectureCitation) {
+			const target = lectureCitation
+			const openLectureCitation = () => {
+				if (editor && focusLectureCitation(editor, target)) return
+				const audioURL = `${apiRoutes.boardLectureAudio(boardID, target.lectureID)}#t=${target.startSecond}`
+				window.open(audioURL, '_blank', 'noopener,noreferrer')
+			}
+			return (
+				<button
+					aria-label={`Play cited lecture at ${formatLectureTime(target.startSecond)}`}
+					className="PDFCitation"
+					onClick={openLectureCitation}
+					title={`Play lecture at ${formatLectureTime(target.startSecond)}`}
+					type="button"
+				>
+					<IconHeadphones aria-hidden="true" size={13} stroke={1.8} />
+					<span>{children}</span>
+				</button>
+			)
+		}
 		return <a {...props} href={href} rel="noreferrer" target="_blank">{children}</a>
 	}
 	const target = citation

@@ -8,6 +8,7 @@ import {
 	WALKTHROUGH_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	TEACH_BACK_SHAPE_TYPE,
+	LECTURE_SHAPE_TYPE,
 	apiRoutes,
 	conceptMapShapeProps,
 	flashcardShapeMigrations,
@@ -24,15 +25,19 @@ import {
 	pdfPageShapeProps,
 	pdfSourceReferenceSchema,
 	teachBackShapeProps,
+	lectureShapeProps,
 	type ActiveRecallGradeResponse,
+	type Lecture,
 	type PDFPageShapeProps,
 	type PDFSourceReference,
 	type TeachBackShapeProps,
+	type LectureShapeProps,
 } from '@agentboard/shared'
 import {
 	IconCards,
 	IconDownload,
 	IconFileText,
+	IconHeadphones,
 	IconMessageCircleCheck,
 	IconPencil,
 	IconQuestionMark,
@@ -68,6 +73,7 @@ declare module '@tldraw/tlschema' {
 		[WALKTHROUGH_SHAPE_TYPE]: WalkthroughShapeProps
 		[PDF_PAGE_SHAPE_TYPE]: PDFPageShapeProps
 		[TEACH_BACK_SHAPE_TYPE]: TeachBackShapeProps
+		[LECTURE_SHAPE_TYPE]: LectureShapeProps
 	}
 }
 
@@ -78,6 +84,7 @@ export type ReviewShape = TLShape<typeof REVIEW_SHAPE_TYPE>
 export type WalkthroughShape = TLShape<typeof WALKTHROUGH_SHAPE_TYPE>
 export type PDFPageShape = TLShape<typeof PDF_PAGE_SHAPE_TYPE>
 export type TeachBackShape = TLShape<typeof TEACH_BACK_SHAPE_TYPE>
+export type LectureShape = TLShape<typeof LECTURE_SHAPE_TYPE>
 
 const STUDY_SHAPE_HEADING_HEIGHT = 30
 
@@ -654,6 +661,126 @@ export class TeachBackShapeUtil extends BaseBoxShapeUtil<TeachBackShape> {
 	}
 }
 
+export class LectureShapeUtil extends BaseBoxShapeUtil<LectureShape> {
+	static override type = LECTURE_SHAPE_TYPE
+	static override props = lectureShapeProps
+	override canResize() { return true }
+	override isAspectRatioLocked() { return false }
+	override getDefaultProps(): LectureShape['props'] {
+		return {
+			w: 520,
+			h: 500,
+			lectureID: '',
+			title: 'Recorded lecture',
+			schemaVersion: 1,
+		}
+	}
+	override getText(shape: LectureShape) {
+		return `Recorded lecture: ${shape.props.title}`
+	}
+	override component(shape: LectureShape) {
+		return <LectureComponent shape={shape} />
+	}
+	override getIndicatorPath(shape: LectureShape) {
+		return getBoxIndicator(shape.props.w, shape.props.h)
+	}
+}
+
+function LectureComponent({ shape }: { shape: LectureShape }) {
+	const chrome = useBoardChrome()
+	const audioRef = useRef<HTMLAudioElement>(null)
+	const [lecture, setLecture] = useState<Lecture | null>(null)
+	const [error, setError] = useState<string | null>(null)
+
+	useEffect(() => {
+		let timer: number | undefined
+		let stopped = false
+		const load = async () => {
+			try {
+				const response = await apiRequest<{ lecture: Lecture }>(
+					apiRoutes.boardLecture(chrome.boardID, shape.props.lectureID)
+				)
+				if (stopped) return
+				setLecture(response.lecture)
+				setError(null)
+				if (response.lecture.status === 'processing') {
+					timer = window.setTimeout(() => void load(), 3_000)
+				}
+			} catch (loadError) {
+				if (!stopped) setError(loadError instanceof Error
+					? loadError.message
+					: 'Unable to load this lecture')
+			}
+		}
+		void load()
+		return () => {
+			stopped = true
+			if (timer) window.clearTimeout(timer)
+		}
+	}, [chrome.boardID, shape.props.lectureID])
+
+	useEffect(() => {
+		const seek = (event: Event) => {
+			const detail = (event as CustomEvent<{ lectureID: string; startSecond: number }>).detail
+			if (detail?.lectureID !== shape.props.lectureID || !audioRef.current) return
+			audioRef.current.currentTime = detail.startSecond
+			void audioRef.current.play().catch(() => undefined)
+		}
+		window.addEventListener('agentboard:lecture-seek', seek)
+		return () => window.removeEventListener('agentboard:lecture-seek', seek)
+	}, [shape.props.lectureID])
+
+	function seekTo(startSecond: number) {
+		if (!audioRef.current) return
+		audioRef.current.currentTime = startSecond
+		void audioRef.current.play().catch(() => undefined)
+	}
+
+	return (
+		<HTMLContainer className="StudyShape StudyShape--lecture">
+			<div className="StudyShape-heading">
+				<span>Recorded lecture</span>
+				<IconHeadphones aria-hidden="true" size={15} />
+			</div>
+			<div className="LectureShape-content" {...canvasInteractionHandlers}>
+				<strong>{shape.props.title}</strong>
+				<audio
+					controls
+					preload="metadata"
+					ref={audioRef}
+					src={apiRoutes.boardLectureAudio(chrome.boardID, shape.props.lectureID)}
+				/>
+				{lecture?.status === 'processing' ? (
+					<p className="LectureShape-status">Transcribing and indexing this recording…</p>
+				) : null}
+				{lecture?.status === 'failed' ? (
+					<p className="FormError">{lecture.failureReason ?? 'Transcription failed'}</p>
+				) : null}
+				{error ? <p className="FormError">{error}</p> : null}
+				{lecture?.status === 'ready' ? (
+					<div className="LectureShape-transcript">
+						{lecture.segments.map((segment, index) => (
+							<button
+								key={`${index}-${segment.start}`}
+								onClick={() => seekTo(segment.start)}
+								type="button"
+							>
+								<time>{formatLectureTimestamp(segment.start)}</time>
+								<span>{segment.text}</span>
+							</button>
+						))}
+					</div>
+				) : null}
+			</div>
+		</HTMLContainer>
+	)
+}
+
+function formatLectureTimestamp(value: number) {
+	const seconds = Math.max(0, Math.floor(value))
+	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
 function TeachBackComponent({ shape }: { shape: TeachBackShape }) {
 	const editor = useEditor()
 	const chrome = useBoardChrome()
@@ -939,5 +1066,6 @@ export const studyShapeUtils = [
 	WalkthroughShapeUtil,
 	ConceptMapShapeUtil,
 	TeachBackShapeUtil,
+	LectureShapeUtil,
 	PDFPageShapeUtil,
 ] as const

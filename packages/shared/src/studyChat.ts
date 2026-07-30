@@ -65,6 +65,11 @@ export interface StudyContextReceipt {
 		documentTitle: string
 		pageNumber: number
 	}>
+	lectureSources: Array<{
+		lectureID: string
+		lectureTitle: string
+		startSecond: number
+	}>
 	profileFields: Array<'about-you' | 'custom-instructions' | 'personality'>
 	spotify: {
 		detail?: string

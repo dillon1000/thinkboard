@@ -86,6 +86,7 @@ import { DockablePanel } from './DockablePanel'
 import { RibbonSection } from './RibbonSection'
 import { HandwritingCheckDialog } from '../../study/components/HandwritingCheckDialog'
 import { capturePDFTextSelection } from '../../study/lib/pdfTextSelection'
+import { LectureImportControl } from '../../study/components/LectureImportControl'
 
 const ZOOM_ANIMATION = { animation: { duration: 140 } } as const
 
@@ -371,6 +372,7 @@ function BoardMenu({ boardID }: { boardID: string }) {
 					onSelect={chrome.copyBoardLink}
 				/>
 				<PDFImportControl boardID={boardID} editor={editor} />
+				<LectureImportControl boardID={boardID} editor={editor} />
 			</RibbonSection>
 			<RibbonSection label="Session">
 				<RibbonItem

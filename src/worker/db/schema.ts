@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import type { LectureSegment } from '@agentboard/shared'
 
 export const user = sqliteTable(
 	'user',
@@ -429,6 +430,49 @@ export const documentChunk = sqliteTable(
 	(table) => [index('document_chunks_documentID_idx').on(table.documentID)]
 )
 
+export const lecture = sqliteTable(
+	'lectures',
+	{
+		id: text('id').primaryKey(),
+		boardID: text('boardID')
+			.notNull()
+			.references(() => board.id, { onDelete: 'cascade' }),
+		ownerID: text('ownerID')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		r2Key: text('r2Key').notNull(),
+		mediaType: text('mediaType').notNull(),
+		byteSize: integer('byteSize').notNull(),
+		status: text('status', { enum: ['processing', 'ready', 'failed'] })
+			.notNull()
+			.default('processing'),
+		transcript: text('transcript').notNull().default(''),
+		segments: text('segments', { mode: 'json' }).$type<LectureSegment[]>().notNull(),
+		durationSeconds: real('durationSeconds'),
+		failureReason: text('failureReason'),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('lectures_boardID_createdAt_idx').on(table.boardID, table.createdAt),
+		index('lectures_ownerID_createdAt_idx').on(table.ownerID, table.createdAt),
+	]
+)
+
+export const lectureChunk = sqliteTable(
+	'lecture_chunks',
+	{
+		vectorID: text('vectorID').primaryKey(),
+		lectureID: text('lectureID')
+			.notNull()
+			.references(() => lecture.id, { onDelete: 'cascade' }),
+		startSecond: real('startSecond').notNull(),
+		endSecond: real('endSecond').notNull(),
+	},
+	(table) => [index('lecture_chunks_lectureID_idx').on(table.lectureID)]
+)
+
 export const documentProcessingUsage = sqliteTable(
 	'document_processing_usage',
 	{
@@ -479,6 +523,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	examPlans: many(examPlan),
 	agentProfile: one(agentProfile),
 	documents: many(document),
+	lectures: many(lecture),
 	documentProcessingUsage: many(documentProcessingUsage),
 	craftDocumentLinks: many(craftDocumentLink),
 	courses: many(course),
@@ -505,6 +550,7 @@ export const boardRelations = relations(board, ({ one, many }) => ({
 	studyArtifacts: many(studyArtifact),
 	primaryExamPlans: many(examPlan),
 	documents: many(document),
+	lectures: many(lecture),
 	craftDocumentLinks: many(craftDocumentLink),
 }))
 
@@ -569,6 +615,16 @@ export const documentPageRelations = relations(documentPage, ({ one }) => ({
 
 export const documentChunkRelations = relations(documentChunk, ({ one }) => ({
 	document: one(document, { fields: [documentChunk.documentID], references: [document.id] }),
+}))
+
+export const lectureRelations = relations(lecture, ({ one, many }) => ({
+	board: one(board, { fields: [lecture.boardID], references: [board.id] }),
+	owner: one(user, { fields: [lecture.ownerID], references: [user.id] }),
+	chunks: many(lectureChunk),
+}))
+
+export const lectureChunkRelations = relations(lectureChunk, ({ one }) => ({
+	lecture: one(lecture, { fields: [lectureChunk.lectureID], references: [lecture.id] }),
 }))
 
 export const documentProcessingUsageRelations = relations(documentProcessingUsage, ({ one }) => ({

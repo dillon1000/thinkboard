@@ -13,6 +13,9 @@ export const apiRoutePatterns = {
 	boardMistakes: '/api/boards/:boardID/mistakes',
 	boardMemories: '/api/boards/:boardID/memories',
 	boardDocuments: '/api/boards/:boardID/documents',
+	boardLectures: '/api/boards/:boardID/lectures',
+	boardLecture: '/api/boards/:boardID/lectures/:lectureID',
+	boardLectureAudio: '/api/boards/:boardID/lectures/:lectureID/audio',
 	boardDocument: '/api/boards/:boardID/documents/:documentID',
 	boardDocumentComplete: '/api/boards/:boardID/documents/:documentID/complete',
 	boardDocumentOriginal: '/api/boards/:boardID/documents/:documentID/original',
@@ -99,6 +102,12 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/memories`,
 	boardDocuments: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/documents`,
+	boardLectures: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/lectures`,
+	boardLecture: (boardID: string, lectureID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/lectures/${encodeURIComponent(lectureID)}`,
+	boardLectureAudio: (boardID: string, lectureID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/lectures/${encodeURIComponent(lectureID)}/audio`,
 	boardDocument: (boardID: string, documentID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/documents/${encodeURIComponent(documentID)}`,
 	boardDocumentComplete: (boardID: string, documentID: string) =>

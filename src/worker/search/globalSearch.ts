@@ -38,7 +38,9 @@ export async function searchWorkspace(
 	for (const result of [...semantic, ...lexical]) {
 		const key = result.kind === 'shape'
 			? `shape:${result.boardID}:${result.shapeID}`
-			: `page:${result.boardID}:${result.documentID}:${result.pageNumber}`
+			: result.kind === 'lecture-segment'
+				? `lecture:${result.boardID}:${result.lectureID}:${Math.floor(result.startSecond)}`
+				: `page:${result.boardID}:${result.documentID}:${result.pageNumber}`
 		const existing = results.get(key)
 		if (!existing || existing.score < result.score) results.set(key, result)
 	}
@@ -128,6 +130,22 @@ export function parseGlobalSearchMatches(
 		const text = readString(metadata, 'chunkText')
 		if (!boardTitle || !text) return []
 		const score = typeof match.score === 'number' ? match.score : 0
+		if (readString(metadata, 'resultKind') === 'lecture') {
+			const lectureID = readString(metadata, 'lectureId')
+			const title = readString(metadata, 'lectureTitle')
+			const startSecond = Reflect.get(metadata, 'startSecond')
+			if (!lectureID || !title || typeof startSecond !== 'number') return []
+			return [{
+				boardID,
+				boardTitle,
+				kind: 'lecture-segment',
+				lectureID,
+				score,
+				snippet: text.slice(0, 260),
+				startSecond,
+				title,
+			}]
+		}
 		if (readString(metadata, 'resultKind') === 'shape') {
 			const kind = studyArtifactKindSchema.safeParse(readString(metadata, 'artifactKind'))
 			const shapeID = readString(metadata, 'shapeId')

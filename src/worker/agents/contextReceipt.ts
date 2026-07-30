@@ -23,8 +23,18 @@ interface ContextReceiptInput {
  */
 export function buildContextReceipt(input: ContextReceiptInput): StudyContextReceipt {
 	const pdfSources = new Map<string, StudyContextReceipt['pdfSources'][number]>()
+	const lectureSources = new Map<string, StudyContextReceipt['lectureSources'][number]>()
 	for (const source of input.retrieval) {
-		addPDFSource(pdfSources, source)
+		if (source.sourceKind === 'lecture') {
+			const key = `${source.lectureID}:${Math.floor(source.startSecond)}`
+			if (!lectureSources.has(key)) lectureSources.set(key, {
+				lectureID: source.lectureID,
+				lectureTitle: source.lectureTitle,
+				startSecond: source.startSecond,
+			})
+		} else {
+			addPDFSource(pdfSources, source)
+		}
 	}
 	for (const source of input.canvasContext?.documentText ?? []) {
 		addPDFSource(pdfSources, source)
@@ -46,6 +56,7 @@ export function buildContextReceipt(input: ContextReceiptInput): StudyContextRec
 		} : {}),
 		craftDocuments: input.craftContext.map(({ title }) => title).slice(0, 10),
 		memories: Math.min(input.memories.length, 40),
+		lectureSources: [...lectureSources.values()].slice(0, 12),
 		pdfSources: [...pdfSources.values()].slice(0, 12),
 		profileFields,
 		spotify: input.profile.promptSources.connectedServices

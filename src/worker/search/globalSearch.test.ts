@@ -43,4 +43,33 @@ describe('global search result access', () => {
 			title: 'Entropy',
 		}])
 	})
+
+	it('returns lecture timestamps only for an authorized board', () => {
+		const matches: VectorizeMatches = {
+			count: 1,
+			matches: [{
+				id: 'lecture',
+				metadata: {
+					boardId: 'board-1',
+					chunkText: 'A spoken explanation of entropy.',
+					lectureId: 'lecture-1',
+					lectureTitle: 'Thermodynamics review',
+					resultKind: 'lecture',
+					startSecond: 92,
+				},
+				score: 0.88,
+			} as VectorizeMatch],
+		}
+
+		expect(parseGlobalSearchMatches(matches, new Map([['board-1', 'Physics']]))).toEqual([{
+			boardID: 'board-1',
+			boardTitle: 'Physics',
+			kind: 'lecture-segment',
+			lectureID: 'lecture-1',
+			score: 0.88,
+			snippet: 'A spoken explanation of entropy.',
+			startSecond: 92,
+			title: 'Thermodynamics review',
+		}])
+	})
 })

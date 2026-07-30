@@ -6,6 +6,7 @@ import {
 	flashcardProposalSchema,
 	flashcardShapeMigrations,
 	flashcardShapeValidator,
+	lectureShapeValidator,
 	quizProposalSchema,
 	reviewProposalSchema,
 	normalizeEquationLatex,
@@ -107,6 +108,16 @@ describe('study shape contracts', () => {
 			topic: 'Explain entropy',
 			verdict: 'partial',
 			w: 430,
+		})).not.toThrow()
+	})
+
+	it('validates a persisted lecture player', () => {
+		expect(() => lectureShapeValidator.validate({
+			h: 500,
+			lectureID: 'lecture-1',
+			schemaVersion: 1,
+			title: 'Week 4 review',
+			w: 520,
 		})).not.toThrow()
 	})
 
