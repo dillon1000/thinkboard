@@ -752,7 +752,7 @@ export async function listBoardMistakes(
 }
 
 function toStudyMistake(value: typeof studyMistake.$inferSelect): StudyMistake {
-	if (!value.boardID) throw new Error('Study mistake is missing its source board')
+	if (!value.boardID) throw new Error('Study mistake is missing its source space')
 	return {
 		boardID: value.boardID,
 		concept: value.concept,

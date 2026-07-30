@@ -135,7 +135,7 @@ const proposalTools = {
 		outputSchema: proposalOutputSchema,
 	}),
 	createConceptMap: tool({
-		description: 'Create one visual concept map from the current board material, with concise nodes and labeled relationships.',
+		description: 'Create one visual concept map from the current space material, with concise nodes and labeled relationships.',
 		inputSchema: conceptMapProposalSchema,
 		outputSchema: proposalOutputSchema,
 	}),
@@ -165,7 +165,7 @@ const proposalTools = {
 		outputSchema: proposalOutputSchema,
 	}),
 	saveMemory: tool({
-		description: 'Propose one durable memory that can improve future study help. Use when the student asks you to remember something, or when a stable preference, goal, background fact, or learning pattern is clearly useful across boards. The student must approve it before it is saved. Never propose sensitive personal data, credentials, health information, financial information, or private identifiers.',
+		description: 'Propose one durable memory that can improve future study help. Use when the student asks you to remember something, or when a stable preference, goal, background fact, or learning pattern is clearly useful across spaces. The student must approve it before it is saved. Never propose sensitive personal data, credentials, health information, financial information, or private identifiers.',
 		inputSchema: agentMemoryProposalSchema,
 		outputSchema: proposalOutputSchema,
 	}),
@@ -179,12 +179,12 @@ const studyTools = {
 		outputSchema: spotifyAgentPlayOutputSchema,
 	}),
 	appendCraftDocument: tool({
-		description: 'Append Markdown to a Craft document linked to this board. Use only when the student explicitly asks to change that document.',
+		description: 'Append Markdown to a Craft document linked to this space. Use only when the student explicitly asks to change that document.',
 		inputSchema: craftDocumentAppendInputSchema,
 		outputSchema: craftDocumentAppendOutputSchema,
 	}),
 	updateCraftDocumentBlocks: tool({
-		description: 'Replace Markdown in specific text blocks from a Craft document linked to this board. Use only block IDs supplied in the live Craft context and only when the student explicitly asks to edit existing text.',
+		description: 'Replace Markdown in specific text blocks from a Craft document linked to this space. Use only block IDs supplied in the live Craft context and only when the student explicitly asks to edit existing text.',
 		inputSchema: craftDocumentBlocksUpdateInputSchema,
 		outputSchema: craftDocumentBlocksUpdateOutputSchema,
 	}),
@@ -276,7 +276,7 @@ export class StudyAgent extends DurableObject<Env> {
 		request.signal.addEventListener('abort', () => generation.abort(), { once: true })
 
 		const boardID = request.headers.get('x-agentboard-board-id')
-		if (!boardID) return Response.json({ error: 'Missing authorized board identity' }, { status: 400 })
+		if (!boardID) return Response.json({ error: 'Missing authorized space identity' }, { status: 400 })
 		const userID = request.headers.get('x-agentboard-user-id')
 		const traceID = crypto.randomUUID()
 		const telemetrySessionID = request.headers.get('x-agentboard-ai-session-id') ?? undefined
@@ -294,7 +294,7 @@ export class StudyAgent extends DurableObject<Env> {
 					parsed.data.canvasContext
 				)
 			} catch (error) {
-				console.error('Invalid canvas board identity', error)
+				console.error('Invalid canvas space identity', error)
 				return Response.json({ error: 'Invalid canvas context' }, { status: 400 })
 			}
 		}
@@ -400,7 +400,7 @@ export class StudyAgent extends DurableObject<Env> {
 							execute: ({ query }) => playSpotifyForAgent(request, this.env, query),
 						}),
 						appendCraftDocument: tool({
-							description: 'Append Markdown to a Craft document linked to this board. Use only when the student explicitly asks to change that document.',
+							description: 'Append Markdown to a Craft document linked to this space. Use only when the student explicitly asks to change that document.',
 							inputSchema: craftDocumentAppendInputSchema,
 							outputSchema: craftDocumentAppendOutputSchema,
 							execute: (input) => appendCraftDocumentForUser(
@@ -412,7 +412,7 @@ export class StudyAgent extends DurableObject<Env> {
 							),
 						}),
 						updateCraftDocumentBlocks: tool({
-							description: 'Replace Markdown in specific text blocks from a Craft document linked to this board. Use only block IDs supplied in the live Craft context and only when the student explicitly asks to edit existing text.',
+							description: 'Replace Markdown in specific text blocks from a Craft document linked to this space. Use only block IDs supplied in the live Craft context and only when the student explicitly asks to edit existing text.',
 							inputSchema: craftDocumentBlocksUpdateInputSchema,
 							outputSchema: craftDocumentBlocksUpdateOutputSchema,
 							execute: (input) => updateCraftDocumentBlocksForUser(
@@ -434,7 +434,7 @@ export class StudyAgent extends DurableObject<Env> {
 		const inlineInstruction = isInline
 			? `
 <inline-request>
-The student invoked you directly on the canvas rather than in the chat panel, so answer as if you were standing at their cursor. Lead with a board artifact whenever one fits the request, and keep any accompanying text to one or two sentences — there is no chat transcript to read it in. Do not ask a clarifying question unless the request is impossible to act on.${anchor ? ` Place every artifact at the anchor point x=${anchor.x.toFixed(2)}, y=${anchor.y.toFixed(2)}; ignore the usual "right of the selection" placement rule.` : ''}
+The student invoked you directly on the canvas rather than in the chat panel, so answer as if you were standing at their cursor. Lead with a space artifact whenever one fits the request, and keep any accompanying text to one or two sentences — there is no chat transcript to read it in. Do not ask a clarifying question unless the request is impossible to act on.${anchor ? ` Place every artifact at the anchor point x=${anchor.x.toFixed(2)}, y=${anchor.y.toFixed(2)}; ignore the usual "right of the selection" placement rule.` : ''}
 </inline-request>`
 			: ''
 		const studyModeInstruction = parsed.data.studyMode === 'socratic'
@@ -479,7 +479,7 @@ The student invoked you directly on the canvas rather than in the chat panel, so
 			}))
 		}
 		const systemPrompt = `<role>
-You are Agentboard's study tutor. Help the student understand their work instead of merely supplying answers.
+You are Thinkspace's study tutor. Help the student understand their work instead of merely supplying answers.
 ${studyModeInstruction}
 </role>
 
@@ -487,8 +487,8 @@ ${agentProfilePrompt}${inlineInstruction}
 
 <canvas-context>
 ${agentProfile.promptSources.boardContext
-	? `Treat the canvas structure attached to the latest user message as the current board snapshot. Use the document clock as its version stamp, viewport shapes as what the student is looking at, selected shapes as the primary referent, and bindings as explicit diagram relationships. Read legible handwriting, equations, annotations, and diagrams directly. Never reduce visible academic work to “several drawings” or ask the student to retype content you can read.${canvasContext ? '' : ' No current canvas context was provided.'}`
-	: 'The student disabled passive board context. Do not claim to see the current board unless a later tool result supplies its contents.'}
+	? `Treat the canvas structure attached to the latest user message as the current space snapshot. Use the document clock as its version stamp, viewport shapes as what the student is looking at, selected shapes as the primary referent, and bindings as explicit diagram relationships. Read legible handwriting, equations, annotations, and diagrams directly. Never reduce visible academic work to “several drawings” or ask the student to retype content you can read.${canvasContext ? '' : ' No current canvas context was provided.'}`
+	: 'The student disabled passive space context. Do not claim to see the current space unless a later tool result supplies its contents.'}
 </canvas-context>
 
 ${spotifyContext}
@@ -497,7 +497,7 @@ ${spotifyContext}
 - Point out misconceptions clearly and kindly. Separate facts from uncertainty.
 - Ask one useful follow-up only when the request is genuinely ambiguous.
 - Write math as LaTeX using $...$ inline or $$...$$ on its own line.
-- Never claim a board mutation has happened before the browser reports a tool result.${getStudyToolContinuationInstruction(toolContinuation)}
+- Never claim a space mutation has happened before the browser reports a tool result.${getStudyToolContinuationInstruction(toolContinuation)}
 - Use saveMemory when the student explicitly asks you to remember a durable fact, preference, goal, or background detail, or when you identify a stable learning pattern that will improve future help. The student must approve every memory. Never save sensitive personal data, credentials, health information, financial information, or private identifiers. Never claim a memory was saved until approval succeeds.
 - Use saveMemory for new learning patterns. recordMistake exists only for older conversations.
 - When document retrieval supports a factual claim, cite the supplied source using its exact Markdown link, including the document title and page number. Never invent a citation or change its link target.

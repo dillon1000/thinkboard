@@ -65,7 +65,7 @@ export async function handleLockInReview(
 		boardID,
 		authentication.session.user.id
 	)
-	if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+	if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 
 	const body: unknown = await request.json().catch(() => null)
 	const parsed = lockInReviewRequestSchema.safeParse(body)
@@ -155,7 +155,7 @@ export function createLockInReviewMessages(review: LockInReviewRequest) {
 
 	return [
 		{
-			content: 'You are Agentboard’s Focus Coach. Compare a student’s stated finish line with their complete canvas and their newest edits. Be visually precise, calm, and brief. Return only one complete JSON object with status, headline, coach, and evidence. Never omit a key.',
+			content: 'You are Thinkspace’s Focus Coach. Compare a student’s stated finish line with their complete canvas and their newest edits. Be visually precise, calm, and brief. Return only one complete JSON object with status, headline, coach, and evidence. Never omit a key.',
 			role: 'system',
 		},
 		{

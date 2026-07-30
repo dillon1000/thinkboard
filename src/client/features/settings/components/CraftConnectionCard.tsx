@@ -51,7 +51,7 @@ export function CraftConnectionCard() {
 	}
 
 	async function disconnect() {
-		if (!window.confirm('Disconnect Craft from Thinkspace? Linked documents will stay on boards, but Thinkspace cannot read them until you reconnect.')) return
+		if (!window.confirm('Disconnect Craft from Thinkspace? Linked documents will stay in spaces, but Thinkspace cannot read them until you reconnect.')) return
 		setError(null)
 		setIsDisconnecting(true)
 		try {
@@ -83,7 +83,7 @@ export function CraftConnectionCard() {
 						{statusLabel}
 					</span>
 				</div>
-				<p>Link Craft documents to a board so your study partner can read and cite live notes.</p>
+				<p>Link Craft documents to a space so your study partner can read and cite live notes.</p>
 				{status.connected ? (
 					<small>Connected to {status.spaceName}. Document changes are available only when you ask for them.</small>
 				) : (

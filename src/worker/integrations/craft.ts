@@ -614,7 +614,7 @@ async function requestCraft(
 async function readLimitedBody(response: Response, maximumBytes: number) {
 	const declaredLength = Number(response.headers.get('content-length'))
 	if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
-		throw new Error('Craft returned more document content than Agentboard can safely read.')
+		throw new Error('Craft returned more document content than Thinkspace can safely read.')
 	}
 	if (!response.body) return ''
 
@@ -629,7 +629,7 @@ async function readLimitedBody(response: Response, maximumBytes: number) {
 			bytesRead += value.byteLength
 			if (bytesRead > maximumBytes) {
 				await reader.cancel()
-				throw new Error('Craft returned more document content than Agentboard can safely read.')
+				throw new Error('Craft returned more document content than Thinkspace can safely read.')
 			}
 			text += decoder.decode(value, { stream: true })
 		}

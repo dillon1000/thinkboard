@@ -66,7 +66,7 @@ describe('applyCanvasPlan', () => {
 			planID: 'stale-plan',
 			baseDocumentClock: 10,
 			elements: [{ id: 'note', kind: 'note', text: 'Old context' }],
-		}, { documentClock: 11 })).toThrow('The board changed')
+		}, { documentClock: 11 })).toThrow('The space changed')
 		expect(harness.shapes).toHaveLength(0)
 	})
 })

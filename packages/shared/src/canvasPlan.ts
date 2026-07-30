@@ -403,7 +403,7 @@ export const canvasPlanSchema = z.object({
 	) {
 		context.addIssue({
 			code: 'custom',
-			message: 'A canvas plan must change at least one board object',
+			message: 'A canvas plan must change at least one space object',
 			path: ['elements'],
 		})
 	}

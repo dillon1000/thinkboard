@@ -126,7 +126,7 @@ async function authorize(request: IRequest, env: Env): Promise<ConversationAutho
 		request.params.boardID,
 		authentication.session.user.id
 	)
-	if (!access) return { response: Response.json({ error: 'Board not found' }, { status: 404 }) }
+	if (!access) return { response: Response.json({ error: 'Space not found' }, { status: 404 }) }
 	return { database, userID: authentication.session.user.id }
 }
 

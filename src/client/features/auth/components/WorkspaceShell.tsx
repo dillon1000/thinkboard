@@ -68,7 +68,7 @@ export function WorkspaceShell({
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
 					<Link aria-current={activePage === 'boards' ? 'page' : undefined} to={appRoutes.home}>
-						<IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards
+						<IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Spaces
 					</Link>
 					<Link aria-current={activePage === 'today' ? 'page' : undefined} to={appRoutes.today}>
 						<IconSun aria-hidden="true" size={16} stroke={1.7} /> Today

@@ -47,7 +47,7 @@ export function getStudyToolContinuationInstruction(
 	if (!continuation) return ''
 
 	const result = continuation === 'applied'
-		? 'The browser reports that the student added the proposal to the board.'
+		? 'The browser reports that the student added the proposal to the space.'
 		: continuation === 'saved'
 			? 'The browser reports that the student approved and saved the memory.'
 		: continuation === 'dismissed'

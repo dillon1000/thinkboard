@@ -163,7 +163,7 @@ export function Component() {
 										{spotifyStatus}
 									</span>
 								</div>
-								<p>See what’s playing and control your active Spotify device from a board.</p>
+								<p>See what’s playing and control your active Spotify device from a space.</p>
 								{spotifyConfigured ? (
 									<small>Allows Thinkspace and your study partner to read playback, find music, and play, pause, or skip tracks.</small>
 								) : (
@@ -171,7 +171,7 @@ export function Component() {
 								)}
 								<label className="SpotifyPreference">
 									<span>
-										<strong>Show Spotify status on boards</strong>
+										<strong>Show Spotify status in spaces</strong>
 										<small>Hide the player without disconnecting your account.</small>
 									</span>
 									<input
@@ -217,7 +217,7 @@ export function Component() {
 				<section aria-labelledby="homepage-heading" className="Settings-section">
 					<div className="Settings-sectionHeading">
 						<h2 id="homepage-heading">Homepage</h2>
-						<p>Choose which study tools appear above your recent boards.</p>
+						<p>Choose which study tools appear above your recent spaces.</p>
 					</div>
 
 					<div className="ConnectionList">
@@ -253,7 +253,7 @@ export function Component() {
 				<section aria-labelledby="canvas-heading" className="Settings-section">
 					<div className="Settings-sectionHeading">
 						<h2 id="canvas-heading">Canvas</h2>
-						<p>Choose how board controls and study cards behave while you work.</p>
+						<p>Choose how space controls and study cards behave while you work.</p>
 					</div>
 
 					<div className="ConnectionList">
@@ -263,9 +263,9 @@ export function Component() {
 							</div>
 							<div className="ConnectionCard-copy">
 								<div>
-									<h3>Board flashcards</h3>
+									<h3>Space flashcards</h3>
 								</div>
-								<p>Choose what happens when you click a compact flashcard on a board.</p>
+								<p>Choose what happens when you click a compact flashcard in a space.</p>
 								<label className="SpotifyPreference">
 									<span>
 										<strong>Reveal answers immediately</strong>
@@ -292,8 +292,8 @@ export function Component() {
 								<div>
 									<h3>Press-and-hold menu</h3>
 								</div>
-								<p>Press and hold anywhere on a board — cursor, touch or pen — to open a quick menu of tools, colours, chat, PDF import and music.</p>
-								<small>Always available in Zen Mode. Turn this on to use it on any board, even with the toolbars showing.</small>
+								<p>Press and hold anywhere in a space — cursor, touch or pen — to open a quick menu of tools, colours, chat, PDF import and music.</p>
+								<small>Always available in Zen Mode. Turn this on to use it in any space, even with the toolbars showing.</small>
 								<label className="SpotifyPreference">
 									<span>
 										<strong>Enable outside Zen Mode</strong>

@@ -80,8 +80,8 @@ const promptSourceCopy: Record<keyof AgentPromptSources, {
 		promptLocation: '<user-profile>',
 	},
 	boardContext: {
-		description: 'Visible shapes, selected work, and linked board documents.',
-		label: 'Current board',
+		description: 'Visible shapes, selected work, and linked space documents.',
+		label: 'Current space',
 		promptLocation: '<canvas-context>',
 	},
 	connectedServices: {

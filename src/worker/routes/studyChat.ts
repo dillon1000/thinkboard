@@ -11,7 +11,7 @@ export async function handleStudyConversationMessages(request: IRequest, env: En
 	const database = createDatabase(env)
 	const userID = authentication.session.user.id
 	const access = await getBoardAccess(database, request.params.boardID, userID)
-	if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+	if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 
 	const conversation = await getStudyConversation(
 		database,
@@ -47,7 +47,7 @@ export async function handleInlineAgentRequest(request: IRequest, env: Env) {
 	const userID = authentication.session.user.id
 	const boardID = request.params.boardID
 	const access = await getBoardAccess(database, boardID, userID)
-	if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+	if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 
 	return forwardStudyAgentRequest(
 		env.StudyAgent.getByName(`inline:${boardID}:${userID}`),

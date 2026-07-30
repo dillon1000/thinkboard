@@ -78,7 +78,7 @@ async function authorizeEditor(request: IRequest, env: Env) {
 	const database = createDatabase(env)
 	const userID = authentication.session.user.id
 	const access = await getBoardAccess(database, request.params.boardID, userID)
-	if (!access) return { response: Response.json({ error: 'Board not found' }, { status: 404 }) }
+	if (!access) return { response: Response.json({ error: 'Space not found' }, { status: 404 }) }
 	if (access.role === 'viewer') {
 		return { response: Response.json({ error: 'Forbidden' }, { status: 403 }) }
 	}

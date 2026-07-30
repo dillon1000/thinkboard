@@ -84,7 +84,7 @@ export function LockInCelebration() {
 				<p className="LockInCelebration-coach">{completion.coach}</p>
 				<small>{completion.evidence}</small>
 				<button autoFocus onClick={dismissCompletion} type="button">
-					Back to board
+					Back to space
 					<IconArrowRight aria-hidden="true" size={17} />
 				</button>
 			</section>

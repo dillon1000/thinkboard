@@ -69,7 +69,7 @@ export function PDFDocumentLibrary({
 
 	function locate(document: DocumentSummary) {
 		if (!editor) {
-			setError('The board is still loading. Try again.')
+			setError('The space is still loading. Try again.')
 			return
 		}
 		if (!locatePDFDocument(editor, document.id)) {
@@ -129,7 +129,7 @@ export function PDFDocumentLibrary({
 						<span className="PDFLibrary-mark"><IconFileTypePdf aria-hidden="true" size={20} stroke={1.7} /></span>
 						<div>
 							<h2 id="pdf-library-title">PDF library</h2>
-							<p>Manage the source material linked to this board.</p>
+							<p>Manage the source material linked to this space.</p>
 						</div>
 					</div>
 					<button aria-label="Close PDF library" onClick={onClose} ref={closeButtonRef} type="button">
@@ -148,7 +148,7 @@ export function PDFDocumentLibrary({
 					{!isLoading && documents.length === 0 ? (
 						<div className="PDFLibrary-empty">
 							<IconFileTypePdf aria-hidden="true" size={28} stroke={1.3} />
-							<strong>No PDFs on this board</strong>
+							<strong>No PDFs in this space</strong>
 							<span>Imported PDFs will appear here with their processing status.</span>
 						</div>
 					) : null}

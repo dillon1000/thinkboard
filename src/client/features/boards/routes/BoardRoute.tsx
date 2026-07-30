@@ -36,7 +36,7 @@ export function Component() {
 	const [editor, setEditor] = useState<Editor | null>(null)
 	const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
 	const [configError, setConfigError] = useState<string | null>(null)
-	const [title, setTitle] = useState('Study board')
+	const [title, setTitle] = useState('Study space')
 	const [role, setRole] = useState<BoardRole>('viewer')
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
@@ -98,9 +98,9 @@ export function Component() {
 		})
 	}, [editor, resolvedBoardID])
 
-	if (!boardID) throw new Error('Missing board ID')
-	if (configError) return <div className="RouteMessage" role="alert"><h1>Unable to open this board</h1><p>{configError}</p></div>
-	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your board" /></div>
+	if (!boardID) throw new Error('Missing space ID')
+	if (configError) return <div className="RouteMessage" role="alert"><h1>Unable to open this space</h1><p>{configError}</p></div>
+	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your space" /></div>
 
 	return (
 		<ProjectorModeProvider>

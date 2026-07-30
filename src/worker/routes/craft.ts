@@ -137,7 +137,7 @@ export async function handleCraftDocumentCreate(
 	}
 	if (currentLinks.length >= MAX_CRAFT_DOCUMENT_LINKS) {
 		return Response.json(
-			{ error: `A board can link up to ${MAX_CRAFT_DOCUMENT_LINKS} Craft documents.` },
+			{ error: `A space can link up to ${MAX_CRAFT_DOCUMENT_LINKS} Craft documents.` },
 			{ status: 409 }
 		)
 	}
@@ -325,7 +325,7 @@ export async function appendCraftDocumentForUser(
 ): Promise<CraftDocumentAppendOutput> {
 	const parsed = craftDocumentAppendInputSchema.parse(input)
 	const row = await getCraftDocumentLinkRow(database, boardID, parsed.linkID)
-	if (!row) throw new Error('That Craft document is not linked to this board.')
+	if (!row) throw new Error('That Craft document is not linked to this space.')
 	if (row.connectionOwnerID !== userID) {
 		throw new Error('Only the person who linked this Craft document can change it.')
 	}
@@ -348,7 +348,7 @@ export async function updateCraftDocumentBlocksForUser(
 ): Promise<CraftDocumentBlocksUpdateOutput> {
 	const parsed = craftDocumentBlocksUpdateInputSchema.parse(input)
 	const row = await getCraftDocumentLinkRow(database, boardID, parsed.linkID)
-	if (!row) throw new Error('That Craft document is not linked to this board.')
+	if (!row) throw new Error('That Craft document is not linked to this space.')
 	if (row.connectionOwnerID !== userID) {
 		throw new Error('Only the person who linked this Craft document can change it.')
 	}

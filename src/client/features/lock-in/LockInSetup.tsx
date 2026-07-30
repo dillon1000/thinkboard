@@ -149,7 +149,7 @@ export function LockInSetup() {
 						<IconFocus2 aria-hidden="true" size={17} stroke={1.8} />
 						<span>
 							<strong>Use current selection as my focus scope</strong>
-							<small>{availableScopeIDs.length > 0 ? `${availableScopeIDs.length} object${availableScopeIDs.length === 1 ? '' : 's'}` : 'Select canvas objects first, or focus on the whole board'}</small>
+							<small>{availableScopeIDs.length > 0 ? `${availableScopeIDs.length} object${availableScopeIDs.length === 1 ? '' : 's'}` : 'Select canvas objects first, or focus on the whole space'}</small>
 						</span>
 					</label>
 

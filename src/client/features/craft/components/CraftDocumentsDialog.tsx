@@ -107,7 +107,7 @@ export function CraftDocumentsDialog({
 	async function addDocument(candidate: CraftDocumentCandidate) {
 		setError(null)
 		if (!editor) {
-			setError('The board is still loading. Try again.')
+			setError('The space is still loading. Try again.')
 			return
 		}
 		setPendingDocumentID(candidate.documentID)
@@ -135,7 +135,7 @@ export function CraftDocumentsDialog({
 	}
 
 	async function removeDocument(document: CraftDocumentLink) {
-		if (!window.confirm(`Remove “${document.title}” from this board? The Craft document will not be deleted.`)) return
+		if (!window.confirm(`Remove “${document.title}” from this space? The Craft document will not be deleted.`)) return
 		setError(null)
 		setPendingDocumentID(document.documentID)
 		try {
@@ -190,7 +190,7 @@ export function CraftDocumentsDialog({
 						<span><IconBrandCraft aria-hidden="true" size={19} stroke={1.8} /></span>
 						<div>
 							<h2 id="craft-documents-title">Craft documents</h2>
-							<p>Give this board and its study partner access to live notes.</p>
+							<p>Give this space and its study partner access to live notes.</p>
 						</div>
 					</div>
 					<div className="CraftDocuments-headerActions">
@@ -213,7 +213,7 @@ export function CraftDocumentsDialog({
 					<div className="CraftDocuments-browser">
 						<section>
 							<div className="CraftDocuments-sectionHeading">
-								<h3>On this board</h3>
+								<h3>In this space</h3>
 								<span>{documents.length}/{MAX_CRAFT_DOCUMENT_LINKS}</span>
 							</div>
 							{isLoading ? <p className="CraftDocuments-empty">Loading linked documents…</p> : null}
@@ -227,14 +227,14 @@ export function CraftDocumentsDialog({
 											<IconFileDescription aria-hidden="true" size={17} stroke={1.7} />
 											<span>
 												<strong>{document.title}</strong>
-												<small>{document.canEdit ? 'You can read and update this document' : 'Shared by a board member'}</small>
+												<small>{document.canEdit ? 'You can read and update this document' : 'Shared by a space member'}</small>
 											</span>
 										</button>
 										<button
 											aria-label={`Remove ${document.title}`}
 											disabled={pendingDocumentID === document.documentID}
 											onClick={() => void removeDocument(document)}
-											title="Remove from board"
+											title="Remove from space"
 											type="button"
 										>
 											<IconTrash aria-hidden="true" size={15} stroke={1.8} />
@@ -279,7 +279,7 @@ export function CraftDocumentsDialog({
 												aria-label={isLinked ? `${candidate.title} is linked` : `Add ${candidate.title}`}
 												disabled={isLinked || pendingDocumentID === candidate.documentID || documents.length >= MAX_CRAFT_DOCUMENT_LINKS}
 												onClick={() => void addDocument(candidate)}
-												title={isLinked ? 'Already on this board' : 'Add to board'}
+												title={isLinked ? 'Already in this space' : 'Add to space'}
 												type="button"
 											>
 												{isLinked

@@ -123,7 +123,7 @@ export function LockInPanel({ onOpenStudyChat }: LockInPanelProps) {
 				<div>
 					<IconFocus2 aria-hidden="true" size={16} stroke={1.8} />
 					<span>
-						<strong>{session.scopeShapeIDs.length > 0 ? `${session.scopeShapeIDs.length} focused objects` : 'Whole board'}</strong>
+						<strong>{session.scopeShapeIDs.length > 0 ? `${session.scopeShapeIDs.length} focused objects` : 'Whole space'}</strong>
 						<small>Visual focus scope</small>
 					</span>
 				</div>

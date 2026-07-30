@@ -5,7 +5,7 @@ export const MAX_CRAFT_DOCUMENT_LINKS = 20
 export const MAX_CRAFT_APPEND_MARKDOWN_LENGTH = 20_000
 // Keeps one agent mutation small enough to review in the model trace and the Craft request body.
 export const MAX_CRAFT_BLOCK_UPDATES = 10
-// Bounds experimental whiteboard payloads before AgentBoard forwards them to Craft.
+// Bounds experimental whiteboard payloads before Thinkspace forwards them to Craft.
 export const MAX_CRAFT_WHITEBOARD_ELEMENTS = 1_000
 export const CRAFT_WHITEBOARD_CONFLICT_MESSAGE =
 	'Craft changed since the last sync. Choose which copy to keep.'

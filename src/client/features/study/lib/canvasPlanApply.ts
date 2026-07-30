@@ -81,7 +81,7 @@ export function applyCanvasPlan(
 		plan.baseDocumentClock !== undefined &&
 		documentClock !== plan.baseDocumentClock
 	) {
-		throw new Error('The board changed after this canvas plan was created')
+		throw new Error('The space changed after this canvas plan was created')
 	}
 
 	validatePlanTargets(editor, plan, planShapeIDs)

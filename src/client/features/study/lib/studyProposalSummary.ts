@@ -25,7 +25,7 @@ export function proposalShortLabel(toolName: string) {
 	if (toolName === 'composeCanvas') return 'Canvas composition'
 	if (toolName === 'recordMistake') return 'Mistake record'
 	if (toolName === 'saveMemory') return 'Memory'
-	return 'Board item'
+	return 'Space item'
 }
 
 export interface ProposalPreview {
@@ -240,7 +240,7 @@ export function summarizeProposal(toolName: string, input: unknown) {
 	if (toolName === 'saveMemory') {
 		const proposal = agentMemoryProposalSchema.safeParse(input)
 		return proposal.success
-			? `Remember “${proposal.data.title}” across your boards.`
+			? `Remember “${proposal.data.title}” across your spaces.`
 			: 'Preparing a memory…'
 	}
 	if (toolName === 'composeCanvas') {
@@ -248,9 +248,9 @@ export function summarizeProposal(toolName: string, input: unknown) {
 		if (!proposal) return 'Preparing a canvas composition…'
 		const objectCount = proposal.elements.length + proposal.connectors.length
 		const editCount = proposal.edits.length + proposal.deletes.length
-		return `${objectCount} board objects${editCount ? ` and ${editCount} edits` : ''}, arranged with native canvas tools.`
+		return `${objectCount} space objects${editCount ? ` and ${editCount} edits` : ''}, arranged with native canvas tools.`
 	}
-	return 'A board item is ready for review.'
+	return 'A space item is ready for review.'
 }
 
 function formatMemoryKind(kind: string) {

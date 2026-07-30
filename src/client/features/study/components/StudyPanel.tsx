@@ -694,7 +694,7 @@ function StudyConversationChat({
 						<MessageScroller.Content aria-busy={chat.status !== 'ready'} className="StudyPanel-messageContent">
 							{chat.messages.length === 0 ? (
 								<MessageScroller.Item className="StudyWelcome" messageId="study-welcome">
-									<h3>Ask about anything on this board.</h3>
+									<h3>Ask about anything in this space.</h3>
 									<p>Select a note or sketch first and I’ll use it as context. I can check reasoning, explain a concept, or propose flashcards and quizzes.</p>
 									<div className="StudyPrompts">
 										<button onClick={() => setInput('Check my selected work and tell me what I misunderstood.')} type="button"><IconCircleCheck aria-hidden="true" size={17} /> Check my reasoning</button>
@@ -876,7 +876,7 @@ function StudyConversationChat({
 						event.preventDefault()
 						event.currentTarget.form?.requestSubmit()
 					}
-				}} onPaste={handlePaste} placeholder="Ask about your board…" rows={3} value={input} />
+				}} onPaste={handlePaste} placeholder="Ask about your space…" rows={3} value={input} />
 				<input accept="image/gif,image/jpeg,image/png,image/webp" aria-label="Attach images" hidden multiple onChange={(event) => void handleFiles(event)} ref={fileInputRef} type="file" />
 				<div className="StudyComposer-footer">
 					<div className="StudyComposer-options">
@@ -969,7 +969,7 @@ function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
 			<dl>
 				{receipt.board ? (
 					<div>
-						<dt>Board</dt>
+						<dt>Space</dt>
 						<dd>{selectedTypes || 'No selected shapes'} · {receipt.board.visibleShapeCount} visible</dd>
 					</div>
 				) : null}
@@ -1245,7 +1245,7 @@ function ProposalToolCall({
 							className="ProposalCall-action ProposalCall-action--accept"
 							disabled={acceptDisabled || pendingDecision !== null}
 							onClick={() => void decide('accept')}
-							title={isMemoryTool(toolName) ? 'Accept and save' : 'Accept and add to board'}
+							title={isMemoryTool(toolName) ? 'Accept and save' : 'Accept and add to space'}
 							type="button"
 						>
 							<IconCheck aria-hidden="true" size={15} stroke={2.2} />

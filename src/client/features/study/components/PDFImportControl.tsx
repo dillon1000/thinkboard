@@ -129,7 +129,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				className="RibbonMenu-item PDFImportButton"
 				disabled={!editor || Boolean(progress)}
 				onClick={() => inputRef.current?.click()}
-				title="Import PDF pages onto this board"
+				title="Import PDF pages into this space"
 				type="button"
 			>
 				<span aria-hidden="true" className="RibbonMenu-itemIcon">
@@ -144,7 +144,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				<button
 					className="RibbonMenu-item CraftDocuments-trigger"
 					onClick={() => setIsLibraryOpen(true)}
-					title="Manage PDFs on this board"
+					title="Manage PDFs in this space"
 					type="button"
 				>
 					<span aria-hidden="true" className="RibbonMenu-itemIcon">
@@ -155,7 +155,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 				<button
 					className="RibbonMenu-item CraftDocuments-trigger"
 					onClick={openCraftDocuments}
-				title="Link Craft documents to this board"
+				title="Link Craft documents to this space"
 				type="button"
 			>
 				<span aria-hidden="true" className="RibbonMenu-itemIcon">

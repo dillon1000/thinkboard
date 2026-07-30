@@ -164,7 +164,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 			request.params.boardID,
 			authentication.session.user.id
 		)
-		if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+		if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 
 		const room = env.BOARD_ROOM.getByName(request.params.boardID)
 		return room.fetch(request.url, { headers: request.headers })
@@ -181,7 +181,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 			request.params.boardID,
 			authentication.session.user.id
 		)
-		if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+		if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 
 		const room = env.BOARD_ROOM.getByName(request.params.boardID)
 		const headers = new Headers(request.headers)
@@ -230,7 +230,7 @@ function authorizeBoardRequest(handler: BoardRequestHandler) {
 			request.params.boardID,
 			authentication.session.user.id
 		)
-		if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
+		if (!access) return Response.json({ error: 'Space not found' }, { status: 404 })
 		if (request.method !== 'GET' && request.method !== 'HEAD' && access.role === 'viewer') {
 			return Response.json({ error: 'Forbidden' }, { status: 403 })
 		}

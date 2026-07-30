@@ -189,7 +189,7 @@ function ProjectorDisplay({
 							<span className="ProjectorPairingCard-icon">
 								<IconDeviceTablet aria-hidden="true" size={32} stroke={1.45} />
 							</span>
-							<p>Pair an iPad from this board</p>
+							<p>Pair an iPad from this space</p>
 							<strong>{formatProjectorCode(code)}</strong>
 							<small>Open View, then choose Control projector.</small>
 							<button
@@ -231,7 +231,7 @@ function ProjectorPairingDialog({
 			return metadata?.mode === 'projector' && metadata.code === normalizedCode
 		})
 		if (!projectorIsAvailable) {
-			setError('No projector with that code is available on this board.')
+			setError('No projector with that code is available in this space.')
 			return
 		}
 

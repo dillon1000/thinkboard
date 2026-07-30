@@ -72,7 +72,7 @@ export function createAuth(request: Request, env: Env) {
 		: []
 
 	return betterAuth({
-		appName: 'Agentboard',
+		appName: 'Thinkspace',
 		basePath: '/api/auth',
 		baseURL,
 		secret,

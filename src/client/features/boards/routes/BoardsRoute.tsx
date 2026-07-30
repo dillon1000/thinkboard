@@ -93,7 +93,7 @@ export function Component() {
 			setBoards(activeResponse.boards)
 			setArchivedBoards(archivedResponse.boards)
 		} catch (loadError) {
-			setError(loadError instanceof Error ? loadError.message : 'Unable to load boards')
+			setError(loadError instanceof Error ? loadError.message : 'Unable to load spaces')
 		} finally {
 			setIsLoading(false)
 		}
@@ -136,7 +136,7 @@ export function Component() {
 			})
 			navigate(appRoutes.board(response.board.id))
 		} catch (createError) {
-			setError(createError instanceof Error ? createError.message : 'Unable to create board')
+			setError(createError instanceof Error ? createError.message : 'Unable to create space')
 			setIsCreating(false)
 		}
 	}
@@ -147,7 +147,7 @@ export function Component() {
 	}
 
 	async function handleRename(board: Board) {
-		const title = window.prompt('Rename board', board.title)?.trim()
+		const title = window.prompt('Rename space', board.title)?.trim()
 		if (!title || title === board.title) return
 		try {
 			await apiRequest<{ ok: true }>(apiRoutes.board(board.id), {
@@ -156,20 +156,20 @@ export function Component() {
 			})
 			setBoards((current) => current.map((item) => item.id === board.id ? { ...item, title } : item))
 		} catch (renameError) {
-			setError(renameError instanceof Error ? renameError.message : 'Unable to rename board')
+			setError(renameError instanceof Error ? renameError.message : 'Unable to rename space')
 		}
 	}
 
 	async function handleArchive(board: Board) {
-		if (!window.confirm(`Archive “${board.title}”? The board will leave your recent list, but its data is not permanently deleted.`)) return
+		if (!window.confirm(`Archive “${board.title}”? The space will leave your recent list, but its data is not permanently deleted.`)) return
 		try {
 			await fetch(apiRoutes.board(board.id), { method: 'DELETE' }).then((response) => {
-				if (!response.ok) throw new Error('Unable to archive board')
+				if (!response.ok) throw new Error('Unable to archive space')
 			})
 				setBoards((current) => current.filter((item) => item.id !== board.id))
 				setArchivedBoards((current) => [board, ...current])
 		} catch (archiveError) {
-			setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive board')
+			setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive space')
 		}
 	}
 
@@ -182,13 +182,13 @@ export function Component() {
 			setArchivedBoards((current) => current.filter(({ id }) => id !== board.id))
 			setBoards((current) => [response.board, ...current])
 		} catch (restoreError) {
-			setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore board')
+			setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore space')
 		}
 	}
 
 	return (
 		<main className="Dashboard" data-sidebar={isSidebarOpen ? 'open' : 'closed'}>
-			<a className="SkipLink" href="#board-library">Skip to boards</a>
+			<a className="SkipLink" href="#board-library">Skip to spaces</a>
 			<aside className="Dashboard-sidebar" inert={!isSidebarOpen}>
 				<div className="Dashboard-sidebarTop">
 					<a className="Wordmark" href={appRoutes.home}>
@@ -199,7 +199,7 @@ export function Component() {
 					</button>
 				</div>
 				<nav className="Dashboard-nav" aria-label="Workspace">
-					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Boards</a>
+					<a aria-current="page" href={appRoutes.home}><IconLayoutBoard aria-hidden="true" size={16} stroke={1.7} /> Spaces</a>
 					<Link to={appRoutes.today}><IconSun aria-hidden="true" size={16} stroke={1.7} /> Today</Link>
 					<Link to={appRoutes.memory}><IconBrain aria-hidden="true" size={16} stroke={1.7} /> Memory</Link>
 					<Link to={appRoutes.settings}><IconSettings aria-hidden="true" size={16} stroke={1.7} /> Settings</Link>
@@ -238,7 +238,7 @@ export function Component() {
 							<IconLayoutSidebarLeftExpand aria-hidden="true" size={17} stroke={1.7} />
 						</button>
 					) : null}
-					<span>Boards</span>
+					<span>Spaces</span>
 				</header>
 
 				<div className="Dashboard-content">
@@ -304,14 +304,14 @@ export function Component() {
 							</button>
 							<span className="SectionHeading-count">{boards.length || ''}</span>
 							<button className="SectionHeading-new" onClick={openComposer} type="button">
-								<IconPlus aria-hidden="true" size={14} stroke={2} /> New board
+								<IconPlus aria-hidden="true" size={14} stroke={2} /> New space
 							</button>
 						</div>
 
 						{isComposerOpen ? (
 							<form className="NewBoard" onSubmit={(event) => void handleCreate(event)}>
 								<input
-									aria-label="Board title"
+									aria-label="Space title"
 									autoComplete="off"
 									maxLength={120}
 									name="board-title"
@@ -335,9 +335,9 @@ export function Component() {
 
 						{isListOpen ? (
 							<>
-								{isLoading ? <p className="EmptyState" role="status">Fetching your boards…</p> : null}
+								{isLoading ? <p className="EmptyState" role="status">Fetching your spaces…</p> : null}
 								{!isLoading && boards.length === 0 ? (
-									<div className="EmptyState"><span><IconLayoutBoard aria-hidden="true" size={18} stroke={1.6} /></span><strong>No boards yet</strong><p>Create your first board to get started.</p></div>
+									<div className="EmptyState"><span><IconLayoutBoard aria-hidden="true" size={18} stroke={1.6} /></span><strong>No spaces yet</strong><p>Create your first space to get started.</p></div>
 								) : null}
 								{boards.length ? <div className="BoardList">
 									{boards.map((board, index) => (

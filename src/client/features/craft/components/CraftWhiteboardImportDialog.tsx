@@ -197,8 +197,8 @@ export function CraftWhiteboardImportDialog({
 					{importedWhiteboards.length ? (
 						<section className="CraftWhiteboard-imported" aria-labelledby="craft-imported-heading">
 							<div className="CraftWhiteboard-sectionHeading">
-								<h3 id="craft-imported-heading">Imported on this board</h3>
-								<span>Syncs while this board is open. Craft is checked every 30 seconds.</span>
+								<h3 id="craft-imported-heading">Imported in this space</h3>
+								<span>Syncs while this space is open. Craft is checked every 30 seconds.</span>
 							</div>
 							<div className="CraftWhiteboard-importedList">
 								{importedWhiteboards.map((whiteboard) => (
@@ -261,7 +261,7 @@ export function CraftWhiteboardImportDialog({
 					<div className="CraftWhiteboard-picker">
 						<section>
 							<div className="CraftWhiteboard-sectionHeading">
-								<h3>1. Board</h3>
+								<h3>1. Space</h3>
 							</div>
 							{boards.length ? (
 								<div className="CraftWhiteboard-list">
@@ -279,7 +279,7 @@ export function CraftWhiteboardImportDialog({
 									))}
 								</div>
 							) : (
-								<p className="CraftWhiteboard-empty">Create a board before you import a whiteboard.</p>
+								<p className="CraftWhiteboard-empty">Create a space before you import a whiteboard.</p>
 							)}
 						</section>
 

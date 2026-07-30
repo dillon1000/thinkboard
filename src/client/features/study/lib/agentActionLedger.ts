@@ -119,12 +119,12 @@ export function assertRecordsUnchanged(
 	const afterByID = new Map(afterRecords.map((record) => [record.id, record]))
 	for (const record of afterRecords) {
 		if (serializeRecord(editor.store.get(record.id)) !== serializeRecord(record)) {
-			throw new Error('An affected board item changed after this AI action')
+			throw new Error('An affected space item changed after this AI action')
 		}
 	}
 	for (const record of beforeRecords) {
 		if (!afterByID.has(record.id) && editor.store.get(record.id)) {
-			throw new Error('A deleted board item was restored after this AI action')
+			throw new Error('A deleted space item was restored after this AI action')
 		}
 	}
 }

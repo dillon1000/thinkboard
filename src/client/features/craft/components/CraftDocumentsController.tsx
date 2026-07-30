@@ -30,7 +30,7 @@ export function CraftDocumentsController({
 }) {
 	const [openDialog, setOpenDialog] = useState<'documents' | 'whiteboards' | null>(null)
 	const [initialLinkID, setInitialLinkID] = useState<string | null>(null)
-	const [boardTitle, setBoardTitle] = useState('Current board')
+	const [boardTitle, setBoardTitle] = useState('Current space')
 	const [notice, setNotice] = useState<string | null>(null)
 	const handledImportRef = useRef<string | null>(null)
 	const noticeTimerRef = useRef<number | null>(null)
@@ -131,7 +131,7 @@ export function CraftDocumentsController({
 					initialBoardID={boardID}
 					onClose={() => setOpenDialog(null)}
 					onImport={async (request) => {
-						if (!editor) throw new Error('The board is still loading. Try again.')
+						if (!editor) throw new Error('The space is still loading. Try again.')
 						await importCraftWhiteboard(
 							editor,
 							boardID,
@@ -141,7 +141,7 @@ export function CraftDocumentsController({
 						setOpenDialog(null)
 					}}
 					onSyncImported={async (frameID, resolution) => {
-						if (!editor) throw new Error('The board is still loading. Try again.')
+						if (!editor) throw new Error('The space is still loading. Try again.')
 						await syncFrame(frameID as TLShapeId, resolution)
 					}}
 				/>

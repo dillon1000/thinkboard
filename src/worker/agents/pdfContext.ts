@@ -13,7 +13,7 @@ export async function hydratePDFSelectionContext(
 ) {
 	if (!canvasContext) return undefined
 	if (canvasContext.boardID !== authorizedBoardID) {
-		throw new Error('Canvas context board does not match the authorized board')
+		throw new Error('Canvas context space does not match the authorized space')
 	}
 	const documentText = canvasContext.pdfTextSelection
 		? await hydrateExactPDFTextSelection(

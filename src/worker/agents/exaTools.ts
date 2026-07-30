@@ -4,7 +4,7 @@ import { z } from 'zod'
 const EXA_API_ORIGIN = 'https://api.exa.ai'
 const DEFAULT_SEARCH_RESULTS = 5
 const DEFAULT_CRAWL_CHARACTERS = 12_000
-const SEARCH_DESCRIPTION = 'Search the public web for current or external information. Returns relevant excerpts and source URLs. Use this when the answer depends on facts beyond the board or may have changed.'
+const SEARCH_DESCRIPTION = 'Search the public web for current or external information. Returns relevant excerpts and source URLs. Use this when the answer depends on facts beyond the space or may have changed.'
 const ANSWER_DESCRIPTION = 'Get a web-grounded answer with citations from Exa. Use this for a specific factual question or open-ended research request that needs a synthesized answer from current sources.'
 const CRAWL_DESCRIPTION = 'Retrieve readable page text and metadata from one to three specific public URLs. Use this when the student supplies a URL or a search result needs to be read in depth.'
 

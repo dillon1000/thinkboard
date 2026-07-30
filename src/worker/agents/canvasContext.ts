@@ -10,9 +10,9 @@ const MAX_SELECTED_PDF_TEXT_LENGTH = 400_000
 const SELECTION_IMAGE_INSTRUCTION =
 	'The next image is the CURRENT canvas selection for the latest user request. Prefer it over images from earlier conversation turns. Read visible handwriting, math, labels, and diagrams directly. If a detail is genuinely illegible, identify that detail precisely rather than treating the whole selection as unknown.'
 const SELECTED_WORK_INSTRUCTION =
-	'The student selected canvas work for this request. Treat that selection as the referent of words such as “this,” “these,” “selected,” or “highlighted.” Complete the request from the provided board context now. Do not say the message is empty, and do not ask the student to upload or retype legible selected content.'
+	'The student selected canvas work for this request. Treat that selection as the referent of words such as “this,” “these,” “selected,” or “highlighted.” Complete the request from the provided space context now. Do not say the message is empty, and do not ask the student to upload or retype legible selected content.'
 const VIEWPORT_CONTEXT_INSTRUCTION =
-	'The current canvas context describes the board version and what the student can see. Use visible and related shapes to interpret spatial references and diagram structure.'
+	'The current canvas context describes the space version and what the student can see. Use visible and related shapes to interpret spatial references and diagram structure.'
 
 export function attachCanvasContext(
 	messages: ModelMessage[],
@@ -78,7 +78,7 @@ function removeHistoricalImages(messages: ModelMessage[], currentUserMessageInde
 
 export function formatCanvasContextForModel(canvasContext: CanvasContext) {
 	const lines = [
-		`Board: ${canvasContext.boardID}`,
+		`Space: ${canvasContext.boardID}`,
 		...(canvasContext.anchor
 			? [`Anchor point: x=${formatNumber(canvasContext.anchor.x)}, y=${formatNumber(canvasContext.anchor.y)}`]
 			: []),

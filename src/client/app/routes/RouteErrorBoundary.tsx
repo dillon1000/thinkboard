@@ -22,5 +22,5 @@ function getErrorMessage(error: unknown): string {
 		return error.message
 	}
 
-	return 'An unexpected error interrupted this board.'
+	return 'An unexpected error interrupted this space.'
 }

@@ -81,7 +81,7 @@ import { RibbonSection } from './RibbonSection'
 const ZOOM_ANIMATION = { animation: { duration: 140 } } as const
 
 const MENU_LABELS: Record<RibbonMenuID, string> = {
-	board: 'Board',
+	board: 'Space',
 	colour: 'Colour',
 	edit: 'Edit',
 	style: 'Stroke & size',
@@ -169,12 +169,12 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 	return (
 		<div className="CanvasTopDock">
 			<DockablePanel className="Dockable--ribbon" edge="top" id="ribbon" label="menu bar">
-				<div aria-label="Board menu bar" className="Ribbon" role="menubar">
+				<div aria-label="Space menu bar" className="Ribbon" role="menubar">
 					<nav aria-label="Breadcrumb" className="Ribbon-crumbs">
-						<a aria-label="Thinkspace Boards" className="Ribbon-home" href={appRoutes.home}>
+						<a aria-label="Thinkspace Spaces" className="Ribbon-home" href={appRoutes.home}>
 							<ThinkspaceWordmark />
 							<ThinkspaceIcon />
-							<span>Boards</span>
+							<span>Spaces</span>
 						</a>
 						<IconChevronRight aria-hidden="true" size={13} stroke={1.8} />
 						<span className="Ribbon-title" data-board-id={boardID} title={chrome.title}>{chrome.title}</span>
@@ -292,7 +292,7 @@ function BoardMenu({ boardID }: { boardID: string }) {
 					icon={chrome.didCopyBoardLink
 						? <IconCheck size={17} key="check" />
 						: <IconCopy size={17} stroke={1.7} key="copy" />}
-					label={chrome.didCopyBoardLink ? 'Link copied' : 'Copy board link'}
+					label={chrome.didCopyBoardLink ? 'Link copied' : 'Copy space link'}
 					onSelect={chrome.copyBoardLink}
 				/>
 				<PDFImportControl boardID={boardID} editor={editor} />
