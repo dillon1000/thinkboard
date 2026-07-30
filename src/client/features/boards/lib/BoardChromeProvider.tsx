@@ -1,7 +1,9 @@
+import type { BoardRole } from '@agentboard/shared'
 import { createContext, useContext, type ReactNode } from 'react'
 
 interface BoardChromeContextValue {
 	boardID: string
+	role: BoardRole
 	/** Board name, shown in the ribbon's breadcrumb. */
 	title: string
 	/** Sync state of the board socket, surfaced as the Live/Offline pill. */

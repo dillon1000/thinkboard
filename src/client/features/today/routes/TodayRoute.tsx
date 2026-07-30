@@ -1,30 +1,21 @@
 import {
 	apiRoutes,
 	appRoutes,
-	type DueFlashcard,
-	type FlashcardReviewRating,
+	type FlashcardAnswerAttempt,
 	type StudyTodayDashboard,
 } from '@agentboard/shared'
-import { IconArrowRight, IconBrain, IconCards, IconFlame } from '@tabler/icons-react'
+import { IconBrain, IconCards, IconFlame, IconTrash } from '@tabler/icons-react'
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { apiRequest } from '../../../lib/api'
 import { WorkspaceShell } from '../../auth/components/WorkspaceShell'
+import { FlashcardAnswerPanel } from '../../study/components/FlashcardAnswerPanel'
 import { studyMarkdownPlugins } from '../../study/lib/studyMath'
 import '../styles/today.css'
 
-const ratingLabels: Record<FlashcardReviewRating, string> = {
-	again: 'Again',
-	hard: 'Hard',
-	good: 'Good',
-	easy: 'Easy',
-}
-
 export function Component() {
 	const [dashboard, setDashboard] = useState<StudyTodayDashboard | null>(null)
-	const [isAnswerVisible, setIsAnswerVisible] = useState(false)
-	const [isSaving, setIsSaving] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
 	useEffect(() => {
@@ -40,19 +31,26 @@ export function Component() {
 		}
 	}
 
-	async function rateCard(card: DueFlashcard, rating: FlashcardReviewRating) {
-		setIsSaving(true)
+	async function deleteAttempt(attemptID: string) {
+		setError(null)
 		try {
-			await apiRequest(apiRoutes.studyReview(card.reviewID), {
-				body: JSON.stringify({ rating }),
-				method: 'POST',
+			await apiRequest(apiRoutes.studyAnswerAttempt(attemptID), { method: 'DELETE' })
+			await loadDashboard()
+		} catch (deleteError) {
+			setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete this answer')
+		}
+	}
+
+	async function deleteCardAttempts(attempt: FlashcardAnswerAttempt) {
+		if (!window.confirm('Delete your answer history for this card? Its review schedule will stay the same.')) return
+		setError(null)
+		try {
+			await apiRequest(apiRoutes.studyCardAnswerAttempts(attempt.boardID, attempt.shapeID), {
+				method: 'DELETE',
 			})
 			await loadDashboard()
-			setIsAnswerVisible(false)
-		} catch (reviewError) {
-			setError(reviewError instanceof Error ? reviewError.message : 'Unable to save this review')
-		} finally {
-			setIsSaving(false)
+		} catch (deleteError) {
+			setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete this card history')
 		}
 	}
 
@@ -102,22 +100,11 @@ export function Component() {
 										<span>{activeCard.reviewCount ? `Review ${activeCard.reviewCount + 1}` : 'New card'}</span>
 									</div>
 									<Markdown className="Today-cardFront">{activeCard.front}</Markdown>
-									{isAnswerVisible ? (
-										<>
-											<Markdown className="Today-cardBack">{activeCard.back}</Markdown>
-											<div aria-label="How well did you remember?" className="Today-ratings">
-												{(['again', 'hard', 'good', 'easy'] as const).map((rating) => (
-													<button disabled={isSaving} key={rating} onClick={() => void rateCard(activeCard, rating)} type="button">
-														{ratingLabels[rating]}
-													</button>
-												))}
-											</div>
-										</>
-									) : (
-										<button className="Button Button--primary" onClick={() => setIsAnswerVisible(true)} type="button">
-											Show answer <IconArrowRight aria-hidden="true" size={15} />
-										</button>
-									)}
+									<FlashcardAnswerPanel
+										key={activeCard.reviewID}
+										onCompleted={loadDashboard}
+										source={{ kind: 'review', reviewID: activeCard.reviewID }}
+									/>
 								</article>
 							) : (
 								<div className="Today-complete">
@@ -162,6 +149,40 @@ export function Component() {
 								) : <p className="Today-patternsEmpty">Patterns appear after the study agent records a repeated mistake.</p>}
 							</div>
 						</section>
+
+						<section aria-labelledby="answer-history-heading" className="Today-section">
+							<details className="Today-history">
+								<summary>
+									<span id="answer-history-heading">Recent answers</span>
+									<small>{dashboard.answerAttempts.length}</small>
+								</summary>
+								{dashboard.answerAttempts.length ? (
+									<div className="Today-historyList">
+										{dashboard.answerAttempts.map((attempt) => (
+											<article key={attempt.id}>
+												<div className="Today-historyMeta">
+													<Link to={appRoutes.board(attempt.boardID)}>{attempt.boardTitle}</Link>
+													<time dateTime={attempt.createdAt}>{formatAttemptDate(attempt.createdAt)}</time>
+												</div>
+												<Markdown className="Today-historyQuestion">{attempt.front}</Markdown>
+												<p className="Today-historyAnswer">
+													<span>{attempt.submittedAnswer ?? 'Skipped'}</span>
+													<small>{formatAttemptSummary(attempt)}</small>
+												</p>
+												<div className="Today-historyActions">
+													<button onClick={() => void deleteAttempt(attempt.id)} type="button">
+														<IconTrash aria-hidden="true" size={14} /> Delete
+													</button>
+													<button onClick={() => void deleteCardAttempts(attempt)} type="button">
+														Delete card history
+													</button>
+												</div>
+											</article>
+										))}
+									</div>
+								) : <p className="Today-historyEmpty">Checked answers will appear here.</p>}
+							</details>
+						</section>
 					</>
 				) : null}
 			</div>
@@ -184,4 +205,23 @@ function Markdown({ children, className }: { children: string; className: string
 
 function formatDay(value: string) {
 	return new Intl.DateTimeFormat(undefined, { weekday: 'narrow', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
+}
+
+function formatAttemptDate(value: string) {
+	return new Intl.DateTimeFormat(undefined, {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+	}).format(new Date(value))
+}
+
+function formatAttemptSummary(attempt: FlashcardAnswerAttempt) {
+	const original = formatVerdict(attempt.originalVerdict)
+	const final = attempt.finalVerdict ? formatVerdict(attempt.finalVerdict) : 'Pending'
+	return `${original} → ${final} · ${attempt.gradingMethod.replaceAll('-', ' ')}`
+}
+
+function formatVerdict(value: FlashcardAnswerAttempt['originalVerdict']) {
+	if (value === 'incorrect') return 'Not quite'
+	if (value === 'uncertain') return 'Self-graded'
+	return value.charAt(0).toUpperCase() + value.slice(1)
 }

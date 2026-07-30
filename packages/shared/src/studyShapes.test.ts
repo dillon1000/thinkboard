@@ -4,6 +4,7 @@ import {
 	conceptMapProposalSchema,
 	equationProposalSchema,
 	flashcardProposalSchema,
+	flashcardShapeMigrations,
 	flashcardShapeValidator,
 	quizProposalSchema,
 	reviewProposalSchema,
@@ -92,6 +93,23 @@ describe('study shape contracts', () => {
 		}
 
 		expect(() => flashcardShapeValidator.validate(props)).not.toThrow()
+	})
+
+	it('adds an empty alternate list to existing flashcards', () => {
+		const props = {
+			w: 300,
+			h: 190,
+			front: 'Question',
+			back: 'Answer',
+			revealed: false,
+			schemaVersion: 1,
+		}
+
+		const migration = flashcardShapeMigrations.sequence[0]
+		if (!('up' in migration)) throw new Error('Expected a flashcard property migration')
+		migration.up(props)
+
+		expect(props).toMatchObject({ alternateAnswers: [] })
 	})
 
 	it('validates worked walkthroughs and connected concept maps', () => {

@@ -194,7 +194,7 @@ export function summarizeProposal(toolName: string, input: unknown) {
 	if (toolName === 'createFlashcards') {
 		const proposal = flashcardProposalSchema.safeParse(input)
 		return proposal.success
-			? `${proposal.data.cards.length} flashcards ready. Answers stay hidden until each card is flipped.`
+			? `${proposal.data.cards.length} flashcards ready. Answers stay hidden until each response is checked.`
 			: 'Preparing flashcards…'
 	}
 	if (toolName === 'createQuiz') {

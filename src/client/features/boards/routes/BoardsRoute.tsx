@@ -1,4 +1,4 @@
-import type { Board, DueFlashcard, FlashcardReviewRating } from '@agentboard/shared'
+import type { Board, DueFlashcard } from '@agentboard/shared'
 import { apiRoutes, appRoutes } from '@agentboard/shared'
 import {
 	IconArchive,
@@ -35,6 +35,7 @@ import {
 	CraftWhiteboardImportDialog,
 } from '../../craft/components/CraftWhiteboardImportDialog'
 import { addCraftWhiteboardImportParameters } from '../../craft/whiteboards/craftWhiteboardNavigation'
+import { FlashcardAnswerPanel } from '../../study/components/FlashcardAnswerPanel'
 
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
@@ -42,7 +43,6 @@ export function Component() {
 	const [boards, setBoards] = useState<Board[]>([])
 	const [archivedBoards, setArchivedBoards] = useState<Board[]>([])
 	const [dueReviews, setDueReviews] = useState<DueFlashcard[]>([])
-	const [revealedReviewID, setRevealedReviewID] = useState<string | null>(null)
 	const [title, setTitle] = useState('')
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
@@ -105,28 +105,6 @@ export function Component() {
 			setDueReviews(response.reviews)
 		} catch (loadError) {
 			setError(loadError instanceof Error ? loadError.message : 'Unable to load today’s reviews')
-		}
-	}
-
-	async function rateFlashcard(review: DueFlashcard, rating: FlashcardReviewRating) {
-		const reviewIndex = dueReviews.findIndex(({ reviewID }) => reviewID === review.reviewID)
-		setError(null)
-		setDueReviews((current) => current.filter(({ reviewID }) => reviewID !== review.reviewID))
-		setRevealedReviewID(null)
-
-		try {
-			await apiRequest(apiRoutes.studyReview(review.reviewID), {
-				body: JSON.stringify({ rating }),
-				method: 'POST',
-			})
-		} catch (reviewError) {
-			setDueReviews((current) => {
-				if (current.some(({ reviewID }) => reviewID === review.reviewID)) return current
-				const restored = [...current]
-				restored.splice(Math.max(0, reviewIndex), 0, review)
-				return restored
-			})
-			setError(reviewError instanceof Error ? reviewError.message : 'Unable to save this review')
 		}
 	}
 
@@ -307,17 +285,16 @@ export function Component() {
 								) : null}
 							</div>
 						</div>
-						{dueReviews.length ? <div className="DueReviewList scroll-fade-x">{dueReviews.map((review) => {
-							const revealed = revealedReviewID === review.reviewID
-							return <article className="DueReviewCard" key={review.reviewID}>
+						{dueReviews.length ? <div className="DueReviewList scroll-fade-x">{dueReviews.map((review) => (
+							<article className="DueReviewCard" key={review.reviewID}>
 								<div><Link to={appRoutes.board(review.boardID)}>{review.boardTitle}</Link><small>{review.reviewCount ? `${review.reviewCount} reviews` : 'New card'}</small></div>
 								<FlashcardMarkdown className="DueReviewCard-front">{review.front}</FlashcardMarkdown>
-								{revealed ? <FlashcardMarkdown className="DueReviewCard-back">{review.back}</FlashcardMarkdown> : <button className="Button Button--primary" onClick={() => setRevealedReviewID(review.reviewID)} type="button">Show answer</button>}
-								{revealed ? <div className="ReviewRatings" aria-label="How well did you remember?">
-									{(['again', 'hard', 'good', 'easy'] as const).map((rating) => <button key={rating} onClick={() => void rateFlashcard(review, rating)} type="button">{rating}</button>)}
-								</div> : null}
+								<FlashcardAnswerPanel
+									onCompleted={() => setDueReviews((current) => current.filter(({ reviewID }) => reviewID !== review.reviewID))}
+									source={{ kind: 'review', reviewID: review.reviewID }}
+								/>
 							</article>
-						})}</div> : <p className="DueReviews-empty">You’re caught up. New flashcards appear here when they’re ready to review.</p>}
+						))}</div> : <p className="DueReviews-empty">You’re caught up. New flashcards appear here when they’re ready to review.</p>}
 					</section> : null}
 
 						<section className="BoardLibrary" id="board-library" aria-labelledby="recent-boards-heading">

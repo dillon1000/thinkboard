@@ -1,4 +1,5 @@
 import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
+import type { BoardRole } from '@agentboard/shared'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { BoardChromeProvider } from '../lib/BoardChromeProvider'
 import { useZenMode } from '../lib/ZenModeProvider'
@@ -11,11 +12,12 @@ const STUDY_PANEL_STORAGE_KEY = 'agentboard.study-panel'
 interface BoardShellProps {
 	boardID: string
 	children: ReactNode
+	role: BoardRole
 	studyPanel: ReactNode
 	title: string
 }
 
-export function BoardShell({ boardID, children, studyPanel, title }: BoardShellProps) {
+export function BoardShell({ boardID, children, role, studyPanel, title }: BoardShellProps) {
 	const [didCopy, setDidCopy] = useState(false)
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
 	const [isOnline, setIsOnline] = useState(navigator.onLine)
@@ -74,9 +76,10 @@ export function BoardShell({ boardID, children, studyPanel, title }: BoardShellP
 		didCopyBoardLink: didCopy,
 		isOnline,
 		isStudyOpen,
+		role,
 		setStudyOpen: setStudyPanelOpen,
 		title,
-	}), [boardID, didCopy, isOnline, isStudyOpen, title])
+	}), [boardID, didCopy, isOnline, isStudyOpen, role, title])
 
 	return (
 		<div className="BoardShell" data-lock-in={Boolean(session)} data-study-open={isStudyOpen} data-zen={zen.enabled}>

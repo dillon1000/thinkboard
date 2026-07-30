@@ -184,7 +184,10 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 		if (!access) return Response.json({ error: 'Board not found' }, { status: 404 })
 
 		const room = env.BOARD_ROOM.getByName(request.params.boardID)
-		return room.fetch(request.url, { headers: request.headers, body: request.body })
+		const headers = new Headers(request.headers)
+		// The room enforces this flag on document updates, so a viewer cannot bypass the client controls.
+		headers.set('x-agentboard-readonly', access.role === 'viewer' ? 'true' : 'false')
+		return room.fetch(request.url, { headers, body: request.body })
 	})
 	.post(apiRoutePatterns.asset, authorizeBoardRequest(handleAssetUpload))
 	.get(apiRoutePatterns.asset, authorizeBoardRequest(handleAssetDownload))

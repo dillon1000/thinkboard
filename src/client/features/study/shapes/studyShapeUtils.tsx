@@ -27,9 +27,12 @@ import {
 	IconDownload,
 	IconFileText,
 	IconMessageCircleCheck,
+	IconPencil,
 	IconQuestionMark,
+	IconX,
 } from '@tabler/icons-react'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'react-router'
 import { Streamdown } from 'streamdown'
 import {
@@ -39,8 +42,10 @@ import {
 	useEditor,
 } from 'tldraw'
 import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
+import { FlashcardAnswerPanel } from '../components/FlashcardAnswerPanel'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { focusPDFCitation } from '../lib/pdfCitation'
+import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
 
 declare module '@tldraw/tlschema' {
 	interface TLGlobalShapePropsMap {
@@ -139,37 +144,144 @@ export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 }
 
 function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
-	const editor = useEditor()
+	const chrome = useBoardChrome()
+	const [isEditing, setIsEditing] = useState(false)
 	const fitRef = useAutoFitHeight(shape, 130)
-	const content = shape.props.revealed ? shape.props.back : shape.props.front
 
 	return (
 		<HTMLContainer className="StudyShape StudyShape--flashcard">
 			<div className="StudyShape-heading">
-				<span>{shape.props.revealed ? 'Answer' : 'Question'}</span>
-				<IconCards aria-hidden="true" size={15} stroke={1.8} />
+				<span>Question</span>
+				<div>
+					{chrome.role !== 'viewer' ? (
+						<button
+							aria-label="Edit flashcard"
+							onClick={() => setIsEditing(true)}
+							title="Edit flashcard"
+							type="button"
+							{...canvasInteractionHandlers}
+						>
+							<IconPencil aria-hidden="true" size={13} stroke={1.8} />
+						</button>
+					) : null}
+					<IconCards aria-hidden="true" size={15} stroke={1.8} />
+				</div>
 			</div>
-			<div className="Flashcard-face" ref={fitRef}>
-				<button
-					className="Flashcard-flip"
-					onClick={() => {
-						editor.updateShape<FlashcardShape>({
-							id: shape.id,
-							type: FLASHCARD_SHAPE_TYPE,
-							props: { revealed: !shape.props.revealed },
-						})
+			<div className="Flashcard-face" ref={fitRef} {...canvasInteractionHandlers}>
+				<StudyMath className="Flashcard-copy">{shape.props.front}</StudyMath>
+				<FlashcardAnswerPanel
+					className="FlashcardAnswerPanel--canvas"
+					source={{
+						alternateAnswers: shape.props.alternateAnswers,
+						back: shape.props.back,
+						boardID: chrome.boardID,
+						front: shape.props.front,
+						kind: 'canvas',
+						shapeID: shape.id,
 					}}
-					{...canvasInteractionHandlers}
-					type="button"
-				>
-					<div className="Flashcard-inner">
-						<StudyMath className="Flashcard-copy">{content}</StudyMath>
-						<small>{shape.props.revealed ? 'Tap to see the question' : 'Tap to reveal'}</small>
-					</div>
-				</button>
+				/>
 				<StudySources shape={shape} />
 			</div>
+			{isEditing ? <FlashcardEditorDialog onClose={() => setIsEditing(false)} shape={shape} /> : null}
 		</HTMLContainer>
+	)
+}
+
+function FlashcardEditorDialog({
+	onClose,
+	shape,
+}: {
+	onClose: () => void
+	shape: FlashcardShape
+}) {
+	const editor = useEditor()
+	const [front, setFront] = useState(shape.props.front)
+	const [back, setBack] = useState(shape.props.back)
+	const [alternateAnswers, setAlternateAnswers] = useState(() => [
+		...shape.props.alternateAnswers.slice(0, 5),
+		...Array.from({ length: Math.max(0, 5 - shape.props.alternateAnswers.length) }, () => ''),
+	])
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') onClose()
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [onClose])
+
+	function save(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault()
+		const nextFront = front.trim()
+		const nextBack = back.trim()
+		if (!nextFront || !nextBack) return
+		editor.updateShape<FlashcardShape>({
+			id: shape.id,
+			type: FLASHCARD_SHAPE_TYPE,
+			props: {
+				alternateAnswers: alternateAnswers.map((answer) => answer.trim()).filter(Boolean),
+				back: nextBack,
+				front: nextFront,
+				revealed: false,
+			},
+		})
+		onClose()
+	}
+
+	return createPortal(
+		<div
+			className="FlashcardEditor-backdrop"
+			onPointerDown={(event) => {
+				if (event.currentTarget === event.target) onClose()
+			}}
+		>
+			<form
+				aria-labelledby="flashcard-editor-title"
+				aria-modal="true"
+				className="FlashcardEditor"
+				onSubmit={save}
+				role="dialog"
+			>
+				<header>
+					<div>
+						<p className="Eyebrow">Study card</p>
+						<h2 id="flashcard-editor-title">Edit flashcard</h2>
+					</div>
+					<button aria-label="Close flashcard editor" onClick={onClose} type="button">
+						<IconX aria-hidden="true" size={17} />
+					</button>
+				</header>
+				<label>
+					<span>Question</span>
+					<textarea autoFocus maxLength={300} onChange={(event) => setFront(event.target.value)} rows={3} value={front} />
+				</label>
+				<label>
+					<span>Primary answer</span>
+					<textarea maxLength={600} onChange={(event) => setBack(event.target.value)} rows={4} value={back} />
+				</label>
+				<fieldset>
+					<legend>Alternate answers</legend>
+					<p>Optional concise answers that should also count as correct.</p>
+					{alternateAnswers.map((answer, index) => (
+						<input
+							aria-label={`Alternate answer ${index + 1}`}
+							key={index}
+							maxLength={300}
+							onChange={(event) => setAlternateAnswers((current) => current.map((value, answerIndex) => (
+								answerIndex === index ? event.target.value : value
+							)))}
+							placeholder={`Alternate answer ${index + 1}`}
+							value={answer}
+						/>
+					))}
+				</fieldset>
+				<footer>
+					<button onClick={onClose} type="button">Cancel</button>
+					<button className="Button Button--primary" disabled={!front.trim() || !back.trim()} type="submit">Save card</button>
+				</footer>
+			</form>
+		</div>,
+		document.body
 	)
 }
 

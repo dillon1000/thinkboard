@@ -1,5 +1,12 @@
 import { useSync } from '@tldraw/sync'
-import { PDF_PAGE_SHAPE_TYPE, apiRoutes, type Board, type PublicConfig } from '@agentboard/shared'
+import {
+	FLASHCARD_SHAPE_TYPE,
+	PDF_PAGE_SHAPE_TYPE,
+	apiRoutes,
+	type Board,
+	type BoardRole,
+	type PublicConfig,
+} from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import { Editor, Tldraw } from 'tldraw'
@@ -28,6 +35,7 @@ export function Component() {
 	const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
 	const [configError, setConfigError] = useState<string | null>(null)
 	const [title, setTitle] = useState('Study board')
+	const [role, setRole] = useState<BoardRole>('viewer')
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
 
@@ -40,7 +48,10 @@ export function Component() {
 	useEffect(() => {
 		if (!resolvedBoardID) return
 		void apiRequest<{ board: Board }>(apiRoutes.board(resolvedBoardID))
-			.then((response) => setTitle(response.board.title))
+			.then((response) => {
+				setRole(response.board.role)
+				setTitle(response.board.title)
+			})
 			.catch(() => undefined)
 	}, [resolvedBoardID])
 
@@ -59,6 +70,12 @@ export function Component() {
 
 	useEffect(() => {
 		if (!editor) return
+		// Viewer mode blocks shared canvas mutations while custom flashcard controls stay interactive.
+		editor.updateInstanceState({ isReadonly: role === 'viewer' })
+	}, [editor, role])
+
+	useEffect(() => {
+		if (!editor) return
 		return editor.sideEffects.registerBeforeDeleteHandler('shape', (shape, source) => {
 			if (
 				source === 'user' &&
@@ -67,6 +84,16 @@ export function Component() {
 			) return false
 		})
 	}, [editor])
+
+	useEffect(() => {
+		if (!editor) return
+		return editor.sideEffects.registerAfterDeleteHandler('shape', (shape) => {
+			if (shape.type !== FLASHCARD_SHAPE_TYPE) return
+			void apiRequest(apiRoutes.boardFlashcard(resolvedBoardID, shape.id), {
+				method: 'DELETE',
+			}).catch(() => undefined)
+		})
+	}, [editor, resolvedBoardID])
 
 	if (!boardID) throw new Error('Missing board ID')
 	if (configError) return <div className="RouteMessage" role="alert"><h1>Unable to open this board</h1><p>{configError}</p></div>
@@ -80,7 +107,7 @@ export function Component() {
 				currentUserID={session.data?.user.id ?? null}
 				editor={editor}
 			/>
-			<BoardShell boardID={boardID} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
+			<BoardShell boardID={boardID} role={role} studyPanel={session.data ? <StudyPanel boardID={boardID} editor={editor} /> : null} title={title}>
 				<div className="BoardCanvas">
 					<Tldraw
 						components={components}

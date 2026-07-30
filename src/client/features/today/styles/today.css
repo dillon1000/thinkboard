@@ -17,12 +17,9 @@
 .Today-cardMeta { display: flex; justify-content: space-between; gap: 12px; }
 .Today-cardMeta a, .Today-cardMeta span { color: var(--faint); font-size: 11.5px; text-decoration: none; }
 .Today-cardFront { max-width: 620px; font-size: 19px; font-weight: 650; line-height: 1.45; }
-.Today-cardBack { border-radius: 8px; background: var(--panel); padding: 14px; color: var(--muted); font-size: 14px; line-height: 1.55; box-shadow: inset 0 0 0 1px var(--line); }
-.Today-cardFront > :first-child, .Today-cardBack > :first-child { margin-top: 0; }
-.Today-cardFront > :last-child, .Today-cardBack > :last-child { margin-bottom: 0; }
+.Today-cardFront > :first-child { margin-top: 0; }
+.Today-cardFront > :last-child { margin-bottom: 0; }
 .Today-card > .Button { justify-self: start; margin-top: auto; }
-.Today-ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: auto; }
-.Today-ratings button { min-height: 38px; border: 0; border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; }
 .Today-complete { display: grid; min-height: 210px; place-content: center; justify-items: center; border-radius: 12px; background: var(--sidebar); box-shadow: var(--shadow-border); text-align: center; }
 .Today-complete > span { display: grid; width: 42px; height: 42px; margin-bottom: 10px; place-items: center; border-radius: 10px; background: var(--panel); color: var(--muted); box-shadow: var(--shadow-border); }
 .Today-complete strong { font-size: 14px; }
@@ -40,6 +37,25 @@
 .Today-patterns small { overflow: hidden; color: var(--faint); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
 .Today-patterns em { flex: 0 0 auto; border-radius: 999px; background: var(--surface); padding: 3px 7px; color: var(--muted); font-size: 10.5px; font-style: normal; }
 .Today-patternsEmpty { min-height: 88px; margin: 0; border-radius: 8px; background: var(--sidebar); padding: 14px; color: var(--faint); font-size: 12px; line-height: 1.5; box-shadow: var(--shadow-border); }
+.Today-history { overflow: hidden; border-radius: 10px; background: var(--sidebar); box-shadow: var(--shadow-border); }
+.Today-history summary { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 15px; cursor: pointer; list-style: none; font-size: 13px; font-weight: 650; }
+.Today-history summary::-webkit-details-marker { display: none; }
+.Today-history summary small { border-radius: 999px; background: var(--surface); padding: 3px 8px; color: var(--faint); font-size: 10.5px; font-weight: 550; }
+.Today-historyList { display: grid; border-top: 1px solid var(--line); }
+.Today-historyList article { display: grid; gap: 7px; padding: 14px 15px; }
+.Today-historyList article + article { border-top: 1px solid var(--line); }
+.Today-historyMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.Today-historyMeta a { overflow: hidden; color: var(--muted); font-size: 11.5px; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.Today-historyMeta time { flex: 0 0 auto; color: var(--faint); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.Today-historyQuestion { font-size: 13px; font-weight: 620; line-height: 1.4; }
+.Today-historyQuestion > :first-child { margin-top: 0; }
+.Today-historyQuestion > :last-child { margin-bottom: 0; }
+.Today-historyAnswer { display: grid; gap: 3px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.Today-historyAnswer small { color: var(--faint); font-size: 10.5px; text-transform: capitalize; }
+.Today-historyActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.Today-historyActions button { display: inline-flex; min-height: 36px; align-items: center; gap: 5px; border: 0; border-radius: 6px; background: var(--surface); padding: 0 10px; color: var(--muted); font-size: 10.5px; cursor: pointer; box-shadow: var(--shadow-border); transition: background-color 150ms var(--ease-out), scale 150ms var(--ease-out); }
+.Today-historyActions button:active { scale: .96; }
+.Today-historyEmpty { margin: 0; border-top: 1px solid var(--line); padding: 16px; color: var(--faint); font-size: 12px; }
 @media (max-width: 700px) {
 	.Today { width: calc(100% - 32px); padding-top: 20px; }
 	.Today-metrics { grid-template-columns: 1fr; }

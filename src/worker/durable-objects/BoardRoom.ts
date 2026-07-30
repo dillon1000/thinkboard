@@ -96,7 +96,11 @@ export class BoardRoom extends DurableObject<Env> {
 
 		// Connect to the room. The first webSocketMessage from the client will
 		// complete the handshake and trigger debounced snapshot storage.
-		this.getOrCreateRoom().handleSocketConnect({ sessionId: sessionID, socket: serverWebSocket })
+		this.getOrCreateRoom().handleSocketConnect({
+			isReadonly: request.headers.get('x-agentboard-readonly') === 'true',
+			sessionId: sessionID,
+			socket: serverWebSocket,
+		})
 
 		return new Response(null, { status: 101, webSocket: clientWebSocket })
 	}

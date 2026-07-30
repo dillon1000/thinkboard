@@ -1,0 +1,27 @@
+.FlashcardAnswerPanel { display: grid; width: 100%; gap: 11px; color: var(--ink); font-size: 12px; }
+.FlashcardAnswerPanel label { display: grid; gap: 5px; }
+.FlashcardAnswerPanel small, .FlashcardAnswerPanel label > span { color: var(--faint); font-size: 10.5px; font-weight: 560; }
+.FlashcardAnswerPanel textarea { width: 100%; min-height: 62px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel); padding: 9px 10px; color: var(--ink); font: inherit; line-height: 1.4; outline: none; }
+.FlashcardAnswerPanel textarea:focus { border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.FlashcardAnswerPanel-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.FlashcardAnswerPanel-actions button, .FlashcardAnswerPanel-choice button, .FlashcardAnswerPanel-ratings button { min-height: 40px; border: 0; border-radius: 7px; background: var(--surface); padding: 0 12px; color: var(--muted); font: inherit; cursor: pointer; box-shadow: var(--shadow-border); transition-property: background-color, box-shadow, scale; transition-duration: 150ms; transition-timing-function: var(--ease-out); }
+.FlashcardAnswerPanel-actions button:active, .FlashcardAnswerPanel-choice button:active, .FlashcardAnswerPanel-ratings button:active, .FlashcardAnswerPanel-continue:active { scale: .96; }
+.FlashcardAnswerPanel button:disabled { cursor: default; opacity: .52; scale: 1; }
+.FlashcardAnswerPanel.is-result { gap: 13px; }
+.FlashcardAnswerPanel-verdict { display: flex; align-items: flex-start; gap: 9px; }
+.FlashcardAnswerPanel-verdict > span { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: color-mix(in srgb, #c75b4c 10%, var(--panel)); color: #aa4c40; }
+.FlashcardAnswerPanel-verdict.is-correct > span { background: color-mix(in srgb, #3f936b 11%, var(--panel)); color: #337a58; }
+.FlashcardAnswerPanel-verdict strong { font-size: 13px; font-weight: 650; }
+.FlashcardAnswerPanel-verdict p { margin: 3px 0 0; color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+.FlashcardAnswerPanel-expected { border-radius: 8px; background: var(--panel); padding: 11px 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.FlashcardAnswerPanel-expected > div > :first-child { margin-top: 5px; }
+.FlashcardAnswerPanel-expected > div > :last-child { margin-bottom: 0; }
+.FlashcardAnswerPanel-expected > p { margin: 8px 0 0; color: var(--muted); line-height: 1.4; }
+.FlashcardAnswerPanel-expected > p span { color: var(--faint); }
+.FlashcardAnswerPanel-choice, .FlashcardAnswerPanel-ratings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 5px; }
+.FlashcardAnswerPanel-ratings { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.FlashcardAnswerPanel-choice button.is-selected, .FlashcardAnswerPanel-ratings button.is-selected { background: var(--surface-active); color: var(--ink); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), var(--shadow-border); }
+.FlashcardAnswerPanel-continue { justify-self: start; gap: 6px; padding-left: 15px; padding-right: 13px; transition-property: background-color, box-shadow, scale; }
+@media (max-width: 520px) {
+	.FlashcardAnswerPanel-ratings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -210,7 +210,7 @@ export const flashcardProposalSchema = z.object({
 		.array(
 			z.object({
 				front: z.string().trim().min(1).max(300).describe('Question or retrieval cue shown first.'),
-				back: z.string().trim().min(1).max(600).describe('Answer hidden until the card is flipped.'),
+				back: z.string().trim().min(1).max(600).describe('Primary answer hidden until the student checks a response.'),
 				alternateAnswers: z.array(
 					z.string().trim().min(1).max(300)
 						.describe('A concise answer that is fully equivalent to the primary answer.')

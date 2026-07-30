@@ -135,7 +135,7 @@ export async function handleFlashcardAnswerAttemptDelete(request: IRequest, env:
 		request.params.attemptID
 	)
 	if (!removed) return Response.json({ error: 'Answer attempt not found' }, { status: 404 })
-	return new Response(null, { status: 204 })
+	return Response.json({ removed: true })
 }
 
 export async function handleFlashcardAnswerAttemptsForCardDelete(request: IRequest, env: Env) {
@@ -159,7 +159,7 @@ export async function handleFlashcardDelete(request: IRequest, env: Env) {
 		request.params.boardID,
 		request.params.shapeID
 	)
-	return new Response(null, { status: 204 })
+	return Response.json({ removed: true })
 }
 
 export async function handleDueFlashcards(request: IRequest, env: Env) {
