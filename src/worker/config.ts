@@ -20,7 +20,7 @@ export function getPublicConfig(env: Env): PublicConfig {
 
 export function getDocumentAIConfig(env: Env) {
 	return {
-		embeddingModel: env.EMBEDDING_MODEL?.trim() || '@cf/baai/bge-base-en-v1.5',
+		embeddingModel: env.EMBEDDING_MODEL?.trim() || '@cf/baai/bge-large-en-v1.5',
 		gatewayID: env.AI_GATEWAY_ID?.trim() || 'default',
 		ocrModel: env.OCR_MODEL?.trim() || '@cf/meta/llama-4-scout-17b-16e-instruct',
 	}

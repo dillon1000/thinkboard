@@ -75,7 +75,7 @@ pnpm db:migrate:remote
 pnpm deploy
 ```
 
-Native PDF imports also require a Queue, a dead-letter Queue, and a 768-dimensional Vectorize index with indexed `boardId` metadata. See [Native PDF operations](./docs/native-pdf-operations.md) for the provisioning commands and model configuration.
+Native PDF imports also require a Queue, a dead-letter Queue, and a 1,024-dimensional Vectorize index with indexed `boardId` metadata. See [Native PDF operations](./docs/native-pdf-operations.md) for the provisioning commands and model configuration.
 
 OAuth sign-in is enabled when its discovery URL, client ID, and client secret are all present; without them, the login page shows a configuration notice and exposes no fallback authentication method. Register `https://YOUR_DOMAIN/api/auth/oauth2/callback/campus-sso` with the identity provider. `OAUTH_PROVIDER_ID`, `OAUTH_PROVIDER_NAME`, `OAUTH_SCOPES`, and `AI_MODEL` can be changed in the Wrangler variables.
 

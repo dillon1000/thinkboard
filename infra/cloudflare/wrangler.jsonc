@@ -86,7 +86,7 @@
 	"vectorize": [
 		{
 			"binding": "DOCUMENT_VECTORS",
-			"index_name": "agentboard-documents"
+			"index_name": "agentboard-documents-1024"
 		}
 	],
 	"queues": {
