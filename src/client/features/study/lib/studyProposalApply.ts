@@ -20,6 +20,7 @@ import {
 	studyPackProposalSchema,
 	walkthroughProposalSchema,
 	type CanvasAnchor,
+	type StudyArtifactInput,
 } from '@agentboard/shared'
 import { Editor, createShapeId, type TLShapeId, type TLShapePartial } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
@@ -56,6 +57,8 @@ export type StudyToolName = (typeof STUDY_TOOL_NAMES)[number]
 export interface ProposalEffect {
 	/** Empty for proposals that write to the student's history rather than the board. */
 	shapeIDs: TLShapeId[]
+	/** Search and exam indexes receive only content that the student accepted onto the canvas. */
+	artifacts?: StudyArtifactInput[]
 	flashcards?: Array<{
 		alternateAnswers: string[]
 		back: string
@@ -87,9 +90,9 @@ export function applyProposal(
 		return anchor ? { ...proposal, x: anchor.x, y: anchor.y } : proposal
 	}
 
-	function finish(shapeIDs: TLShapeId[]) {
+	function finish(shapeIDs: TLShapeId[], artifacts?: StudyArtifactInput[]): ProposalEffect {
 		if (select) editor.setSelectedShapes(shapeIDs)
-		return { shapeIDs }
+		return { artifacts, shapeIDs }
 	}
 
 	if (toolName === 'composeCanvas') {
@@ -116,7 +119,12 @@ export function applyProposal(
 			},
 		}
 		editor.createShape(shape)
-		return finish([id])
+		return finish([id], [{
+			kind: 'review-note',
+			shapeID: id,
+			text: proposal.body,
+			title: proposal.title,
+		}])
 	}
 
 	if (toolName === 'createFlashcards') {
@@ -143,6 +151,13 @@ export function applyProposal(
 		editor.createShapes(shapes)
 		return {
 			...finish(shapeIDs),
+			artifacts: proposal.cards.map((card, index) => ({
+				kind: 'flashcard' as const,
+				payload: card,
+				shapeID: shapeIDs[index],
+				text: `${card.front}\n${card.back}`,
+				title: card.front,
+			})),
 			flashcards: proposal.cards.map((card, index) => ({ ...card, shapeID: shapeIDs[index] })),
 		}
 	}
@@ -169,7 +184,18 @@ export function applyProposal(
 			},
 		}
 		editor.createShape(shape)
-		return finish([id])
+		return finish([id], [{
+			kind: 'quiz',
+			payload: {
+				correctIndex: proposal.correctIndex,
+				explanation: proposal.explanation,
+				options: proposal.options,
+				question: proposal.question,
+			},
+			shapeID: id,
+			text: `${proposal.question}\n${proposal.options.join('\n')}\n${proposal.explanation}`,
+			title: proposal.question,
+		}])
 	}
 
 	if (toolName === 'createWalkthrough') {
@@ -192,7 +218,15 @@ export function applyProposal(
 			},
 		}
 		editor.createShape(shape)
-		return finish([id])
+		return finish([id], [{
+			kind: 'walkthrough',
+			payload: { steps: proposal.steps },
+			shapeID: id,
+			text: proposal.steps
+				.map(({ explanation, prompt }) => `${prompt}\n${explanation}`)
+				.join('\n\n'),
+			title: proposal.title,
+		}])
 	}
 
 	if (toolName === 'createConceptMap') {
@@ -214,7 +248,13 @@ export function applyProposal(
 			},
 		}
 		editor.createShape(shape)
-		return finish([id])
+		return finish([id], [{
+			kind: 'concept-map',
+			payload: { edges: proposal.edges, nodes: proposal.nodes },
+			shapeID: id,
+			text: proposal.nodes.map(({ label }) => label).join('\n'),
+			title: proposal.title,
+		}])
 	}
 
 	if (toolName === 'createPracticeSet') {
@@ -239,7 +279,13 @@ export function applyProposal(
 			},
 		}))
 		editor.createShapes(shapes)
-		return finish(shapeIDs)
+		return finish(shapeIDs, proposal.quizzes.map((quiz, index) => ({
+			kind: 'practice-problem',
+			payload: quiz,
+			shapeID: shapeIDs[index],
+			text: `${quiz.question}\n${quiz.options.join('\n')}\n${quiz.explanation}`,
+			title: quiz.question,
+		})))
 	}
 
 	if (toolName === 'createStudyPack') {
@@ -345,6 +391,32 @@ export function applyProposal(
 		const shapeIDs = [conceptMapID, ...cardIDs, ...quizIDs]
 		return {
 			...finish(shapeIDs),
+			artifacts: [
+				{
+					kind: 'concept-map',
+					payload: {
+						edges: proposal.conceptMap.edges,
+						nodes: proposal.conceptMap.nodes,
+					},
+					shapeID: conceptMapID,
+					text: proposal.conceptMap.nodes.map(({ label }) => label).join('\n'),
+					title: proposal.conceptMap.title,
+				},
+				...proposal.cards.map((card, index) => ({
+					kind: 'flashcard' as const,
+					payload: card,
+					shapeID: cardIDs[index],
+					text: `${card.front}\n${card.back}`,
+					title: card.front,
+				})),
+				...proposal.quizzes.map((quiz, index) => ({
+					kind: 'quiz' as const,
+					payload: quiz,
+					shapeID: quizIDs[index],
+					text: `${quiz.question}\n${quiz.options.join('\n')}\n${quiz.explanation}`,
+					title: quiz.question,
+				})),
+			],
 			flashcards: proposal.cards.map((card, index) => ({
 				...card,
 				shapeID: cardIDs[index],
@@ -380,18 +452,32 @@ export function applyProposal(
 			}
 		})
 		editor.createShapes(shapes)
-		return finish(shapeIDs)
+		return finish(shapeIDs, latexLines.map((latex, index) => ({
+			kind: 'equation',
+			shapeID: shapeIDs[index],
+			text: latex,
+			title: `Equation ${index + 1}`,
+		})))
 	}
 
 	throw new Error(`Unknown proposal type: ${toolName}`)
 }
 
 export async function persistProposalEffect(boardID: string, effect: ProposalEffect) {
-	if (!effect.flashcards?.length) return
-	await apiRequest(apiRoutes.boardFlashcards(boardID), {
-		body: JSON.stringify({ cards: effect.flashcards }),
-		method: 'POST',
-	}).catch(() => undefined)
+	const writes: Promise<unknown>[] = []
+	if (effect.flashcards?.length) {
+		writes.push(apiRequest(apiRoutes.boardFlashcards(boardID), {
+			body: JSON.stringify({ cards: effect.flashcards }),
+			method: 'POST',
+		}))
+	}
+	if (effect.artifacts?.length) {
+		writes.push(apiRequest(apiRoutes.boardArtifacts(boardID), {
+			body: JSON.stringify({ artifacts: effect.artifacts }),
+			method: 'POST',
+		}))
+	}
+	await Promise.all(writes.map((write) => write.catch(() => undefined)))
 }
 
 export async function recordProposedMistake(boardID: string, input: unknown) {

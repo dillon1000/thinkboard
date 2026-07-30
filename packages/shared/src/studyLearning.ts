@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { ExamPlan } from './exams'
 
 export const studyModeSchema = z.enum(['direct', 'socratic'])
 export const flashcardReviewRatingSchema = z.enum(['again', 'hard', 'good', 'easy'])
@@ -206,6 +207,7 @@ export interface StudyTodayTrendDay {
 export interface StudyTodayDashboard {
 	answerAttempts: FlashcardAnswerAttempt[]
 	dueReviews: DueFlashcard[]
+	exams: ExamPlan[]
 	patterns: StudyTodayPattern[]
 	streakDays: number
 	trend: StudyTodayTrendDay[]

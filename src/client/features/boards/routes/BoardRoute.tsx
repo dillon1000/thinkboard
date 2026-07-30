@@ -8,7 +8,7 @@ import {
 	type PublicConfig,
 } from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { Editor, Tldraw } from 'tldraw'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
@@ -27,6 +27,7 @@ import { ZenModeProvider } from '../lib/ZenModeProvider'
 import { ProjectorModeProvider } from '../lib/ProjectorModeProvider'
 import { getProjectorUserPresence } from '../lib/projectorMode'
 import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
+import { ExamPracticeImport } from '../components/ExamPracticeImport'
 
 export function Component() {
 	const { boardID } = useParams<{ boardID: string }>()
@@ -38,6 +39,8 @@ export function Component() {
 	const [configError, setConfigError] = useState<string | null>(null)
 	const [title, setTitle] = useState('Study space')
 	const [role, setRole] = useState<BoardRole>('viewer')
+	const [searchParameters, setSearchParameters] = useSearchParams()
+	const examID = searchParameters.get('examPlan')
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
 
@@ -91,8 +94,12 @@ export function Component() {
 	useEffect(() => {
 		if (!editor) return
 		return editor.sideEffects.registerAfterDeleteHandler('shape', (shape) => {
-			if (shape.type !== FLASHCARD_SHAPE_TYPE) return
-			void apiRequest(apiRoutes.boardFlashcard(resolvedBoardID, shape.id), {
+			if (shape.type === FLASHCARD_SHAPE_TYPE) {
+				void apiRequest(apiRoutes.boardFlashcard(resolvedBoardID, shape.id), {
+					method: 'DELETE',
+				}).catch(() => undefined)
+			}
+			void apiRequest(apiRoutes.boardArtifact(resolvedBoardID, shape.id), {
 				method: 'DELETE',
 			}).catch(() => undefined)
 		})
@@ -128,6 +135,17 @@ export function Component() {
 							editor.registerExternalAssetHandler('url', getBookmarkPreview)
 						}}
 					/>
+					{editor && examID && role !== 'viewer' ? (
+						<ExamPracticeImport
+							boardID={boardID}
+							editor={editor}
+							examID={examID}
+							onClose={() => {
+								searchParameters.delete('examPlan')
+								setSearchParameters(searchParameters, { replace: true })
+							}}
+						/>
+					) : null}
 				</div>
 			</BoardShell>
 		</LockInProvider>

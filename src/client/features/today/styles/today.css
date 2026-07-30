@@ -13,6 +13,24 @@
 .Today-sectionHeading .Eyebrow { margin-bottom: 3px; }
 .Today-sectionHeading h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.012em; }
 .Today-sectionHeading > span { color: var(--faint); font-size: 11.5px; }
+.Today-addExam { display: inline-flex; min-height: 34px; align-items: center; gap: 5px; border: 0; border-radius: 7px; background: var(--sidebar); padding: 0 10px; color: var(--muted); font-size: 11px; cursor: pointer; box-shadow: var(--shadow-border); }
+.Today-exams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.Today-exam { display: grid; gap: 12px; border-radius: 11px; background: var(--sidebar); padding: 15px; box-shadow: var(--shadow-border); }
+.Today-exam header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.Today-exam header > div { display: grid; gap: 3px; }
+.Today-exam header strong { font-size: 13.5px; }
+.Today-exam header time { color: var(--faint); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.Today-exam header button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; }
+.Today-examSignals { display: flex; flex-wrap: wrap; gap: 5px; }
+.Today-examSignals span { border-radius: 999px; background: var(--surface); padding: 4px 8px; color: var(--faint); font-size: 10.5px; }
+.Today-examSignals b { color: var(--ink); font-weight: 650; }
+.Today-exam > p { min-height: 36px; margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.Today-examActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.Today-examActions a { display: inline-flex; min-height: 34px; align-items: center; gap: 5px; border-radius: 7px; background: var(--surface); padding: 0 9px; color: var(--muted); font-size: 10.5px; text-decoration: none; box-shadow: var(--shadow-border); }
+.Today-examEmpty { display: flex; width: 100%; min-height: 104px; align-items: center; justify-content: center; gap: 11px; border: 0; border-radius: 11px; background: var(--sidebar); color: var(--muted); cursor: pointer; box-shadow: var(--shadow-border); }
+.Today-examEmpty span { display: grid; gap: 3px; text-align: left; }
+.Today-examEmpty strong { color: var(--ink); font-size: 12.5px; }
+.Today-examEmpty small { color: var(--faint); font-size: 10.5px; }
 .Today-card { display: grid; min-height: 286px; align-content: start; gap: 16px; border-radius: 12px; background: var(--sidebar); padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow-border); }
 .Today-cardMeta { display: flex; justify-content: space-between; gap: 12px; }
 .Today-cardMeta a, .Today-cardMeta span { color: var(--faint); font-size: 11.5px; text-decoration: none; }
@@ -61,5 +79,33 @@
 	.Today-metrics { grid-template-columns: 1fr; }
 	.Today-metric { min-height: 76px; }
 	.Today-grid { grid-template-columns: 1fr; }
+	.Today-exams { grid-template-columns: 1fr; }
 	.Today-card { min-height: 250px; }
+}
+
+.ExamPlanner-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; background: rgb(15 18 24 / 36%); padding: 18px; backdrop-filter: blur(5px); }
+.ExamPlanner { display: grid; width: min(620px, 100%); max-height: min(760px, calc(100vh - 36px)); gap: 18px; overflow: auto; border-radius: 14px; background: var(--panel); padding: 20px; box-shadow: var(--shadow-border), 0 24px 80px rgb(14 17 23 / 24%); }
+.ExamPlanner > header { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+.ExamPlanner > header h2 { margin: 2px 0 0; font-size: 18px; }
+.ExamPlanner > header p:last-child { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.ExamPlanner > header button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 7px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.ExamPlanner-loading { margin: 0; color: var(--muted); font-size: 12px; }
+.ExamPlanner-fields { display: grid; grid-template-columns: 1fr 170px; gap: 10px; }
+.ExamPlanner-fields label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; }
+.ExamPlanner input, .ExamPlanner select { min-height: 39px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); padding: 0 10px; color: var(--ink); font: inherit; }
+.ExamPlanner fieldset { min-width: 0; margin: 0; border: 0; padding: 0; }
+.ExamPlanner legend { margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 650; }
+.ExamPlanner legend small { color: var(--faint); font-weight: 500; }
+.ExamPlanner-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.ExamPlanner-options label, .ExamPlanner-documents label { display: flex; min-height: 42px; align-items: center; gap: 9px; border-radius: 8px; background: var(--sidebar); padding: 8px 10px; color: var(--muted); font-size: 11.5px; box-shadow: var(--shadow-border); }
+.ExamPlanner-options input, .ExamPlanner-documents input { min-height: auto; }
+.ExamPlanner-documents { display: grid; gap: 6px; }
+.ExamPlanner-documents label > span { display: grid; min-width: 0; gap: 2px; }
+.ExamPlanner-documents strong { overflow: hidden; color: var(--ink); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.ExamPlanner-documents small { color: var(--faint); font-size: 10px; text-transform: capitalize; }
+.ExamPlanner > footer { display: flex; justify-content: end; gap: 7px; }
+.ExamPlanner > footer button { min-height: 38px; border: 0; border-radius: 7px; background: var(--surface); padding: 0 13px; color: var(--muted); cursor: pointer; box-shadow: var(--shadow-border); }
+.ExamPlanner > footer button:last-child { background: var(--ink); color: var(--panel); }
+@media (max-width: 560px) {
+	.ExamPlanner-fields, .ExamPlanner-options { grid-template-columns: 1fr; }
 }

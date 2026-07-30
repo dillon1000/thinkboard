@@ -7,6 +7,8 @@ export const apiRoutePatterns = {
 	boardFlashcard: '/api/boards/:boardID/flashcards/:shapeID',
 	boardAgentActions: '/api/boards/:boardID/agent-actions',
 	boardAgentActionUndo: '/api/boards/:boardID/agent-actions/:actionID/undo',
+	boardArtifacts: '/api/boards/:boardID/artifacts',
+	boardArtifact: '/api/boards/:boardID/artifacts/:shapeID',
 	boardMistakes: '/api/boards/:boardID/mistakes',
 	boardMemories: '/api/boards/:boardID/memories',
 	boardDocuments: '/api/boards/:boardID/documents',
@@ -35,6 +37,9 @@ export const apiRoutePatterns = {
 	studyAnswerAttemptComplete: '/api/study/answer-attempts/:attemptID/complete',
 	studyCardAnswerAttempts: '/api/study/cards/:boardID/:shapeID/answer-attempts',
 	studyToday: '/api/study/today',
+	examPlans: '/api/study/exams',
+	examPlan: '/api/study/exams/:examID',
+	examPractice: '/api/study/exams/:examID/practice',
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: '/api/study/memory/:memoryKey',
 	studyAgentProfile: '/api/study/agent-profile',
@@ -80,6 +85,10 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/agent-actions`,
 	boardAgentActionUndo: (boardID: string, actionID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/agent-actions/${encodeURIComponent(actionID)}/undo`,
+	boardArtifacts: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/artifacts`,
+	boardArtifact: (boardID: string, shapeID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/artifacts/${encodeURIComponent(shapeID)}`,
 	boardMistakes: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/mistakes`,
 	boardMemories: (boardID: string) =>
@@ -119,6 +128,10 @@ export const apiRoutes = {
 	studyCardAnswerAttempts: (boardID: string, shapeID: string) =>
 		`/api/study/cards/${encodeURIComponent(boardID)}/${encodeURIComponent(shapeID)}/answer-attempts`,
 	studyToday: '/api/study/today',
+	examPlans: '/api/study/exams',
+	examPlan: (examID: string) => `/api/study/exams/${encodeURIComponent(examID)}`,
+	examPractice: (examID: string) =>
+		`/api/study/exams/${encodeURIComponent(examID)}/practice`,
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: (memoryKey: string) =>
 		`/api/study/memory/${encodeURIComponent(memoryKey)}`,

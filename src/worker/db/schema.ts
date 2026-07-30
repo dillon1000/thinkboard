@@ -300,6 +300,58 @@ export const studyMistake = sqliteTable(
 	]
 )
 
+export const studyArtifact = sqliteTable(
+	'studyArtifact',
+	{
+		boardID: text('boardID')
+			.notNull()
+			.references(() => board.id, { onDelete: 'cascade' }),
+		shapeID: text('shapeID').notNull(),
+		kind: text('kind', {
+			enum: [
+				'concept-map',
+				'equation',
+				'flashcard',
+				'practice-problem',
+				'quiz',
+				'review-note',
+				'walkthrough',
+			],
+		}).notNull(),
+		title: text('title').notNull(),
+		text: text('text').notNull(),
+		payload: text('payload').notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.boardID, table.shapeID] }),
+		index('studyArtifact_boardID_kind_idx').on(table.boardID, table.kind),
+	]
+)
+
+export const examPlan = sqliteTable(
+	'examPlan',
+	{
+		id: text('id').primaryKey(),
+		userID: text('userID')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		examDate: text('examDate').notNull(),
+		boardIDs: text('boardIDs', { mode: 'json' }).$type<string[]>().notNull(),
+		documentIDs: text('documentIDs', { mode: 'json' }).$type<string[]>().notNull(),
+		primaryBoardID: text('primaryBoardID')
+			.notNull()
+			.references(() => board.id, { onDelete: 'cascade' }),
+		practiceSet: text('practiceSet'),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('examPlan_userID_examDate_idx').on(table.userID, table.examDate),
+	]
+)
+
 export const agentProfile = sqliteTable('agentProfile', {
 	userID: text('userID').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
 	personality: text('personality', {
@@ -421,6 +473,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	flashcardReviews: many(flashcardReview),
 	flashcardAnswerAttempts: many(flashcardAnswerAttempt),
 	studyMistakes: many(studyMistake),
+	studyArtifacts: many(studyArtifact),
+	examPlans: many(examPlan),
 	agentProfile: one(agentProfile),
 	documents: many(document),
 	documentProcessingUsage: many(documentProcessingUsage),
@@ -446,6 +500,8 @@ export const boardRelations = relations(board, ({ one, many }) => ({
 	flashcardReviews: many(flashcardReview),
 	flashcardAnswerAttempts: many(flashcardAnswerAttempt),
 	studyMistakes: many(studyMistake),
+	studyArtifacts: many(studyArtifact),
+	primaryExamPlans: many(examPlan),
 	documents: many(document),
 	craftDocumentLinks: many(craftDocumentLink),
 }))
@@ -483,6 +539,15 @@ export const flashcardAnswerAttemptRelations = relations(flashcardAnswerAttempt,
 export const studyMistakeRelations = relations(studyMistake, ({ one }) => ({
 	board: one(board, { fields: [studyMistake.boardID], references: [board.id] }),
 	user: one(user, { fields: [studyMistake.userID], references: [user.id] }),
+}))
+
+export const studyArtifactRelations = relations(studyArtifact, ({ one }) => ({
+	board: one(board, { fields: [studyArtifact.boardID], references: [board.id] }),
+}))
+
+export const examPlanRelations = relations(examPlan, ({ one }) => ({
+	user: one(user, { fields: [examPlan.userID], references: [user.id] }),
+	primaryBoard: one(board, { fields: [examPlan.primaryBoardID], references: [board.id] }),
 }))
 
 export const agentProfileRelations = relations(agentProfile, ({ one }) => ({

@@ -92,6 +92,13 @@
       "when": 1785395623416,
       "tag": "0012_quick_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1785396131375,
+      "tag": "0013_careless_polaris",
+      "breakpoints": true
     }
   ]
 }

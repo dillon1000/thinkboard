@@ -17,6 +17,23 @@ export {
 	pdfTextBlockSchema,
 	pdfTextLayoutSchema,
 } from './documents'
+export {
+	examPlanInputSchema,
+	quizArtifactPayloadSchema,
+	registerStudyArtifactsSchema,
+	studyArtifactInputSchema,
+	studyArtifactKindSchema,
+} from './exams'
+export type {
+	ExamDeckStatus,
+	ExamPattern,
+	ExamPlan,
+	ExamPlanInput,
+	ExamPracticeSet,
+	ExamStudyTask,
+	StudyArtifactInput,
+	StudyArtifactKind,
+} from './exams'
 export type {
 	DocumentErrorCode,
 	DocumentErrorResponse,

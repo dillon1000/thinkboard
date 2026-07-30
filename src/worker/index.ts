@@ -83,6 +83,13 @@ import {
 	handleCourses,
 	handleInvitation,
 } from './routes/workspace'
+import {
+	handleBoardArtifact,
+	handleBoardArtifacts,
+	handleExamPlan,
+	handleExamPlans,
+	handleExamPractice,
+} from './routes/exams'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -125,6 +132,10 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.delete(apiRoutePatterns.studyAnswerAttempt, handleFlashcardAnswerAttemptDelete)
 	.delete(apiRoutePatterns.studyCardAnswerAttempts, handleFlashcardAnswerAttemptsForCardDelete)
 	.get(apiRoutePatterns.studyToday, handleStudyToday)
+	.get(apiRoutePatterns.examPlans, handleExamPlans)
+	.post(apiRoutePatterns.examPlans, handleExamPlans)
+	.delete(apiRoutePatterns.examPlan, handleExamPlan)
+	.post(apiRoutePatterns.examPractice, handleExamPractice)
 	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
 	.post(apiRoutePatterns.studyMemory, handleStudyMemoryCreate)
 	.delete(apiRoutePatterns.studyMemoryItem, handleStudyMemoryDelete)
@@ -132,6 +143,8 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.put(apiRoutePatterns.studyAgentProfile, handleAgentProfilePut)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
 	.delete(apiRoutePatterns.boardFlashcard, handleFlashcardDelete)
+	.post(apiRoutePatterns.boardArtifacts, handleBoardArtifacts)
+	.delete(apiRoutePatterns.boardArtifact, handleBoardArtifact)
 	.get(apiRoutePatterns.boardAgentActions, handleAgentActions)
 	.post(apiRoutePatterns.boardAgentActions, handleAgentActions)
 	.post(apiRoutePatterns.boardAgentActionUndo, handleAgentActionUndo)

@@ -24,6 +24,7 @@ import {
 	flashcardReviewEvent,
 	studyMistake,
 } from './schema'
+import { listExamPlans } from './exams'
 
 const DAY_MS = 86_400_000
 
@@ -472,7 +473,7 @@ export async function getStudyTodayDashboard(
 	now = new Date()
 ): Promise<StudyTodayDashboard> {
 	const trendStart = startOfUTCDay(new Date(now.getTime() - 6 * DAY_MS))
-	const [answerAttempts, dueReviews, events, mistakeRows] = await Promise.all([
+	const [answerAttempts, dueReviews, events, exams, mistakeRows] = await Promise.all([
 		listRecentFlashcardAnswerAttempts(database, userID),
 		listDueFlashcards(database, userID, now),
 		database.select({
@@ -486,6 +487,7 @@ export async function getStudyTodayDashboard(
 				isNull(board.archivedAt)
 			))
 			.orderBy(flashcardReviewEvent.reviewedAt),
+		listExamPlans(database, userID, now),
 		database.select({
 			boardID: studyMistake.boardID,
 			concept: studyMistake.concept,
@@ -507,6 +509,7 @@ export async function getStudyTodayDashboard(
 	return {
 		answerAttempts,
 		dueReviews,
+		exams,
 		patterns: groupStudyPatterns(mistakeRows).slice(0, 5),
 		streakDays: calculateReviewStreak(events.map(({ reviewedAt }) => reviewedAt), now),
 		trend: buildReviewTrend(events, now),

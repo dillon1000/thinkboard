@@ -1,0 +1,12 @@
+.ExamPracticeImport { position: absolute; z-index: 500; right: 16px; bottom: 16px; display: grid; width: min(390px, calc(100% - 32px)); max-height: min(520px, calc(100% - 32px)); gap: 12px; overflow: auto; border-radius: 12px; background: var(--panel); padding: 14px; box-shadow: var(--shadow-border), 0 18px 48px rgb(18 22 31 / 18%); }
+.ExamPracticeImport header { display: grid; grid-template-columns: 32px 1fr 28px; align-items: center; gap: 9px; }
+.ExamPracticeImport header > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; background: var(--surface); color: var(--muted); }
+.ExamPracticeImport header div { display: grid; gap: 2px; }
+.ExamPracticeImport header strong { font-size: 13px; }
+.ExamPracticeImport header small { color: var(--faint); font-size: 10.5px; }
+.ExamPracticeImport header button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.ExamPracticeImport > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.ExamPracticeImport ol { display: grid; gap: 6px; margin: 0; padding: 0 0 0 22px; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.ExamPracticeImport footer { display: flex; justify-content: end; gap: 7px; }
+.ExamPracticeImport footer button { min-height: 35px; border: 0; border-radius: 7px; padding: 0 12px; color: var(--muted); cursor: pointer; box-shadow: var(--shadow-border); }
+.ExamPracticeImport footer button:last-child { background: var(--ink); color: var(--panel); }
