@@ -70,6 +70,7 @@ export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) 
 		: await resolveCanvasFlashcard(database, userID, parsed.data.source)
 	if (!card) return Response.json({ error: 'Flashcard not found' }, { status: 404 })
 
+	const gradingModel = env.FLASHCARD_GRADING_MODEL?.trim() || DEFAULT_FLASHCARD_GRADING_MODEL
 	const grade = parsed.data.action === 'skip'
 		? {
 				feedback: null,
@@ -83,7 +84,17 @@ export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) 
 				ai: env.AI as AIRunner,
 				answer: parsed.data.answer,
 				front: card.review.front,
-				model: env.FLASHCARD_GRADING_MODEL?.trim() || DEFAULT_FLASHCARD_GRADING_MODEL,
+				model: gradingModel,
+				onAIError: (error) => {
+					console.warn(JSON.stringify({
+						boardID: card.review.boardID,
+						error: getAIErrorLog(error),
+						model: gradingModel,
+						pipeline: 'flashcard-answer',
+						rayID: request.headers.get('cf-ray'),
+						shapeID: card.review.shapeID,
+					}))
+				},
 				options: {
 					gateway: {
 						id: env.AI_GATEWAY_ID?.trim() || 'default',
@@ -102,6 +113,16 @@ export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) 
 		submittedAnswer: parsed.data.action === 'answer' ? parsed.data.answer : null,
 	})
 	return Response.json(result, { status: 201 })
+}
+
+function getAIErrorLog(error: unknown) {
+	const code = error && typeof error === 'object' ? Reflect.get(error, 'code') : null
+	const message = error instanceof Error ? error.message : String(error)
+	return {
+		...(typeof code === 'number' || typeof code === 'string' ? { code } : {}),
+		message: message.slice(0, 500),
+		name: error instanceof Error ? error.name : 'UnknownError',
+	}
 }
 
 export async function handleFlashcardAnswerAttemptComplete(request: IRequest, env: Env) {

@@ -57,11 +57,17 @@ describe('flashcard answer grading', () => {
 
 	it('calls AI once only when deterministic checks cannot decide', async () => {
 		let callCount = 0
+		let receivedInput: unknown = null
 		const ai = {
-			run: () => {
+			run: (_model: string, input: unknown) => {
 				callCount += 1
+				receivedInput = input
 				return Promise.resolve({
-					response: '{"verdict":"correct","reason":"The meaning is equivalent.","matchedAnswerIndex":0}',
+					response: {
+						matchedAnswerIndex: 0,
+						reason: 'The meaning is equivalent.',
+						verdict: 'correct',
+					},
 				})
 			},
 		}
@@ -78,6 +84,16 @@ describe('flashcard answer grading', () => {
 			verdict: 'correct',
 		})
 		expect(callCount).toBe(1)
+		expect(receivedInput).toMatchObject({
+			response_format: {
+				json_schema: {
+					required: ['matchedAnswerIndex', 'reason', 'verdict'],
+					type: 'object',
+				},
+				type: 'json_schema',
+			},
+			temperature: 0,
+		})
 	})
 
 	it('does not call AI for a deterministic match', async () => {
@@ -110,6 +126,7 @@ describe('flashcard answer grading', () => {
 			verdict: 'uncertain',
 		})
 
+		let reportedErrors = 0
 		for (const run of [
 			() => Promise.resolve({ response: 'not json' }),
 			() => Promise.reject(new Error('Unavailable')),
@@ -120,10 +137,14 @@ describe('flashcard answer grading', () => {
 				answer: 'Different response',
 				front: 'Question',
 				model: 'llama',
+				onAIError: () => {
+					reportedErrors += 1
+				},
 			})).resolves.toMatchObject({
 				gradingMethod: 'ai-unavailable',
 				verdict: 'uncertain',
 			})
 		}
+		expect(reportedErrors).toBe(2)
 	})
 })

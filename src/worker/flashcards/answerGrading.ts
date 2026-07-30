@@ -49,6 +49,7 @@ interface GradeFlashcardAnswerInput {
 	answer: string
 	front: string
 	model: string
+	onAIError?: (error: unknown) => void
 	options?: unknown
 }
 
@@ -62,6 +63,7 @@ export async function gradeFlashcardAnswer({
 	answer,
 	front,
 	model,
+	onAIError,
 	options,
 }: GradeFlashcardAnswerInput): Promise<FlashcardGrade> {
 	const deterministic = gradeDeterministicAnswer(answer, acceptedAnswers)
@@ -69,9 +71,12 @@ export async function gradeFlashcardAnswer({
 
 	try {
 		const response = await ai.run(model, {
-			guided_json: AI_GRADE_JSON_SCHEMA,
 			max_tokens: 120,
 			messages: createAIGradeMessages(front, acceptedAnswers, answer),
+			response_format: {
+				json_schema: AI_GRADE_JSON_SCHEMA,
+				type: 'json_schema',
+			},
 			temperature: 0,
 		}, options)
 		const result = parseAIGrade(response)
@@ -84,7 +89,8 @@ export async function gradeFlashcardAnswer({
 			model,
 			verdict: result.verdict,
 		}
-	} catch {
+	} catch (error) {
+		onAIError?.(error)
 		return {
 			feedback: 'The automatic comparison was unavailable. Choose how to grade this answer.',
 			gradingMethod: 'ai-unavailable',
@@ -173,7 +179,9 @@ function createAIGradeMessages(
 }
 
 function parseAIGrade(value: unknown) {
-	const text = readGeneratedText(value)
+	const response = readGeneratedResponse(value)
+	if (response && typeof response === 'object') return aiGradeSchema.parse(response)
+	const text = typeof response === 'string' ? response : ''
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Answer grader returned invalid JSON')
@@ -181,11 +189,10 @@ function parseAIGrade(value: unknown) {
 	return aiGradeSchema.parse(candidate)
 }
 
-function readGeneratedText(value: unknown) {
+function readGeneratedResponse(value: unknown) {
 	if (typeof value === 'string') return value
-	if (!value || typeof value !== 'object') return ''
-	const response = Reflect.get(value, 'response')
-	return typeof response === 'string' ? response : ''
+	if (!value || typeof value !== 'object') return null
+	return Reflect.get(value, 'response')
 }
 
 function correctGrade(
