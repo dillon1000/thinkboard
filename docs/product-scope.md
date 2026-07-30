@@ -78,21 +78,21 @@ In scope:
 - Usage metering, billing boundaries, abuse controls, and operational dashboards
 - Collaboration roles and school/privacy readiness if the product expands beyond personal use
 
-## Product expansion roadmap
+## Connected study capabilities
 
-The first three items are the current product priorities after the core reliability and safety work:
+These capabilities connect the canvas, retrieval, review schedule, and Today:
 
-1. **Exam mode.** Let the student select an exam date and a set of spaces or PDFs. Generate a study plan that identifies decks that are behind schedule and repeated mistake patterns, builds a practice exam from the existing quiz and practice-set shapes, and adds the countdown and next study tasks to Today. This feature reuses the current review schedule, mistake tracker, study shapes, PDF retrieval, and Today dashboard.
-2. **Shared spaces.** Add email and link invitations with owner, editor, and viewer roles. Membership records, read-only sockets, and live presence already exist in [`schema.ts`](../src/worker/db/schema.ts#L85) and [`index.ts`](../src/worker/index.ts#L176), so the remaining work is mainly invitation management and user interface work. Estimated effort: medium.
-3. **Courses and exam dates.** Add a small course model with a color and an exam date. Spaces currently have only a title and an archive state in [`schema.ts`](../src/worker/db/schema.ts#L70). Use course exam dates as goals for adaptive study sessions. Do not add LMS features.
+1. **Exam mode.** The student selects an exam date and a set of spaces or PDFs. Thinkspace identifies decks that are behind schedule and repeated mistake patterns, builds a practice exam from study shapes, and adds the countdown and next tasks to Today.
+2. **Shared spaces.** Email and link invitations grant owner, editor, or viewer access. The socket enforces read-only access for viewers and shows live presence to members.
+3. **Courses and exam dates.** A small course model groups spaces by color and supplies an exam date for adaptive study goals without adding LMS features.
 
-Other planned product capabilities:
+The same study system also includes:
 
-- **Cross-space semantic search.** Add a `⌘K` search across spaces, notes, review notes, PDF pages, and flashcards. Search results must open the correct space and select the source shape on the canvas. Reuse document embeddings and add indexes only for content types that do not have them.
-- **Handwriting-aware checking.** Use vision or OCR for selected ink when text context is not sufficient. The tutor can check a worked derivation step by step and propose a circle or note on the first incorrect step. The student must approve the annotation before it changes the canvas.
-- **Audio and lecture ingestion.** Let a student upload or record audio. Create a timestamped transcript, then use the same retrieval and citation flow as PDF documents. Keep transcription outside the board synchronization path.
-- **Teach-it-back interactive.** Add a study shape in which the student explains a concept with text or ink. Grade the explanation against selected source material, cite the evidence, and identify missing or incorrect ideas.
-- **Exports.** Export a space to PDF and a flashcard deck to Anki-compatible CSV. Keep the format documented and stable so users can move their work to other tools.
+- **Cross-space semantic search.** `⌘K` searches notes, review notes, PDF pages, lecture transcripts, and flashcards across every accessible space, then opens the source shape.
+- **Handwriting-aware checking.** Vision checks selected ink step by step and proposes a circle or review note for the first incorrect step. The student approves each canvas change.
+- **Audio and lecture ingestion.** An upload or microphone recording becomes a timestamped transcript in the same retrieval and citation flow as PDF documents.
+- **Teach-it-back interactive.** A study shape grades a typed or ink explanation against selected source material and identifies missing or incorrect ideas.
+- **Exports.** A space exports as a PDF, and a flashcard deck exports as CSV or an Anki-ready UTF-8 tab file.
 
 ## Explicitly outside the first release
 
