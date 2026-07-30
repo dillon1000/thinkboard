@@ -2,6 +2,11 @@ import type {
 	AgentMemory,
 	AgentMemoryProposal,
 	DueFlashcard,
+	FlashcardAnswerAttempt,
+	FlashcardAnswerCompletionResult,
+	FlashcardAnswerVerdict,
+	FlashcardFinalVerdict,
+	FlashcardGradingMethod,
 	FlashcardReviewRating,
 	MistakeProposal,
 	StudyMistake,
@@ -14,6 +19,7 @@ import type { Database } from './client'
 import {
 	board,
 	boardMember,
+	flashcardAnswerAttempt,
 	flashcardReview,
 	flashcardReviewEvent,
 	studyMistake,
@@ -28,35 +34,114 @@ interface FlashcardRegistration {
 	shapeID: string
 }
 
+interface RegisterFlashcardOptions {
+	updateBoardMembers?: boolean
+}
+
 export async function registerFlashcards(
 	database: Database,
 	userID: string,
 	boardID: string,
 	cards: readonly FlashcardRegistration[],
+	options: RegisterFlashcardOptions = {},
 	now = new Date()
 ) {
 	for (const card of cards) {
-		await database.insert(flashcardReview).values({
-			id: crypto.randomUUID(),
-			userID,
-			boardID,
-			shapeID: card.shapeID,
-			front: card.front,
-			back: card.back,
-			alternateAnswers: card.alternateAnswers,
-			nextReviewAt: now,
-			createdAt: now,
-			updatedAt: now,
-		}).onConflictDoUpdate({
-			target: [flashcardReview.userID, flashcardReview.boardID, flashcardReview.shapeID],
-			set: {
+		const scope = options.updateBoardMembers
+			? and(eq(flashcardReview.boardID, boardID), eq(flashcardReview.shapeID, card.shapeID))
+			: and(
+					eq(flashcardReview.userID, userID),
+					eq(flashcardReview.boardID, boardID),
+					eq(flashcardReview.shapeID, card.shapeID)
+				)
+		const existing = await database.select().from(flashcardReview).where(scope)
+		const materialChange = existing.some((review) => isMaterialFlashcardChange(review, card))
+		if (existing.length) {
+			await database.update(flashcardReview).set({
 				alternateAnswers: card.alternateAnswers,
 				front: card.front,
 				back: card.back,
+				...(materialChange ? {
+					easeFactor: 2.5,
+					intervalDays: 0,
+					lastReviewedAt: null,
+					nextReviewAt: now,
+					repetition: 0,
+					reviewCount: 0,
+				} : {}),
 				updatedAt: now,
-			},
-		})
+			}).where(scope)
+		}
+		if (!existing.some((review) => review.userID === userID)) {
+			await database.insert(flashcardReview).values({
+				id: crypto.randomUUID(),
+				userID,
+				boardID,
+				shapeID: card.shapeID,
+				front: card.front,
+				back: card.back,
+				alternateAnswers: card.alternateAnswers,
+				nextReviewAt: now,
+				createdAt: now,
+				updatedAt: now,
+			})
+		}
 	}
+}
+
+export function isMaterialFlashcardChange(
+	current: Pick<FlashcardRegistration, 'front' | 'back'>,
+	next: Pick<FlashcardRegistration, 'front' | 'back'>
+) {
+	return current.front !== next.front || current.back !== next.back
+}
+
+export async function getFlashcardReviewByID(
+	database: Database,
+	userID: string,
+	reviewID: string
+) {
+	const [row] = await database.select({
+		boardTitle: board.title,
+		review: flashcardReview,
+	}).from(flashcardReview)
+		.innerJoin(board, eq(board.id, flashcardReview.boardID))
+		.innerJoin(boardMember, and(
+			eq(boardMember.boardID, flashcardReview.boardID),
+			eq(boardMember.userID, userID)
+		))
+		.where(and(
+			eq(flashcardReview.id, reviewID),
+			eq(flashcardReview.userID, userID),
+			isNull(board.archivedAt)
+		))
+		.limit(1)
+	return row ?? null
+}
+
+export async function getFlashcardReviewByShape(
+	database: Database,
+	userID: string,
+	boardID: string,
+	shapeID: string
+) {
+	const [row] = await database.select({
+		boardTitle: board.title,
+		review: flashcardReview,
+	}).from(flashcardReview)
+		.innerJoin(board, eq(board.id, flashcardReview.boardID))
+		.innerJoin(boardMember, and(
+			eq(boardMember.boardID, flashcardReview.boardID),
+			eq(boardMember.userID, userID)
+		))
+		.where(and(
+			eq(flashcardReview.userID, userID),
+			eq(flashcardReview.boardID, boardID),
+			eq(flashcardReview.shapeID, shapeID),
+			isNull(board.archivedAt)
+		))
+		.limit(1)
+	return row ?? null
 }
 
 export async function listDueFlashcards(
@@ -88,6 +173,250 @@ export async function listDueFlashcards(
 		.orderBy(flashcardReview.nextReviewAt)
 
 	return rows.map((row) => ({ ...row, dueAt: row.dueAt.toISOString() }))
+}
+
+interface RecordAnswerAttemptInput {
+	card: NonNullable<Awaited<ReturnType<typeof getFlashcardReviewByID>>>
+	feedback: string | null
+	gradingMethod: FlashcardGradingMethod
+	matchedAnswer: string | null
+	model: string | null
+	submittedAnswer: string | null
+	verdict: FlashcardAnswerVerdict
+}
+
+export async function recordFlashcardAnswerAttempt(
+	database: Database,
+	userID: string,
+	input: RecordAnswerAttemptInput,
+	now = new Date()
+) {
+	const isDue = input.card.review.nextReviewAt <= now
+	const value: typeof flashcardAnswerAttempt.$inferInsert = {
+		id: crypto.randomUUID(),
+		userID,
+		boardID: input.card.review.boardID,
+		shapeID: input.card.review.shapeID,
+		reviewID: input.card.review.id,
+		reviewCountAtAttempt: isDue ? input.card.review.reviewCount : null,
+		front: input.card.review.front,
+		primaryAnswer: input.card.review.back,
+		alternateAnswers: input.card.review.alternateAnswers,
+		submittedAnswer: input.submittedAnswer,
+		originalVerdict: input.verdict,
+		finalVerdict: input.verdict === 'uncertain' ? null : input.verdict,
+		gradingMethod: input.gradingMethod,
+		matchedAnswer: input.matchedAnswer,
+		feedback: input.feedback,
+		model: input.model,
+		createdAt: now,
+	}
+	await database.insert(flashcardAnswerAttempt).values(value)
+	return {
+		attempt: toFlashcardAnswerAttempt({
+			...value,
+			completedAt: null,
+			finalVerdict: value.finalVerdict ?? null,
+			feedback: value.feedback ?? null,
+			matchedAnswer: value.matchedAnswer ?? null,
+			model: value.model ?? null,
+			rating: null,
+			reviewCountAtAttempt: value.reviewCountAtAttempt ?? null,
+			reviewID: value.reviewID ?? null,
+			submittedAnswer: value.submittedAnswer ?? null,
+		}, input.card.boardTitle),
+		isDue,
+	}
+}
+
+export async function listRecentFlashcardAnswerAttempts(
+	database: Database,
+	userID: string,
+	limit = 20
+): Promise<FlashcardAnswerAttempt[]> {
+	const rows = await database.select({
+		attempt: flashcardAnswerAttempt,
+		boardTitle: board.title,
+	}).from(flashcardAnswerAttempt)
+		.innerJoin(board, eq(board.id, flashcardAnswerAttempt.boardID))
+		.where(and(eq(flashcardAnswerAttempt.userID, userID), isNull(board.archivedAt)))
+		.orderBy(desc(flashcardAnswerAttempt.createdAt))
+		.limit(limit)
+	return rows.map(({ attempt, boardTitle }) => toFlashcardAnswerAttempt(attempt, boardTitle))
+}
+
+export async function completeFlashcardAnswerAttempt(
+	database: Database,
+	userID: string,
+	attemptID: string,
+	finalVerdict: FlashcardFinalVerdict,
+	rating: FlashcardReviewRating | undefined,
+	now = new Date()
+): Promise<
+	| { kind: 'completed'; result: FlashcardAnswerCompletionResult }
+	| { kind: 'not-found' }
+	| { kind: 'rating-required' }
+> {
+	const [row] = await database.select({
+		attempt: flashcardAnswerAttempt,
+		boardTitle: board.title,
+	}).from(flashcardAnswerAttempt)
+		.innerJoin(board, eq(board.id, flashcardAnswerAttempt.boardID))
+		.where(and(
+			eq(flashcardAnswerAttempt.id, attemptID),
+			eq(flashcardAnswerAttempt.userID, userID)
+		))
+		.limit(1)
+	if (!row) return { kind: 'not-found' }
+	if (row.attempt.completedAt) {
+		return {
+			kind: 'completed',
+			result: {
+				attempt: toFlashcardAnswerAttempt(row.attempt, row.boardTitle),
+				schedule: null,
+			},
+		}
+	}
+
+	const isDueAttempt = row.attempt.reviewCountAtAttempt !== null
+	if (isDueAttempt && !rating) return { kind: 'rating-required' }
+	const completedAttempt = {
+		...row.attempt,
+		completedAt: now,
+		finalVerdict,
+		rating: isDueAttempt ? rating ?? null : null,
+	}
+	if (!isDueAttempt || !row.attempt.reviewID || !rating) {
+		await database.update(flashcardAnswerAttempt).set({
+			completedAt: now,
+			finalVerdict,
+		}).where(and(
+			eq(flashcardAnswerAttempt.id, attemptID),
+			eq(flashcardAnswerAttempt.userID, userID),
+			isNull(flashcardAnswerAttempt.completedAt)
+		))
+		return {
+			kind: 'completed',
+			result: {
+				attempt: toFlashcardAnswerAttempt(completedAttempt, row.boardTitle),
+				schedule: null,
+			},
+		}
+	}
+
+	const [review] = await database.select().from(flashcardReview).where(and(
+		eq(flashcardReview.id, row.attempt.reviewID),
+		eq(flashcardReview.userID, userID)
+	)).limit(1)
+	if (!review || review.reviewCount !== row.attempt.reviewCountAtAttempt) {
+		await database.update(flashcardAnswerAttempt).set({
+			completedAt: now,
+			finalVerdict,
+		}).where(and(
+			eq(flashcardAnswerAttempt.id, attemptID),
+			eq(flashcardAnswerAttempt.userID, userID),
+			isNull(flashcardAnswerAttempt.completedAt)
+		))
+		return {
+			kind: 'completed',
+			result: {
+				attempt: toFlashcardAnswerAttempt({
+					...completedAttempt,
+					rating: null,
+				}, row.boardTitle),
+				schedule: null,
+			},
+		}
+	}
+
+	const schedule = calculateReviewSchedule(review, rating)
+	const nextReviewAt = new Date(now.getTime() + schedule.intervalDays * DAY_MS)
+	await database.batch([
+		database.update(flashcardAnswerAttempt).set({
+			completedAt: now,
+			finalVerdict,
+			rating,
+		}).where(and(
+			eq(flashcardAnswerAttempt.id, attemptID),
+			eq(flashcardAnswerAttempt.userID, userID),
+			isNull(flashcardAnswerAttempt.completedAt)
+		)),
+		database.update(flashcardReview).set({
+			...schedule,
+			lastReviewedAt: now,
+			nextReviewAt,
+			reviewCount: review.reviewCount + 1,
+			updatedAt: now,
+		}).where(and(
+			eq(flashcardReview.id, review.id),
+			eq(flashcardReview.userID, userID),
+			eq(flashcardReview.reviewCount, row.attempt.reviewCountAtAttempt)
+		)),
+		database.insert(flashcardReviewEvent).values({
+			id: `answer:${attemptID}`,
+			userID,
+			boardID: review.boardID,
+			reviewID: review.id,
+			rating,
+			intervalDays: schedule.intervalDays,
+			easeFactor: schedule.easeFactor,
+			reviewedAt: now,
+		}).onConflictDoNothing(),
+	])
+	return {
+		kind: 'completed',
+		result: {
+			attempt: toFlashcardAnswerAttempt(completedAttempt, row.boardTitle),
+			schedule: { nextReviewAt: nextReviewAt.toISOString(), ...schedule },
+		},
+	}
+}
+
+export async function removeFlashcardAnswerAttempt(
+	database: Database,
+	userID: string,
+	attemptID: string
+) {
+	const removed = await database.delete(flashcardAnswerAttempt)
+		.where(and(
+			eq(flashcardAnswerAttempt.id, attemptID),
+			eq(flashcardAnswerAttempt.userID, userID)
+		))
+		.returning({ id: flashcardAnswerAttempt.id })
+	return removed.length
+}
+
+export async function removeFlashcardAnswerAttemptsForCard(
+	database: Database,
+	userID: string,
+	boardID: string,
+	shapeID: string
+) {
+	const removed = await database.delete(flashcardAnswerAttempt)
+		.where(and(
+			eq(flashcardAnswerAttempt.userID, userID),
+			eq(flashcardAnswerAttempt.boardID, boardID),
+			eq(flashcardAnswerAttempt.shapeID, shapeID)
+		))
+		.returning({ id: flashcardAnswerAttempt.id })
+	return removed.length
+}
+
+export async function removeFlashcardForBoard(
+	database: Database,
+	boardID: string,
+	shapeID: string
+) {
+	await database.batch([
+		database.delete(flashcardAnswerAttempt).where(and(
+			eq(flashcardAnswerAttempt.boardID, boardID),
+			eq(flashcardAnswerAttempt.shapeID, shapeID)
+		)),
+		database.delete(flashcardReview).where(and(
+			eq(flashcardReview.boardID, boardID),
+			eq(flashcardReview.shapeID, shapeID)
+		)),
+	])
 }
 
 export async function reviewFlashcard(
@@ -143,7 +472,8 @@ export async function getStudyTodayDashboard(
 	now = new Date()
 ): Promise<StudyTodayDashboard> {
 	const trendStart = startOfUTCDay(new Date(now.getTime() - 6 * DAY_MS))
-	const [dueReviews, events, mistakeRows] = await Promise.all([
+	const [answerAttempts, dueReviews, events, mistakeRows] = await Promise.all([
+		listRecentFlashcardAnswerAttempts(database, userID),
 		listDueFlashcards(database, userID, now),
 		database.select({
 			rating: flashcardReviewEvent.rating,
@@ -175,11 +505,37 @@ export async function getStudyTodayDashboard(
 	])
 
 	return {
-		answerAttempts: [],
+		answerAttempts,
 		dueReviews,
 		patterns: groupStudyPatterns(mistakeRows).slice(0, 5),
 		streakDays: calculateReviewStreak(events.map(({ reviewedAt }) => reviewedAt), now),
 		trend: buildReviewTrend(events, now),
+	}
+}
+
+function toFlashcardAnswerAttempt(
+	value: typeof flashcardAnswerAttempt.$inferSelect,
+	boardTitle: string
+): FlashcardAnswerAttempt {
+	return {
+		alternateAnswers: value.alternateAnswers,
+		boardID: value.boardID,
+		boardTitle,
+		completedAt: value.completedAt?.toISOString() ?? null,
+		createdAt: value.createdAt.toISOString(),
+		feedback: value.feedback,
+		finalVerdict: value.finalVerdict,
+		front: value.front,
+		gradingMethod: value.gradingMethod,
+		id: value.id,
+		matchedAnswer: value.matchedAnswer,
+		model: value.model,
+		originalVerdict: value.originalVerdict,
+		primaryAnswer: value.primaryAnswer,
+		rating: value.rating,
+		reviewID: value.reviewID,
+		shapeID: value.shapeID,
+		submittedAnswer: value.submittedAnswer,
 	}
 }
 

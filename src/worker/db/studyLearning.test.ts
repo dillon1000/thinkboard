@@ -3,6 +3,7 @@ import {
 	buildReviewTrend,
 	calculateReviewSchedule,
 	calculateReviewStreak,
+	isMaterialFlashcardChange,
 } from './studyLearning'
 
 describe('calculateReviewSchedule', () => {
@@ -51,5 +52,20 @@ describe('review history summaries', () => {
 			new Date('2026-07-27T12:00:00.000Z'),
 			new Date('2026-07-25T12:00:00.000Z'),
 		], now)).toBe(2)
+	})
+})
+
+describe('flashcard registration changes', () => {
+	it('resets schedules only for question or primary-answer changes', () => {
+		const current = { back: 'Primary answer', front: 'Question' }
+		expect(isMaterialFlashcardChange(current, current)).toBe(false)
+		expect(isMaterialFlashcardChange(current, {
+			...current,
+			back: 'Changed primary answer',
+		})).toBe(true)
+		expect(isMaterialFlashcardChange(current, {
+			...current,
+			front: 'Changed question',
+		})).toBe(true)
 	})
 })

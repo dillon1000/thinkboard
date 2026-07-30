@@ -119,7 +119,7 @@ const proposalTools = {
 		outputSchema: proposalOutputSchema,
 	}),
 	createFlashcards: tool({
-		description: 'Create one proposal containing two to six interactive canvas flashcards. Keep every back hidden from visible assistant text.',
+		description: 'Create one proposal containing two to six interactive canvas flashcards. Add up to five concise alternate answers only when they are fully equivalent to the primary answer. Keep every primary and alternate answer hidden from visible assistant text.',
 		inputSchema: flashcardProposalSchema,
 		outputSchema: proposalOutputSchema,
 	}),
@@ -462,6 +462,7 @@ ${spotifyContext}
 ${requestedTool ? `- The latest request requires ${requestedTool}. Call the available proposal tool before writing assistant text.\n` : ''}- Emit a native tool call; never print tool names, parameters, JSON, or schema text.
 - The student must explicitly approve or dismiss each proposal in the interface.
 - Never reveal flashcard backs, quiz answers, or quiz explanations in assistant text.
+- For flashcards, add alternate answers only for fully equivalent wording. Do not add hints, partial answers, or broader related facts.
 - Use LaTeX delimiters inside tool text fields when needed.
 - Put artifacts immediately right of the selection, or near the viewport center when nothing is selected.
 - Use composeCanvas for native shapes, text, notes, lines, bound arrows, frames, groups, diagrams, custom layouts, restyling, movement, resizing, relabeling, or deletion. Keep interactive flashcards, quizzes, walkthroughs, review notes, and memories in their dedicated tools.

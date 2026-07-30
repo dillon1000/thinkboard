@@ -2,11 +2,14 @@ import {
 	agentProfileSchema,
 	agentMemoryKeySchema,
 	agentMemoryProposalSchema,
+	flashcardAnswerAttemptRequestSchema,
+	flashcardAnswerCompletionSchema,
 	flashcardReviewRatingSchema,
 	manualAgentMemorySchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
 } from '@agentboard/shared'
+import type { FlashcardAnswerAttemptRequest } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
 import { requireSession } from '../auth/session'
 import { getBoardAccess } from '../db/boards'
@@ -15,19 +18,31 @@ import {
 	listBoardMistakes,
 	listDueFlashcards,
 	listAgentMemories,
+	completeFlashcardAnswerAttempt,
+	getFlashcardReviewByID,
+	getFlashcardReviewByShape,
 	getStudyTodayDashboard,
+	recordFlashcardAnswerAttempt,
 	recordAgentMemory,
 	recordStudyMistake,
+	removeFlashcardAnswerAttempt,
+	removeFlashcardAnswerAttemptsForCard,
+	removeFlashcardForBoard,
 	removeAgentMemory,
 	registerFlashcards,
 	reviewFlashcard,
 } from '../db/studyLearning'
 import { getAgentProfile, saveAgentProfile } from '../db/agentProfile'
+import {
+	gradeFlashcardAnswer,
+	type AIRunner,
+} from '../flashcards/answerGrading'
+
+const DEFAULT_FLASHCARD_GRADING_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'
 
 export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 	const authorized = await authorizeBoard(request, env)
 	if ('response' in authorized) return authorized.response
-	if (authorized.role === 'viewer') return Response.json({ error: 'Forbidden' }, { status: 403 })
 	const body: unknown = await request.json().catch(() => null)
 	const parsed = registerFlashcardsSchema.safeParse(body)
 	if (!parsed.success) return Response.json({ error: 'Invalid flashcards' }, { status: 400 })
@@ -35,9 +50,116 @@ export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 		authorized.database,
 		authorized.userID,
 		request.params.boardID,
-		parsed.data.cards
+		parsed.data.cards,
+		{ updateBoardMembers: authorized.role !== 'viewer' }
 	)
 	return Response.json({ registered: parsed.data.cards.length }, { status: 201 })
+}
+
+export async function handleFlashcardAnswerAttempt(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const body: unknown = await request.json().catch(() => null)
+	const parsed = flashcardAnswerAttemptRequestSchema.safeParse(body)
+	if (!parsed.success) return Response.json({ error: 'Invalid flashcard answer' }, { status: 400 })
+
+	const database = createDatabase(env)
+	const userID = authentication.session.user.id
+	const card = parsed.data.source.kind === 'review'
+		? await getFlashcardReviewByID(database, userID, parsed.data.source.reviewID)
+		: await resolveCanvasFlashcard(database, userID, parsed.data.source)
+	if (!card) return Response.json({ error: 'Flashcard not found' }, { status: 404 })
+
+	const grade = parsed.data.action === 'skip'
+		? {
+				feedback: null,
+				gradingMethod: 'skipped' as const,
+				matchedAnswer: null,
+				model: null,
+				verdict: 'skipped' as const,
+			}
+		: await gradeFlashcardAnswer({
+				acceptedAnswers: [card.review.back, ...card.review.alternateAnswers],
+				ai: env.AI as AIRunner,
+				answer: parsed.data.answer,
+				front: card.review.front,
+				model: env.FLASHCARD_GRADING_MODEL?.trim() || DEFAULT_FLASHCARD_GRADING_MODEL,
+				options: {
+					gateway: {
+						id: env.AI_GATEWAY_ID?.trim() || 'default',
+						metadata: {
+							boardID: card.review.boardID,
+							pipeline: 'flashcard-answer',
+							shapeID: card.review.shapeID,
+						},
+					},
+					tags: ['agentboard', 'flashcard-answer'],
+				},
+			})
+	const result = await recordFlashcardAnswerAttempt(database, userID, {
+		card,
+		...grade,
+		submittedAnswer: parsed.data.action === 'answer' ? parsed.data.answer : null,
+	})
+	return Response.json(result, { status: 201 })
+}
+
+export async function handleFlashcardAnswerAttemptComplete(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const body: unknown = await request.json().catch(() => null)
+	const parsed = flashcardAnswerCompletionSchema.safeParse(body)
+	if (!parsed.success) return Response.json({ error: 'Invalid answer completion' }, { status: 400 })
+	const result = await completeFlashcardAnswerAttempt(
+		createDatabase(env),
+		authentication.session.user.id,
+		request.params.attemptID,
+		parsed.data.finalVerdict,
+		parsed.data.rating
+	)
+	if (result.kind === 'not-found') {
+		return Response.json({ error: 'Answer attempt not found' }, { status: 404 })
+	}
+	if (result.kind === 'rating-required') {
+		return Response.json({ error: 'A due answer requires a review rating' }, { status: 400 })
+	}
+	return Response.json(result.result)
+}
+
+export async function handleFlashcardAnswerAttemptDelete(request: IRequest, env: Env) {
+	const authentication = await requireSession(request, env)
+	if ('response' in authentication) return authentication.response
+	const removed = await removeFlashcardAnswerAttempt(
+		createDatabase(env),
+		authentication.session.user.id,
+		request.params.attemptID
+	)
+	if (!removed) return Response.json({ error: 'Answer attempt not found' }, { status: 404 })
+	return new Response(null, { status: 204 })
+}
+
+export async function handleFlashcardAnswerAttemptsForCardDelete(request: IRequest, env: Env) {
+	const authorized = await authorizeBoard(request, env)
+	if ('response' in authorized) return authorized.response
+	const removed = await removeFlashcardAnswerAttemptsForCard(
+		authorized.database,
+		authorized.userID,
+		request.params.boardID,
+		request.params.shapeID
+	)
+	return Response.json({ removed })
+}
+
+export async function handleFlashcardDelete(request: IRequest, env: Env) {
+	const authorized = await authorizeBoard(request, env)
+	if ('response' in authorized) return authorized.response
+	if (authorized.role === 'viewer') return Response.json({ error: 'Forbidden' }, { status: 403 })
+	await removeFlashcardForBoard(
+		authorized.database,
+		request.params.boardID,
+		request.params.shapeID
+	)
+	return new Response(null, { status: 204 })
 }
 
 export async function handleDueFlashcards(request: IRequest, env: Env) {
@@ -213,4 +335,20 @@ async function authorizeBoard(request: IRequest, env: Env) {
 		role: access.role,
 		userID: authentication.session.user.id,
 	}
+}
+
+async function resolveCanvasFlashcard(
+	database: ReturnType<typeof createDatabase>,
+	userID: string,
+	source: Extract<FlashcardAnswerAttemptRequest['source'], { kind: 'canvas' }>
+) {
+	const access = await getBoardAccess(database, source.boardID, userID)
+	if (!access) return null
+	await registerFlashcards(database, userID, source.boardID, [{
+		alternateAnswers: source.alternateAnswers,
+		back: source.back,
+		front: source.front,
+		shapeID: source.shapeID,
+	}], { updateBoardMembers: access.role !== 'viewer' })
+	return getFlashcardReviewByShape(database, userID, source.boardID, source.shapeID)
 }

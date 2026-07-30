@@ -245,6 +245,8 @@ export type {
 	AgentPromptSources,
 	DueFlashcard,
 	FlashcardAnswerAttempt,
+	FlashcardAnswerAttemptResult,
+	FlashcardAnswerCompletionResult,
 	FlashcardAnswerAttemptRequest,
 	FlashcardAnswerCompletion,
 	FlashcardAnswerVerdict,

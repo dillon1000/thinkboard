@@ -31,6 +31,11 @@ import {
 	handleBoardMemoryCreate,
 	handleBoardMistakes,
 	handleDueFlashcards,
+	handleFlashcardAnswerAttempt,
+	handleFlashcardAnswerAttemptComplete,
+	handleFlashcardAnswerAttemptDelete,
+	handleFlashcardAnswerAttemptsForCardDelete,
+	handleFlashcardDelete,
 	handleFlashcardRegistration,
 	handleFlashcardReview,
 	handleAgentProfileGet,
@@ -99,6 +104,10 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.post(apiRoutePatterns.studyConversationTitle, handleStudyConversationTitle)
 	.get(apiRoutePatterns.studyReviews, handleDueFlashcards)
 	.post(apiRoutePatterns.studyReview, handleFlashcardReview)
+	.post(apiRoutePatterns.studyAnswerAttempts, handleFlashcardAnswerAttempt)
+	.post(apiRoutePatterns.studyAnswerAttemptComplete, handleFlashcardAnswerAttemptComplete)
+	.delete(apiRoutePatterns.studyAnswerAttempt, handleFlashcardAnswerAttemptDelete)
+	.delete(apiRoutePatterns.studyCardAnswerAttempts, handleFlashcardAnswerAttemptsForCardDelete)
 	.get(apiRoutePatterns.studyToday, handleStudyToday)
 	.get(apiRoutePatterns.studyMemory, handleStudyMemory)
 	.post(apiRoutePatterns.studyMemory, handleStudyMemoryCreate)
@@ -106,6 +115,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.studyAgentProfile, handleAgentProfileGet)
 	.put(apiRoutePatterns.studyAgentProfile, handleAgentProfilePut)
 	.post(apiRoutePatterns.boardFlashcards, handleFlashcardRegistration)
+	.delete(apiRoutePatterns.boardFlashcard, handleFlashcardDelete)
 	.get(apiRoutePatterns.boardAgentActions, handleAgentActions)
 	.post(apiRoutePatterns.boardAgentActions, handleAgentActions)
 	.post(apiRoutePatterns.boardAgentActionUndo, handleAgentActionUndo)

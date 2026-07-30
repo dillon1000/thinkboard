@@ -161,6 +161,21 @@ export interface FlashcardAnswerAttempt {
 	submittedAnswer: string | null
 }
 
+export interface FlashcardAnswerAttemptResult {
+	attempt: FlashcardAnswerAttempt
+	isDue: boolean
+}
+
+export interface FlashcardAnswerCompletionResult {
+	attempt: FlashcardAnswerAttempt
+	schedule: {
+		easeFactor: number
+		intervalDays: number
+		nextReviewAt: string
+		repetition: number
+	} | null
+}
+
 export interface StudyMistake {
 	boardID: string
 	concept: string
