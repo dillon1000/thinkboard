@@ -2,6 +2,21 @@ import { z } from 'zod'
 
 export const studyModeSchema = z.enum(['direct', 'socratic'])
 export const flashcardReviewRatingSchema = z.enum(['again', 'hard', 'good', 'easy'])
+export const flashcardAnswerVerdictSchema = z.enum([
+	'correct',
+	'incorrect',
+	'uncertain',
+	'skipped',
+])
+export const flashcardFinalVerdictSchema = z.enum(['correct', 'incorrect', 'skipped'])
+export const flashcardGradingMethodSchema = z.enum([
+	'exact',
+	'edit-distance',
+	'word-coverage',
+	'ai',
+	'ai-unavailable',
+	'skipped',
+])
 export const agentMemoryKindSchema = z.enum([
 	'background',
 	'goal',
@@ -26,7 +41,40 @@ export const registerFlashcardsSchema = z.object({
 		shapeID: z.string().max(120),
 		front: z.string().trim().min(1).max(300),
 		back: z.string().trim().min(1).max(600),
+		alternateAnswers: z.array(z.string().trim().min(1).max(300)).max(5).default([]),
 	})).min(1).max(30),
+})
+
+const flashcardAnswerSourceSchema = z.discriminatedUnion('kind', [
+	z.object({
+		kind: z.literal('review'),
+		reviewID: z.string().trim().min(1).max(120),
+	}),
+	z.object({
+		kind: z.literal('canvas'),
+		boardID: z.string().trim().min(1).max(120),
+		shapeID: z.string().trim().min(1).max(120),
+		front: z.string().trim().min(1).max(300),
+		back: z.string().trim().min(1).max(600),
+		alternateAnswers: z.array(z.string().trim().min(1).max(300)).max(5).default([]),
+	}),
+])
+
+export const flashcardAnswerAttemptRequestSchema = z.discriminatedUnion('action', [
+	z.object({
+		action: z.literal('answer'),
+		answer: z.string().trim().min(1).max(1_200),
+		source: flashcardAnswerSourceSchema,
+	}),
+	z.object({
+		action: z.literal('skip'),
+		source: flashcardAnswerSourceSchema,
+	}),
+])
+
+export const flashcardAnswerCompletionSchema = z.object({
+	finalVerdict: flashcardFinalVerdictSchema,
+	rating: flashcardReviewRatingSchema.optional(),
 })
 
 export const mistakeProposalSchema = z.object({
@@ -81,6 +129,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
 }
 
 export interface DueFlashcard {
+	alternateAnswers: string[]
 	back: string
 	boardID: string
 	boardTitle: string
@@ -89,6 +138,27 @@ export interface DueFlashcard {
 	reviewCount: number
 	reviewID: string
 	shapeID: string
+}
+
+export interface FlashcardAnswerAttempt {
+	alternateAnswers: string[]
+	boardID: string
+	boardTitle: string
+	completedAt: string | null
+	createdAt: string
+	feedback: string | null
+	finalVerdict: FlashcardFinalVerdict | null
+	front: string
+	gradingMethod: FlashcardGradingMethod
+	id: string
+	matchedAnswer: string | null
+	model: string | null
+	originalVerdict: FlashcardAnswerVerdict
+	primaryAnswer: string
+	rating: FlashcardReviewRating | null
+	reviewID: string | null
+	shapeID: string
+	submittedAnswer: string | null
 }
 
 export interface StudyMistake {
@@ -119,6 +189,7 @@ export interface StudyTodayTrendDay {
 }
 
 export interface StudyTodayDashboard {
+	answerAttempts: FlashcardAnswerAttempt[]
 	dueReviews: DueFlashcard[]
 	patterns: StudyTodayPattern[]
 	streakDays: number
@@ -141,6 +212,11 @@ export type AgentPersonality = z.infer<typeof agentPersonalitySchema>
 export type AgentProfile = z.infer<typeof agentProfileSchema>
 export type AgentPromptSources = z.infer<typeof agentPromptSourcesSchema>
 export type FlashcardReviewRating = z.infer<typeof flashcardReviewRatingSchema>
+export type FlashcardAnswerAttemptRequest = z.infer<typeof flashcardAnswerAttemptRequestSchema>
+export type FlashcardAnswerCompletion = z.infer<typeof flashcardAnswerCompletionSchema>
+export type FlashcardAnswerVerdict = z.infer<typeof flashcardAnswerVerdictSchema>
+export type FlashcardFinalVerdict = z.infer<typeof flashcardFinalVerdictSchema>
+export type FlashcardGradingMethod = z.infer<typeof flashcardGradingMethodSchema>
 export type ManualAgentMemory = z.infer<typeof manualAgentMemorySchema>
 export type MistakeProposal = z.infer<typeof mistakeProposalSchema>
 export type StudyMode = z.infer<typeof studyModeSchema>

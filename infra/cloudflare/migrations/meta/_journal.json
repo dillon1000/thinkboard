@@ -78,6 +78,13 @@
       "when": 1785367959743,
       "tag": "0010_zippy_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785373043069,
+      "tag": "0011_next_wraith",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ interface Env {
 	TLDRAW_LICENSE_KEY?: string
 	AI_GATEWAY_ID?: string
 	LOCK_IN_MODEL?: string
+	FLASHCARD_GRADING_MODEL?: string
 	CONVERSATION_TITLE_MODEL?: string
 	EMBEDDING_MODEL?: string
 	OCR_MODEL?: string

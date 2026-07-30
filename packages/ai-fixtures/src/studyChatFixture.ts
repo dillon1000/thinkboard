@@ -44,9 +44,21 @@ export const studyChatFixture = createChat<unknown, StudyFixtureData, StudyFixtu
 					x: 920,
 					y: 630,
 					cards: [
-						{ front: 'What does a derivative measure?', back: 'Instantaneous rate of change.' },
-						{ front: 'How is a derivative written?', back: "Using notation such as f'(x)." },
-						{ front: 'What is one use of derivatives?', back: 'Finding maxima and minima.' },
+						{
+							front: 'What does a derivative measure?',
+							back: 'Instantaneous rate of change.',
+							alternateAnswers: ['The instantaneous change rate.'],
+						},
+						{
+							front: 'How is a derivative written?',
+							back: "Using notation such as f'(x).",
+							alternateAnswers: ['With derivative notation such as dy/dx.'],
+						},
+						{
+							front: 'What is one use of derivatives?',
+							back: 'Finding maxima and minima.',
+							alternateAnswers: ['Locating maximum and minimum values.'],
+						},
 					],
 				},
 			})

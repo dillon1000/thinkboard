@@ -222,6 +222,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 					shapeID: flashcard.id,
 					front: flashcard.props.front,
 					back: flashcard.props.back,
+					alternateAnswers: flashcard.props.alternateAnswers,
 				}]
 			})
 			const signature = JSON.stringify(cards)

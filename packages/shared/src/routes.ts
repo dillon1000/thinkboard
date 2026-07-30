@@ -4,6 +4,7 @@ export const apiRoutePatterns = {
 	boardInlineAgent: '/api/boards/:boardID/inline',
 	boardLockInReview: '/api/boards/:boardID/lock-in/review',
 	boardFlashcards: '/api/boards/:boardID/flashcards',
+	boardFlashcard: '/api/boards/:boardID/flashcards/:shapeID',
 	boardAgentActions: '/api/boards/:boardID/agent-actions',
 	boardAgentActionUndo: '/api/boards/:boardID/agent-actions/:actionID/undo',
 	boardMistakes: '/api/boards/:boardID/mistakes',
@@ -21,6 +22,10 @@ export const apiRoutePatterns = {
 	archivedBoards: '/api/boards/archived',
 	studyReviews: '/api/study/reviews',
 	studyReview: '/api/study/reviews/:reviewID',
+	studyAnswerAttempts: '/api/study/answer-attempts',
+	studyAnswerAttempt: '/api/study/answer-attempts/:attemptID',
+	studyAnswerAttemptComplete: '/api/study/answer-attempts/:attemptID/complete',
+	studyCardAnswerAttempts: '/api/study/cards/:boardID/:shapeID/answer-attempts',
 	studyToday: '/api/study/today',
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: '/api/study/memory/:memoryKey',
@@ -58,6 +63,8 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/lock-in/review`,
 	boardFlashcards: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/flashcards`,
+	boardFlashcard: (boardID: string, shapeID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/flashcards/${encodeURIComponent(shapeID)}`,
 	boardAgentActions: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/agent-actions`,
 	boardAgentActionUndo: (boardID: string, actionID: string) =>
@@ -82,6 +89,13 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/documents/${encodeURIComponent(documentID)}/status`,
 	studyReviews: '/api/study/reviews',
 	studyReview: (reviewID: string) => `/api/study/reviews/${encodeURIComponent(reviewID)}`,
+	studyAnswerAttempts: '/api/study/answer-attempts',
+	studyAnswerAttempt: (attemptID: string) =>
+		`/api/study/answer-attempts/${encodeURIComponent(attemptID)}`,
+	studyAnswerAttemptComplete: (attemptID: string) =>
+		`/api/study/answer-attempts/${encodeURIComponent(attemptID)}/complete`,
+	studyCardAnswerAttempts: (boardID: string, shapeID: string) =>
+		`/api/study/cards/${encodeURIComponent(boardID)}/${encodeURIComponent(shapeID)}/answer-attempts`,
 	studyToday: '/api/study/today',
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: (memoryKey: string) =>

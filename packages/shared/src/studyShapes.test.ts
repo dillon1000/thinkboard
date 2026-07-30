@@ -44,6 +44,28 @@ describe('study shape contracts', () => {
 				],
 			}).success
 		).toBe(true)
+
+		const proposal = flashcardProposalSchema.parse({
+			x: 20,
+			y: 30,
+			cards: [
+				{ front: 'Question one', back: 'Answer one' },
+				{ front: 'Question two', back: 'Answer two' },
+			],
+		})
+		expect(proposal.cards[0].alternateAnswers).toEqual([])
+		expect(flashcardProposalSchema.safeParse({
+			x: 20,
+			y: 30,
+			cards: [
+				{
+					front: 'Question one',
+					back: 'Answer one',
+					alternateAnswers: ['1', '2', '3', '4', '5', '6'],
+				},
+				{ front: 'Question two', back: 'Answer two' },
+			],
+		}).success).toBe(false)
 	})
 
 	it('rejects a quiz answer outside of its options', () => {
@@ -64,6 +86,7 @@ describe('study shape contracts', () => {
 			h: 190,
 			front: 'Question',
 			back: 'Answer',
+			alternateAnswers: ['Accepted alternative'],
 			revealed: false,
 			schemaVersion: 1,
 		}

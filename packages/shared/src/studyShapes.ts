@@ -21,6 +21,7 @@ export interface FlashcardShapeProps {
 	h: number
 	front: string
 	back: string
+	alternateAnswers: string[]
 	revealed: boolean
 	schemaVersion: number
 }
@@ -87,6 +88,7 @@ export const flashcardShapeProps = {
 	h: T.number,
 	front: T.string,
 	back: T.string,
+	alternateAnswers: T.arrayOf(T.string),
 	revealed: T.boolean,
 	schemaVersion: T.positiveInteger,
 }
@@ -160,6 +162,18 @@ export const pdfPageShapeMigrations = createShapePropsMigrationSequence({
 	}],
 })
 
+export const flashcardShapeMigrations = createShapePropsMigrationSequence({
+	sequence: [{
+		id: 'com.tldraw.shape.agentboard-flashcard/1',
+		up: (props) => {
+			props.alternateAnswers = []
+		},
+		down: (props) => {
+			delete props.alternateAnswers
+		},
+	}],
+})
+
 export const flashcardShapeValidator = T.object(flashcardShapeProps)
 export const quizShapeValidator = T.object(quizShapeProps)
 export const reviewShapeValidator = T.object(reviewShapeProps)
@@ -169,7 +183,7 @@ export const mathShapeValidator = T.object(mathShapeProps)
 export const pdfPageShapeValidator = T.object(pdfPageShapeProps)
 
 export const studyShapeSchemas = {
-	[FLASHCARD_SHAPE_TYPE]: { props: flashcardShapeProps },
+	[FLASHCARD_SHAPE_TYPE]: { migrations: flashcardShapeMigrations, props: flashcardShapeProps },
 	[CONCEPT_MAP_SHAPE_TYPE]: { props: conceptMapShapeProps },
 	[QUIZ_SHAPE_TYPE]: { props: quizShapeProps },
 	[REVIEW_SHAPE_TYPE]: { props: reviewShapeProps },
@@ -197,6 +211,10 @@ export const flashcardProposalSchema = z.object({
 			z.object({
 				front: z.string().trim().min(1).max(300).describe('Question or retrieval cue shown first.'),
 				back: z.string().trim().min(1).max(600).describe('Answer hidden until the card is flipped.'),
+				alternateAnswers: z.array(
+					z.string().trim().min(1).max(300)
+						.describe('A concise answer that is fully equivalent to the primary answer.')
+				).max(5).default([]),
 			})
 		)
 		.min(2)

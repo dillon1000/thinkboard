@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable(
@@ -134,6 +134,10 @@ export const flashcardReview = sqliteTable(
 		shapeID: text('shapeID').notNull(),
 		front: text('front').notNull(),
 		back: text('back').notNull(),
+		alternateAnswers: text('alternateAnswers', { mode: 'json' })
+			.$type<string[]>()
+			.notNull()
+			.default(sql`'[]'`),
 		easeFactor: real('easeFactor').notNull().default(2.5),
 		intervalDays: integer('intervalDays').notNull().default(0),
 		repetition: integer('repetition').notNull().default(0),
@@ -150,6 +154,39 @@ export const flashcardReview = sqliteTable(
 			table.shapeID
 		),
 		index('flashcardReview_userID_nextReviewAt_idx').on(table.userID, table.nextReviewAt),
+	]
+)
+
+export const flashcardAnswerAttempt = sqliteTable(
+	'flashcardAnswerAttempt',
+	{
+		id: text('id').primaryKey(),
+		userID: text('userID').notNull().references(() => user.id, { onDelete: 'cascade' }),
+		boardID: text('boardID').notNull().references(() => board.id, { onDelete: 'cascade' }),
+		shapeID: text('shapeID').notNull(),
+		reviewID: text('reviewID'),
+		reviewCountAtAttempt: integer('reviewCountAtAttempt'),
+		front: text('front').notNull(),
+		primaryAnswer: text('primaryAnswer').notNull(),
+		alternateAnswers: text('alternateAnswers', { mode: 'json' }).$type<string[]>().notNull(),
+		submittedAnswer: text('submittedAnswer'),
+		originalVerdict: text('originalVerdict', {
+			enum: ['correct', 'incorrect', 'uncertain', 'skipped'],
+		}).notNull(),
+		finalVerdict: text('finalVerdict', { enum: ['correct', 'incorrect', 'skipped'] }),
+		gradingMethod: text('gradingMethod', {
+			enum: ['exact', 'edit-distance', 'word-coverage', 'ai', 'ai-unavailable', 'skipped'],
+		}).notNull(),
+		matchedAnswer: text('matchedAnswer'),
+		feedback: text('feedback'),
+		model: text('model'),
+		rating: text('rating', { enum: ['again', 'hard', 'good', 'easy'] }),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+		completedAt: integer('completedAt', { mode: 'timestamp' }),
+	},
+	(table) => [
+		index('flashcardAnswerAttempt_userID_createdAt_idx').on(table.userID, table.createdAt),
+		index('flashcardAnswerAttempt_boardID_shapeID_idx').on(table.boardID, table.shapeID),
 	]
 )
 
@@ -340,6 +377,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	boardMemberships: many(boardMember),
 	studyConversations: many(studyConversation),
 	flashcardReviews: many(flashcardReview),
+	flashcardAnswerAttempts: many(flashcardAnswerAttempt),
 	studyMistakes: many(studyMistake),
 	agentProfile: one(agentProfile),
 	documents: many(document),
@@ -360,6 +398,7 @@ export const boardRelations = relations(board, ({ one, many }) => ({
 	members: many(boardMember),
 	studyConversations: many(studyConversation),
 	flashcardReviews: many(flashcardReview),
+	flashcardAnswerAttempts: many(flashcardAnswerAttempt),
 	studyMistakes: many(studyMistake),
 	documents: many(document),
 	craftDocumentLinks: many(craftDocumentLink),
@@ -378,6 +417,11 @@ export const studyConversationRelations = relations(studyConversation, ({ one })
 export const flashcardReviewRelations = relations(flashcardReview, ({ one }) => ({
 	board: one(board, { fields: [flashcardReview.boardID], references: [board.id] }),
 	user: one(user, { fields: [flashcardReview.userID], references: [user.id] }),
+}))
+
+export const flashcardAnswerAttemptRelations = relations(flashcardAnswerAttempt, ({ one }) => ({
+	board: one(board, { fields: [flashcardAnswerAttempt.boardID], references: [board.id] }),
+	user: one(user, { fields: [flashcardAnswerAttempt.userID], references: [user.id] }),
 }))
 
 export const studyMistakeRelations = relations(studyMistake, ({ one }) => ({

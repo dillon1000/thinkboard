@@ -4,6 +4,8 @@ import {
 	agentMemoryProposalSchema,
 	agentProfileSchema,
 	flashcardReviewRatingSchema,
+	flashcardAnswerAttemptRequestSchema,
+	flashcardAnswerCompletionSchema,
 	manualAgentMemorySchema,
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
@@ -13,10 +15,24 @@ import {
 describe('study learning contracts', () => {
 	it('accepts review registration and learning modes', () => {
 		expect(registerFlashcardsSchema.safeParse({
-			cards: [{ shapeID: 'shape:one', front: 'Prompt', back: 'Answer' }],
+			cards: [{
+				shapeID: 'shape:one',
+				front: 'Prompt',
+				back: 'Answer',
+				alternateAnswers: ['Equivalent answer'],
+			}],
 		}).success).toBe(true)
 		expect(studyModeSchema.parse('socratic')).toBe('socratic')
 		expect(flashcardReviewRatingSchema.parse('good')).toBe('good')
+		expect(flashcardAnswerAttemptRequestSchema.safeParse({
+			action: 'answer',
+			answer: 'Equivalent answer',
+			source: { kind: 'review', reviewID: 'review-1' },
+		}).success).toBe(true)
+		expect(flashcardAnswerCompletionSchema.safeParse({
+			finalVerdict: 'correct',
+			rating: 'good',
+		}).success).toBe(true)
 	})
 
 	it('requires stable mistake pattern keys', () => {

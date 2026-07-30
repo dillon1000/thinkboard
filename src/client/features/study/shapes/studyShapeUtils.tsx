@@ -119,6 +119,7 @@ export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 			h: 190,
 			front: 'Question',
 			back: 'Answer',
+			alternateAnswers: [],
 			revealed: false,
 			schemaVersion: 1,
 		}

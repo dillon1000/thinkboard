@@ -22,6 +22,7 @@ import {
 const DAY_MS = 86_400_000
 
 interface FlashcardRegistration {
+	alternateAnswers: string[]
 	back: string
 	front: string
 	shapeID: string
@@ -42,12 +43,18 @@ export async function registerFlashcards(
 			shapeID: card.shapeID,
 			front: card.front,
 			back: card.back,
+			alternateAnswers: card.alternateAnswers,
 			nextReviewAt: now,
 			createdAt: now,
 			updatedAt: now,
 		}).onConflictDoUpdate({
 			target: [flashcardReview.userID, flashcardReview.boardID, flashcardReview.shapeID],
-			set: { front: card.front, back: card.back, updatedAt: now },
+			set: {
+				alternateAnswers: card.alternateAnswers,
+				front: card.front,
+				back: card.back,
+				updatedAt: now,
+			},
 		})
 	}
 }
@@ -58,6 +65,7 @@ export async function listDueFlashcards(
 	now = new Date()
 ): Promise<DueFlashcard[]> {
 	const rows = await database.select({
+		alternateAnswers: flashcardReview.alternateAnswers,
 		back: flashcardReview.back,
 		boardID: flashcardReview.boardID,
 		boardTitle: board.title,
@@ -167,6 +175,7 @@ export async function getStudyTodayDashboard(
 	])
 
 	return {
+		answerAttempts: [],
 		dueReviews,
 		patterns: groupStudyPatterns(mistakeRows).slice(0, 5),
 		streakDays: calculateReviewStreak(events.map(({ reviewedAt }) => reviewedAt), now),
