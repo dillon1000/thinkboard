@@ -129,6 +129,8 @@ export type {
 	CanvasSpacing,
 } from './canvasPlan'
 export {
+	FLASHCARD_CANVAS_HEIGHT,
+	FLASHCARD_CANVAS_WIDTH,
 	FLASHCARD_SHAPE_TYPE,
 	CONCEPT_MAP_SHAPE_TYPE,
 	QUIZ_SHAPE_TYPE,

@@ -3,6 +3,9 @@ import { T } from '@tldraw/validate'
 import { z } from 'zod'
 
 export const FLASHCARD_SHAPE_TYPE = 'agentboard-flashcard' as const
+/** Default canvas dimensions keep flashcards compact while leaving enough room for readable math. */
+export const FLASHCARD_CANVAS_WIDTH = 220
+export const FLASHCARD_CANVAS_HEIGHT = 118
 export const CONCEPT_MAP_SHAPE_TYPE = 'agentboard-concept-map' as const
 export const QUIZ_SHAPE_TYPE = 'agentboard-quiz' as const
 export const REVIEW_SHAPE_TYPE = 'agentboard-review' as const

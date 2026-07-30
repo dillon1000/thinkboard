@@ -1,5 +1,7 @@
 import {
 	FLASHCARD_SHAPE_TYPE,
+	FLASHCARD_CANVAS_HEIGHT,
+	FLASHCARD_CANVAS_WIDTH,
 	CONCEPT_MAP_SHAPE_TYPE,
 	QUIZ_SHAPE_TYPE,
 	REVIEW_SHAPE_TYPE,
@@ -127,8 +129,8 @@ export function applyProposal(
 			y: proposal.y + Math.floor(index / 3) * 215,
 			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'flashcard' } },
 			props: {
-				w: 300,
-				h: 190,
+				w: FLASHCARD_CANVAS_WIDTH,
+				h: FLASHCARD_CANVAS_HEIGHT,
 				front: card.front,
 				back: card.back,
 				alternateAnswers: card.alternateAnswers,
@@ -246,8 +248,8 @@ export function applyProposal(
 		const quizIDs = proposal.quizzes.map(() => createShapeId())
 		const padding = 28
 		const gap = 24
-		const cardWidth = 300
-		const cardHeight = 190
+		const cardWidth = FLASHCARD_CANVAS_WIDTH
+		const cardHeight = FLASHCARD_CANVAS_HEIGHT
 		const quizWidth = 370
 		const quizHeight = 350
 		const conceptWidth = 580

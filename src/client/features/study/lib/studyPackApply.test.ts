@@ -56,6 +56,11 @@ describe('applyProposal study pack', () => {
 		expect(createdShapes.slice(1).every((shape) =>
 			JSON.stringify(shape.meta).includes('"documentID":"biology-notes"')
 		)).toBe(true)
+		const flashcards = createdShapes.filter((shape) => shape.type === 'agentboard-flashcard')
+		expect(flashcards.every((shape) => (
+			Reflect.get(shape.props as object, 'w') === 220
+			&& Reflect.get(shape.props as object, 'h') === 118
+		))).toBe(true)
 		expect(effect.flashcards).toHaveLength(2)
 		expect(effect.shapeIDs).toHaveLength(4)
 	})

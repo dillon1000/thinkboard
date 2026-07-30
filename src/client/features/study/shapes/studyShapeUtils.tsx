@@ -1,5 +1,7 @@
 import {
 	CONCEPT_MAP_SHAPE_TYPE,
+	FLASHCARD_CANVAS_HEIGHT,
+	FLASHCARD_CANVAS_WIDTH,
 	FLASHCARD_SHAPE_TYPE,
 	QUIZ_SHAPE_TYPE,
 	REVIEW_SHAPE_TYPE,
@@ -43,7 +45,6 @@ import {
 	useEditor,
 } from 'tldraw'
 import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
-import { FlashcardAnswerPanel } from '../components/FlashcardAnswerPanel'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { focusPDFCitation } from '../lib/pdfCitation'
 import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
@@ -122,8 +123,8 @@ export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 
 	override getDefaultProps(): FlashcardShape['props'] {
 		return {
-			w: 300,
-			h: 190,
+			w: FLASHCARD_CANVAS_WIDTH,
+			h: FLASHCARD_CANVAS_HEIGHT,
 			front: 'Question',
 			back: 'Answer',
 			alternateAnswers: [],
@@ -148,12 +149,18 @@ export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 	const chrome = useBoardChrome()
 	const [isEditing, setIsEditing] = useState(false)
-	const fitRef = useAutoFitHeight(shape, 130)
+	// Answer visibility is private UI state, so a click does not reveal it for collaborators.
+	const [isRevealed, setIsRevealed] = useState(false)
+	const fitRef = useAutoFitHeight(shape, FLASHCARD_CANVAS_HEIGHT)
+
+	function toggleAnswer() {
+		setIsRevealed((current) => !current)
+	}
 
 	return (
 		<HTMLContainer className="StudyShape StudyShape--flashcard">
 			<div className="StudyShape-heading">
-				<span>Question</span>
+				<span>{isRevealed ? 'Answer' : 'Question'}</span>
 				<div>
 					{chrome.role !== 'viewer' ? (
 						<button
@@ -170,18 +177,23 @@ function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 				</div>
 			</div>
 			<div className="Flashcard-face" ref={fitRef} {...canvasInteractionHandlers}>
-				<StudyMath className="Flashcard-copy">{shape.props.front}</StudyMath>
-				<FlashcardAnswerPanel
-					className="FlashcardAnswerPanel--canvas"
-					source={{
-						alternateAnswers: shape.props.alternateAnswers,
-						back: shape.props.back,
-						boardID: chrome.boardID,
-						front: shape.props.front,
-						kind: 'canvas',
-						shapeID: shape.id,
+				<div
+					aria-label={isRevealed ? 'Show flashcard question' : 'Reveal flashcard answer'}
+					className={`Flashcard-reveal${isRevealed ? ' is-revealed' : ''}`}
+					onClick={toggleAnswer}
+					onKeyDown={(event) => {
+						if (event.key !== 'Enter' && event.key !== ' ') return
+						event.preventDefault()
+						toggleAnswer()
 					}}
-				/>
+					role="button"
+					tabIndex={0}
+				>
+					<StudyMath className="Flashcard-copy">
+						{isRevealed ? shape.props.back : shape.props.front}
+					</StudyMath>
+					<span>{isRevealed ? 'Click for question' : 'Click to reveal'}</span>
+				</div>
 				<StudySources shape={shape} />
 			</div>
 			{isEditing ? <FlashcardEditorDialog onClose={() => setIsEditing(false)} shape={shape} /> : null}
