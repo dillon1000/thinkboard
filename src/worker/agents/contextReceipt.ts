@@ -23,7 +23,10 @@ interface ContextReceiptInput {
  */
 export function buildContextReceipt(input: ContextReceiptInput): StudyContextReceipt {
 	const pdfSources = new Map<string, StudyContextReceipt['pdfSources'][number]>()
-	const lectureSources = new Map<string, StudyContextReceipt['lectureSources'][number]>()
+	const lectureSources = new Map<
+		string,
+		NonNullable<StudyContextReceipt['lectureSources']>[number]
+	>()
 	for (const source of input.retrieval) {
 		if (source.sourceKind === 'lecture') {
 			const key = `${source.lectureID}:${Math.floor(source.startSecond)}`

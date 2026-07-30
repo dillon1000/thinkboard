@@ -4,6 +4,7 @@ import {
 	STUDY_REASONING_EFFORTS,
 	apiRoutes,
 	getStudyModel,
+	getStudyContextLectureSources,
 	parseCraftDocumentCitationHref,
 	studyReasoningEffortSchema,
 	type ConceptMapProposal,
@@ -962,6 +963,7 @@ function MessageContextChips({
 /** Shows the source metadata that reached one response without exposing source text. */
 function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
 	const selectedTypes = summarizeShapeTypes(receipt.board?.selectedShapeTypes ?? [])
+	const lectureSources = getStudyContextLectureSources(receipt)
 	const profileLabels = receipt.profileFields.map((field) => ({
 		'about-you': 'About you',
 		'custom-instructions': 'Custom instructions',
@@ -986,8 +988,8 @@ function ResponseContextReceipt({ receipt }: { receipt: StudyContextReceipt }) {
 				</div>
 				<div>
 					<dt>Lectures</dt>
-					<dd>{receipt.lectureSources.length
-						? receipt.lectureSources
+					<dd>{lectureSources.length
+						? lectureSources
 							.map((source) => `${source.lectureTitle}, ${formatLectureTime(source.startSecond)}`)
 							.join(' · ')
 						: 'None'}</dd>

@@ -65,7 +65,7 @@ export interface StudyContextReceipt {
 		documentTitle: string
 		pageNumber: number
 	}>
-	lectureSources: Array<{
+	lectureSources?: Array<{
 		lectureID: string
 		lectureTitle: string
 		startSecond: number
@@ -75,6 +75,11 @@ export interface StudyContextReceipt {
 		detail?: string
 		state: 'excluded' | 'idle' | 'paused' | 'playing' | 'unavailable'
 	}
+}
+
+/** Stored receipts can omit feature-specific sources, so readers use a stable empty list. */
+export function getStudyContextLectureSources(receipt: StudyContextReceipt) {
+	return receipt.lectureSources ?? []
 }
 
 export interface StudyMessageMetadata {

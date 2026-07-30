@@ -283,6 +283,7 @@ export {
 	STUDY_MODELS,
 	STUDY_REASONING_EFFORTS,
 	getStudyModel,
+	getStudyContextLectureSources,
 	studyModelModeSchema,
 	studyModelSupportsReasoning,
 	studyReasoningEffortSchema,
