@@ -625,12 +625,14 @@ img { max-width: 100%; }
 	inset: 0;
 	overflow: hidden;
 	color: #fff;
+	/* tldraw's front-layer host ignores pointer input, so this shield opts its subtree back in. */
+	pointer-events: auto;
 	touch-action: none;
 	user-select: none;
 	-webkit-touch-callout: none;
 }
 .ProjectorModeLayer[data-intro='true'] {
-	background: #0754b8;
+	background: #07111d;
 	cursor: none;
 }
 
@@ -643,9 +645,9 @@ img { max-width: 100%; }
 	overflow: hidden;
 	padding: max(32px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
 	background:
-		radial-gradient(90% 110% at 8% 2%, rgba(84, 202, 255, .14), transparent 72%),
-		radial-gradient(90% 115% at 96% 100%, rgba(117, 92, 225, .12), transparent 74%),
-		linear-gradient(135deg, #0874c9 0%, #0964ba 48%, #1954af 100%);
+		radial-gradient(90% 110% at 8% 2%, rgba(56, 135, 190, .09), transparent 72%),
+		radial-gradient(90% 115% at 96% 100%, rgba(89, 75, 157, .06), transparent 74%),
+		linear-gradient(135deg, #07111d 0%, #081827 48%, #0a1e31 100%);
 	text-align: center;
 	isolation: isolate;
 	animation: projector-intro-field 4s ease-in-out both;
@@ -662,7 +664,7 @@ img { max-width: 100%; }
 	left: -23vmax;
 	width: 72vmax;
 	height: 72vmax;
-	background: radial-gradient(circle, rgba(57, 199, 247, .16), transparent 68%);
+	background: radial-gradient(circle, rgba(51, 137, 178, .08), transparent 68%);
 	animation: projector-orbit-a 5s ease-in-out infinite alternate;
 }
 .ProjectorIntro::after {
@@ -670,7 +672,7 @@ img { max-width: 100%; }
 	bottom: -42vmax;
 	width: 84vmax;
 	height: 84vmax;
-	background: radial-gradient(circle, rgba(124, 82, 218, .14), transparent 68%);
+	background: radial-gradient(circle, rgba(92, 72, 150, .055), transparent 68%);
 	animation: projector-orbit-b 4.6s ease-in-out infinite alternate;
 }
 .ProjectorIntro-aurora {
@@ -678,7 +680,7 @@ img { max-width: 100%; }
 	left: 50%;
 	width: 38vmax;
 	height: 38vmax;
-	background: radial-gradient(circle, rgba(52, 218, 196, .09), transparent 70%);
+	background: radial-gradient(circle, rgba(48, 139, 133, .04), transparent 70%);
 	translate: -50% -50%;
 	animation: projector-aurora 3.8s ease-in-out infinite alternate;
 }
