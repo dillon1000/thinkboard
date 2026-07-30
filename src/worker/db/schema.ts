@@ -67,11 +67,30 @@ export const verification = sqliteTable(
 	(table) => [index('verification_identifier_idx').on(table.identifier)]
 )
 
+export const course = sqliteTable(
+	'course',
+	{
+		id: text('id').primaryKey(),
+		ownerID: text('ownerID')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		color: text('color').notNull(),
+		examDate: text('examDate'),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+		updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		index('course_ownerID_updatedAt_idx').on(table.ownerID, table.updatedAt),
+	]
+)
+
 export const board = sqliteTable(
 	'board',
 	{
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
+		courseID: text('courseID').references(() => course.id, { onDelete: 'set null' }),
 		ownerID: text('ownerID')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -97,6 +116,29 @@ export const boardMember = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.boardID, table.userID] }),
 		index('boardMember_userID_idx').on(table.userID),
+	]
+)
+
+export const boardInvitation = sqliteTable(
+	'boardInvitation',
+	{
+		id: text('id').primaryKey(),
+		boardID: text('boardID')
+			.notNull()
+			.references(() => board.id, { onDelete: 'cascade' }),
+		inviterID: text('inviterID')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		tokenHash: text('tokenHash').notNull(),
+		targetEmail: text('targetEmail'),
+		role: text('role', { enum: ['editor', 'viewer'] }).notNull(),
+		expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
+		acceptedAt: integer('acceptedAt', { mode: 'timestamp' }),
+		createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
+	},
+	(table) => [
+		uniqueIndex('boardInvitation_tokenHash_unique').on(table.tokenHash),
+		index('boardInvitation_boardID_createdAt_idx').on(table.boardID, table.createdAt),
 	]
 )
 
@@ -383,6 +425,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	documents: many(document),
 	documentProcessingUsage: many(documentProcessingUsage),
 	craftDocumentLinks: many(craftDocumentLink),
+	courses: many(course),
+	boardInvitations: many(boardInvitation),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -395,7 +439,9 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export const boardRelations = relations(board, ({ one, many }) => ({
 	owner: one(user, { fields: [board.ownerID], references: [user.id] }),
+	course: one(course, { fields: [board.courseID], references: [course.id] }),
 	members: many(boardMember),
+	invitations: many(boardInvitation),
 	studyConversations: many(studyConversation),
 	flashcardReviews: many(flashcardReview),
 	flashcardAnswerAttempts: many(flashcardAnswerAttempt),
@@ -407,6 +453,16 @@ export const boardRelations = relations(board, ({ one, many }) => ({
 export const boardMemberRelations = relations(boardMember, ({ one }) => ({
 	board: one(board, { fields: [boardMember.boardID], references: [board.id] }),
 	user: one(user, { fields: [boardMember.userID], references: [user.id] }),
+}))
+
+export const courseRelations = relations(course, ({ many, one }) => ({
+	owner: one(user, { fields: [course.ownerID], references: [user.id] }),
+	boards: many(board),
+}))
+
+export const boardInvitationRelations = relations(boardInvitation, ({ one }) => ({
+	board: one(board, { fields: [boardInvitation.boardID], references: [board.id] }),
+	inviter: one(user, { fields: [boardInvitation.inviterID], references: [user.id] }),
 }))
 
 export const studyConversationRelations = relations(studyConversation, ({ one }) => ({

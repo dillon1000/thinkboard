@@ -1,4 +1,4 @@
-import type { Board, DueFlashcard } from '@agentboard/shared'
+import type { Board, Course, DueFlashcard } from '@agentboard/shared'
 import { apiRoutes, appRoutes } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
 import {
@@ -37,11 +37,13 @@ import {
 } from '../../craft/components/CraftWhiteboardImportDialog'
 import { addCraftWhiteboardImportParameters } from '../../craft/whiteboards/craftWhiteboardNavigation'
 import { FlashcardAnswerPanel } from '../../study/components/FlashcardAnswerPanel'
+import { CoursePlanner } from '../../workspace/components/CoursePlanner'
 
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
 export function Component() {
 	const [boards, setBoards] = useState<Board[]>([])
+	const [courses, setCourses] = useState<Course[]>([])
 	const [archivedBoards, setArchivedBoards] = useState<Board[]>([])
 	const [dueReviews, setDueReviews] = useState<DueFlashcard[]>([])
 	const [title, setTitle] = useState('')
@@ -88,12 +90,14 @@ export function Component() {
 	async function loadBoards() {
 		setIsLoading(true)
 		try {
-			const [activeResponse, archivedResponse] = await Promise.all([
+			const [activeResponse, archivedResponse, courseResponse] = await Promise.all([
 				apiRequest<{ boards: Board[] }>(apiRoutes.boards),
 				apiRequest<{ boards: Board[] }>(apiRoutes.archivedBoards),
+				apiRequest<{ courses: Course[] }>(apiRoutes.courses),
 			])
 			setBoards(activeResponse.boards)
 			setArchivedBoards(archivedResponse.boards)
+			setCourses(courseResponse.courses)
 		} catch (loadError) {
 			setError(loadError instanceof Error ? loadError.message : 'Unable to load spaces')
 		} finally {
@@ -253,6 +257,14 @@ export function Component() {
 
 					{error ? <p className="FormError" role="alert">{error}</p> : null}
 
+					<CoursePlanner
+						boards={boards}
+						courses={courses}
+						onBoardsChange={setBoards}
+						onCoursesChange={setCourses}
+						onError={setError}
+					/>
+
 					{showDueReviews ? <section aria-labelledby="due-reviews-heading" className="DueReviews">
 						<div className="SectionHeading">
 							<span className="SectionHeading-toggle" id="due-reviews-heading"><IconCards aria-hidden="true" size={14} /> Due today</span>
@@ -351,7 +363,7 @@ export function Component() {
 										<article className="BoardRow" key={board.id} style={{ '--row-index': Math.min(index, 12) } as CSSProperties}>
 											<Link className="BoardRow-main" to={appRoutes.board(board.id)}>
 												<span className="BoardRow-icon"><IconLayoutBoard aria-hidden="true" size={17} stroke={1.6} /></span>
-												<span className="BoardRow-copy"><strong>{board.title}</strong><small>{formatRelativeDate(board.updatedAt)}</small></span>
+												<span className="BoardRow-copy"><strong>{board.title}</strong><BoardMeta board={board} courses={courses} /></span>
 											</Link>
 											<div className="BoardRow-actions">
 												<button aria-label={`Rename ${board.title}`} onClick={() => void handleRename(board)} title="Rename" type="button"><IconPencil aria-hidden="true" size={15} stroke={1.7} /></button>
@@ -418,6 +430,20 @@ function FlashcardMarkdown({ children, className }: { children: string; classNam
 		<Streamdown className={className} controls={false} mode="static" plugins={studyMarkdownPlugins}>
 			{children}
 		</Streamdown>
+	)
+}
+
+function BoardMeta({ board, courses }: { board: Board; courses: Course[] }) {
+	const course = courses.find(({ id }) => id === board.courseID)
+	return (
+		<small>
+			{course ? (
+				<span className="BoardRow-course" style={{ '--course-color': course.color } as CSSProperties}>
+					<i aria-hidden="true" /> {course.title} ·
+				</span>
+			) : null}{' '}
+			{formatRelativeDate(board.updatedAt)}
+		</small>
 	)
 }
 

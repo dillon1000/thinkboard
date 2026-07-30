@@ -11,6 +11,7 @@ export interface BoardAccess {
 export async function listBoards(database: Database, userID: string): Promise<Board[]> {
 	const rows = await database
 		.select({
+			courseID: board.courseID,
 			id: board.id,
 			title: board.title,
 			role: boardMember.role,
@@ -34,6 +35,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 export async function listArchivedBoards(database: Database, userID: string): Promise<Board[]> {
 	const rows = await database
 		.select({
+			courseID: board.courseID,
 			id: board.id,
 			title: board.title,
 			role: boardMember.role,
@@ -69,6 +71,7 @@ export async function createBoard(database: Database, userID: string, title: str
 	])
 
 	return {
+		courseID: null,
 		id,
 		title,
 		role: 'owner',
@@ -97,6 +100,7 @@ export async function getBoardAccess(
 export async function getBoard(database: Database, boardID: string, userID: string): Promise<Board | null> {
 	const [row] = await database
 		.select({
+			courseID: board.courseID,
 			id: board.id,
 			title: board.title,
 			role: boardMember.role,

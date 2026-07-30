@@ -11,6 +11,7 @@ interface BoardChromeContextValue {
 	isStudyOpen: boolean
 	setStudyOpen: (open: boolean) => void
 	copyBoardLink: () => void
+	openShare: () => void
 	/** True for a few seconds after a copy, so the control can confirm itself. */
 	didCopyBoardLink: boolean
 }

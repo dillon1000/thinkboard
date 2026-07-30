@@ -1,0 +1,114 @@
+.CoursePlanner { display: grid; gap: 9px; margin: 0 0 28px; }
+.CoursePlanner-empty { margin: 0; color: var(--faint); font-size: 12px; }
+.CourseComposer, .CourseCard-edit {
+	display: grid;
+	grid-template-columns: 34px minmax(0, 1fr) 150px auto auto;
+	align-items: center;
+	gap: 6px;
+	border-radius: 8px;
+	background: var(--surface-hover);
+	padding: 7px;
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+.CourseComposer input, .CourseCard-edit input, .CourseCard-assign select {
+	min-width: 0;
+	height: 34px;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--panel);
+	padding: 0 8px;
+	color: var(--ink);
+	font: 12px var(--font-sans);
+}
+.CourseComposer input[type='color'], .CourseCard-edit input[type='color'] {
+	width: 34px;
+	padding: 3px;
+}
+.CourseComposer button, .CourseCard-edit button {
+	display: inline-flex;
+	height: 34px;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	border: 0;
+	border-radius: 6px;
+	background: var(--ink);
+	padding: 0 10px;
+	color: var(--panel);
+	font-size: 11.5px;
+	font-weight: 620;
+}
+.CourseComposer button:last-child { width: 34px; background: transparent; padding: 0; color: var(--faint); }
+
+.CourseGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.CourseCard {
+	display: grid;
+	min-width: 0;
+	align-content: start;
+	gap: 10px;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--sidebar);
+	padding: 11px;
+}
+.CourseCard > header {
+	display: grid;
+	min-width: 0;
+	grid-template-columns: 11px minmax(0, 1fr) 28px 28px;
+	align-items: center;
+	gap: 6px;
+}
+.CourseCard > header > span {
+	width: 9px;
+	height: 28px;
+	border-radius: 5px;
+	background: var(--course-color);
+}
+.CourseCard > header > div { display: grid; min-width: 0; gap: 2px; }
+.CourseCard > header strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.CourseCard > header small { color: var(--faint); font-size: 10.5px; }
+.CourseCard > header button {
+	display: grid;
+	width: 28px;
+	height: 28px;
+	place-items: center;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--faint);
+}
+.CourseCard > header button:hover { background: var(--surface-hover); color: var(--ink); }
+.CourseCard-edit { grid-template-columns: 30px minmax(0, 1fr); }
+.CourseCard-edit input[type='date'], .CourseCard-edit button { grid-column: 2; }
+
+.CourseCard-spaces { display: flex; min-height: 24px; flex-wrap: wrap; align-items: center; gap: 5px; }
+.CourseCard-spaces button {
+	display: inline-flex;
+	min-height: 24px;
+	align-items: center;
+	gap: 4px;
+	border: 0;
+	border-radius: 5px;
+	background: color-mix(in srgb, var(--course-color) 14%, var(--panel));
+	padding: 0 7px;
+	color: var(--ink);
+	font-size: 10.5px;
+}
+.CourseCard-spaces button:disabled { opacity: .72; }
+.CourseCard-spaces small { color: var(--faint); font-size: 10.5px; }
+.CourseCard-assign {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	align-items: center;
+	color: var(--faint);
+}
+.CourseCard-assign select { height: 29px; border: 0; background: transparent; padding: 0 4px; color: var(--muted); }
+
+.BoardRow-course { display: inline-flex; align-items: center; gap: 4px; }
+.BoardRow-course i { width: 7px; height: 7px; border-radius: 50%; background: var(--course-color); }
+
+@media (max-width: 680px) {
+	.CourseGrid { grid-template-columns: 1fr; }
+	.CourseComposer { grid-template-columns: 34px minmax(0, 1fr) auto; }
+	.CourseComposer input[type='date'] { grid-column: 2; }
+}

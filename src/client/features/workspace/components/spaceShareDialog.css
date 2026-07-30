@@ -1,0 +1,231 @@
+.SpaceShare-backdrop {
+	position: fixed;
+	z-index: 12000;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	overflow-y: auto;
+	background: rgb(20 20 18 / 34%);
+	padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+	backdrop-filter: blur(8px);
+}
+
+.SpaceShare {
+	display: grid;
+	width: min(620px, 100%);
+	max-height: min(760px, calc(100dvh - 40px));
+	overflow: hidden;
+	border-radius: 15px;
+	background: var(--panel);
+	color: var(--ink);
+	box-shadow: var(--shadow-pop);
+	animation: pop-in 180ms var(--ease-swift) backwards;
+}
+
+.SpaceShare > header {
+	display: grid;
+	grid-template-columns: 36px minmax(0, 1fr) 40px;
+	align-items: start;
+	gap: 10px;
+	padding: 18px 18px 14px;
+}
+
+.SpaceShare > header > span {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border-radius: 10px;
+	background: var(--accent-soft);
+	color: var(--accent-text);
+}
+
+.SpaceShare h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.SpaceShare header p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.SpaceShare header > button, .SpaceShare-list article > button {
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--faint);
+}
+.SpaceShare header > button:hover, .SpaceShare-list article > button:hover {
+	background: var(--surface-hover);
+	color: var(--ink);
+}
+
+.SpaceShare-error, .SpaceShare-loading {
+	margin: 0 18px 12px;
+	border-radius: 7px;
+	padding: 8px 10px;
+	font-size: 12px;
+}
+.SpaceShare-error { background: var(--danger-soft); color: var(--danger); }
+.SpaceShare-loading { color: var(--muted); }
+
+.SpaceShare-invite {
+	display: grid;
+	gap: 9px;
+	margin: 0 18px 12px;
+	border-radius: 10px;
+	background: var(--sidebar);
+	padding: 12px;
+	box-shadow: inset 0 0 0 1px var(--line);
+}
+.SpaceShare-invite > div { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 8px; }
+.SpaceShare-invite label { display: grid; gap: 5px; }
+.SpaceShare-invite label > span {
+	color: var(--muted);
+	font-size: 10.5px;
+	font-weight: 620;
+}
+.SpaceShare-invite label small { color: var(--faint); font-weight: 500; }
+.SpaceShare-invite input, .SpaceShare-invite select, .SpaceShare-list select, .SpaceShare-created input {
+	min-width: 0;
+	height: 36px;
+	border: 1px solid var(--line-strong);
+	border-radius: 7px;
+	background: var(--panel);
+	padding: 0 9px;
+	color: var(--ink);
+	font: 12px var(--font-sans);
+}
+.SpaceShare-invite > button, .SpaceShare-created button {
+	display: inline-flex;
+	min-height: 34px;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	justify-self: end;
+	border: 0;
+	border-radius: 7px;
+	background: var(--ink);
+	padding: 0 12px;
+	color: var(--panel);
+	font-size: 12px;
+	font-weight: 620;
+}
+.SpaceShare-invite > button:disabled { opacity: .45; }
+
+.SpaceShare-created {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 7px;
+	margin: 0 18px 12px;
+}
+
+.SpaceShare-body {
+	display: grid;
+	min-height: 0;
+	gap: 18px;
+	overflow-y: auto;
+	border-top: 1px solid var(--line);
+	padding: 15px 18px 20px;
+}
+.SpaceShare-body section { display: grid; gap: 7px; }
+.SpaceShare-body h3 {
+	margin: 0;
+	color: var(--faint);
+	font-size: 10px;
+	font-weight: 680;
+	letter-spacing: .07em;
+	text-transform: uppercase;
+}
+.SpaceShare-list { display: grid; gap: 2px; }
+.SpaceShare-list article {
+	display: grid;
+	min-width: 0;
+	grid-template-columns: 32px minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 8px;
+	border-radius: 8px;
+	padding: 5px;
+}
+.SpaceShare-list article:hover { background: var(--surface-hover); }
+.SpaceShare-list article > span {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	place-items: center;
+	border-radius: 8px;
+	background: var(--surface-active);
+	color: var(--muted);
+	font-size: 10px;
+	font-weight: 700;
+}
+.SpaceShare-list article > div { display: grid; min-width: 0; gap: 2px; }
+.SpaceShare-list strong, .SpaceShare-list small {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.SpaceShare-list strong { font-size: 12.5px; font-weight: 590; }
+.SpaceShare-list small { color: var(--faint); font-size: 10.5px; text-transform: capitalize; }
+.SpaceShare-list em {
+	padding-right: 8px;
+	color: var(--faint);
+	font-size: 11px;
+	font-style: normal;
+	text-transform: capitalize;
+}
+.SpaceShare-list select { width: 96px; height: 32px; }
+
+@media (max-width: 560px) {
+	.SpaceShare { max-height: calc(100dvh - 24px); }
+	.SpaceShare-invite > div { grid-template-columns: 1fr; }
+	.SpaceShare-list article { grid-template-columns: 32px minmax(0, 1fr) auto; }
+	.SpaceShare-list select { grid-column: 2; width: 100%; }
+	.SpaceShare-list article > button { grid-column: 3; grid-row: 1 / span 2; }
+}
+
+.InvitationPage {
+	display: grid;
+	min-height: 100dvh;
+	place-items: center;
+	background:
+		radial-gradient(circle at 50% 24%, var(--accent-soft), transparent 34%),
+		var(--panel);
+	padding: 24px;
+}
+.InvitationCard {
+	display: grid;
+	width: min(460px, 100%);
+	justify-items: center;
+	gap: 12px;
+	border: 1px solid var(--line);
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--panel) 94%, transparent);
+	padding: 34px;
+	box-shadow: var(--shadow-pop);
+	text-align: center;
+	backdrop-filter: blur(14px);
+}
+.InvitationCard > span {
+	display: grid;
+	width: 48px;
+	height: 48px;
+	place-items: center;
+	border-radius: 14px;
+	background: var(--accent-soft);
+	color: var(--accent-text);
+}
+.InvitationCard h1 { margin: -4px 0 0; font-size: 27px; letter-spacing: -.035em; }
+.InvitationCard p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.InvitationCard button {
+	display: inline-flex;
+	min-height: 42px;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-radius: 9px;
+	background: var(--ink);
+	padding: 0 15px;
+	color: var(--panel);
+	font-weight: 650;
+}
+.InvitationCard button:disabled { opacity: .5; }
+.InvitationCard small, .InvitationCard > a { color: var(--faint); font-size: 11px; }
+.InvitationCard > a { margin-top: 5px; }

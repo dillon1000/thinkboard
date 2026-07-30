@@ -38,6 +38,14 @@ export const router = createBrowserRouter([
 				path: '/today',
 				lazy: () => import('../features/today/routes/TodayRoute'),
 			},
+			{
+				path: '/invite/:token',
+				lazy: () => import('../features/workspace/routes/InvitationRoute'),
+			},
+			{
+				path: '/invite/:token',
+				lazy: () => import('../features/workspace/routes/InvitationRoute'),
+			},
 		],
 	},
 	{

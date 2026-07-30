@@ -1,6 +1,7 @@
-export type BoardRole = 'owner' | 'editor' | 'viewer'
+import type { BoardRole } from './workspace'
 
 export interface Board {
+	courseID: string | null
 	id: string
 	title: string
 	role: BoardRole

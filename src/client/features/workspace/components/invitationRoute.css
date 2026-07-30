@@ -1,0 +1,48 @@
+.InvitationPage {
+	display: grid;
+	min-height: 100dvh;
+	place-items: center;
+	background:
+		radial-gradient(circle at 50% 24%, var(--accent-soft), transparent 34%),
+		var(--panel);
+	padding: 24px;
+}
+.InvitationCard {
+	display: grid;
+	width: min(460px, 100%);
+	justify-items: center;
+	gap: 12px;
+	border: 1px solid var(--line);
+	border-radius: 18px;
+	background: color-mix(in srgb, var(--panel) 94%, transparent);
+	padding: 34px;
+	box-shadow: var(--shadow-pop);
+	text-align: center;
+	backdrop-filter: blur(14px);
+}
+.InvitationCard > span {
+	display: grid;
+	width: 48px;
+	height: 48px;
+	place-items: center;
+	border-radius: 14px;
+	background: var(--accent-soft);
+	color: var(--accent-text);
+}
+.InvitationCard h1 { margin: -4px 0 0; font-size: 27px; letter-spacing: -.035em; }
+.InvitationCard p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.InvitationCard button {
+	display: inline-flex;
+	min-height: 42px;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-radius: 9px;
+	background: var(--ink);
+	padding: 0 15px;
+	color: var(--panel);
+	font-weight: 650;
+}
+.InvitationCard button:disabled { opacity: .5; }
+.InvitationCard small, .InvitationCard > a { color: var(--faint); font-size: 11px; }
+.InvitationCard > a { margin-top: 5px; }

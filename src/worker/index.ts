@@ -73,6 +73,16 @@ import {
 	handleCraftWhiteboardPut,
 	handleCraftWhiteboardsList,
 } from './routes/craft'
+import {
+	handleBoardCourse,
+	handleBoardInvitation,
+	handleBoardInvitations,
+	handleBoardMember,
+	handleBoardMembers,
+	handleCourse,
+	handleCourses,
+	handleInvitation,
+} from './routes/workspace'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -94,6 +104,12 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.boards, handleBoardsList)
 	.post(apiRoutePatterns.boards, handleBoardCreate)
 	.get(apiRoutePatterns.archivedBoards, handleArchivedBoardsList)
+	.get(apiRoutePatterns.courses, handleCourses)
+	.post(apiRoutePatterns.courses, handleCourses)
+	.patch(apiRoutePatterns.course, handleCourse)
+	.delete(apiRoutePatterns.course, handleCourse)
+	.get(apiRoutePatterns.invitation, handleInvitation)
+	.post(apiRoutePatterns.invitation, handleInvitation)
 	.get(apiRoutePatterns.studyConversations, handleStudyConversationsList)
 	.post(apiRoutePatterns.studyConversations, handleStudyConversationCreate)
 	.get(apiRoutePatterns.studyConversationMessages, handleStudyConversationMessages)
@@ -133,6 +149,13 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.put(apiRoutePatterns.boardDocumentPage, authorizeBoardRequest(handleDocumentPageUpload))
 	.get(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentGet))
 	.delete(apiRoutePatterns.boardDocument, authorizeBoardRequest(handleDocumentDelete))
+	.patch(apiRoutePatterns.boardCourse, handleBoardCourse)
+	.get(apiRoutePatterns.boardMembers, handleBoardMembers)
+	.patch(apiRoutePatterns.boardMember, handleBoardMember)
+	.delete(apiRoutePatterns.boardMember, handleBoardMember)
+	.get(apiRoutePatterns.boardInvitations, handleBoardInvitations)
+	.post(apiRoutePatterns.boardInvitations, handleBoardInvitations)
+	.delete(apiRoutePatterns.boardInvitation, handleBoardInvitation)
 	.get('/api/boards/:boardID/craft/candidates', authorizeBoardRequest(handleCraftCandidatesList))
 	.get('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentsList))
 	.post('/api/boards/:boardID/craft/documents', authorizeBoardRequest(handleCraftDocumentCreate))

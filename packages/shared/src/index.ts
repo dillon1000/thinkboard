@@ -185,7 +185,25 @@ export type {
 	WalkthroughShapeProps,
 	PDFPageShapeProps,
 } from './studyShapes'
-export type { Board, BoardRole, PublicConfig, StudyConversation } from './types'
+export type { Board, PublicConfig, StudyConversation } from './types'
+export {
+	boardCourseUpdateSchema,
+	boardRoleSchema,
+	courseInputSchema,
+	courseUpdateSchema,
+	invitationRoleSchema,
+	spaceInvitationInputSchema,
+	spaceMemberRoleUpdateSchema,
+} from './workspace'
+export type {
+	BoardRole,
+	Course,
+	InvitationRole,
+	SpaceInvitation,
+	SpaceInvitationCreated,
+	SpaceInvitationPreview,
+	SpaceMember,
+} from './workspace'
 export {
 	SPOTIFY_SCOPES,
 	spotifyAgentPlayInputSchema,

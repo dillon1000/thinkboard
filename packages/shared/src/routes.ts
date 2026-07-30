@@ -16,10 +16,18 @@ export const apiRoutePatterns = {
 	boardDocumentPage: '/api/boards/:boardID/documents/:documentID/pages/:pageNumber',
 	boardDocumentRetry: '/api/boards/:boardID/documents/:documentID/retry',
 	boardDocumentStatus: '/api/boards/:boardID/documents/:documentID/status',
+	boardCourse: '/api/boards/:boardID/course',
+	boardMembers: '/api/boards/:boardID/members',
+	boardMember: '/api/boards/:boardID/members/:userID',
+	boardInvitations: '/api/boards/:boardID/invitations',
+	boardInvitation: '/api/boards/:boardID/invitations/:invitationID',
 	board: '/api/boards/:boardID',
 	boardRestore: '/api/boards/:boardID/restore',
 	boards: '/api/boards',
 	archivedBoards: '/api/boards/archived',
+	courses: '/api/courses',
+	course: '/api/courses/:courseID',
+	invitation: '/api/invitations/:token',
 	studyReviews: '/api/study/reviews',
 	studyReview: '/api/study/reviews/:reviewID',
 	studyAnswerAttempts: '/api/study/answer-attempts',
@@ -47,11 +55,14 @@ export const appRoutes = {
 	settings: '/settings',
 	today: '/today',
 	board: (boardID: string) => `/boards/${encodeURIComponent(boardID)}`,
+	invitation: (token: string) => `/invite/${encodeURIComponent(token)}`,
 } as const
 
 export const apiRoutes = {
 	boards: '/api/boards',
 	archivedBoards: '/api/boards/archived',
+	courses: '/api/courses',
+	course: (courseID: string) => `/api/courses/${encodeURIComponent(courseID)}`,
 	board: (boardID: string) => `/api/boards/${encodeURIComponent(boardID)}`,
 	boardRestore: (boardID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/restore`,
@@ -87,6 +98,17 @@ export const apiRoutes = {
 		`/api/boards/${encodeURIComponent(boardID)}/documents/${encodeURIComponent(documentID)}/retry`,
 	boardDocumentStatus: (boardID: string, documentID: string) =>
 		`/api/boards/${encodeURIComponent(boardID)}/documents/${encodeURIComponent(documentID)}/status`,
+	boardCourse: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/course`,
+	boardMembers: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/members`,
+	boardMember: (boardID: string, userID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/members/${encodeURIComponent(userID)}`,
+	boardInvitations: (boardID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/invitations`,
+	boardInvitation: (boardID: string, invitationID: string) =>
+		`/api/boards/${encodeURIComponent(boardID)}/invitations/${encodeURIComponent(invitationID)}`,
+	invitation: (token: string) => `/api/invitations/${encodeURIComponent(token)}`,
 	studyReviews: '/api/study/reviews',
 	studyReview: (reviewID: string) => `/api/study/reviews/${encodeURIComponent(reviewID)}`,
 	studyAnswerAttempts: '/api/study/answer-attempts',

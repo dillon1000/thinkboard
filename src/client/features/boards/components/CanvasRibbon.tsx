@@ -32,6 +32,7 @@ import {
 	IconSquare,
 	IconSun,
 	IconTrash,
+	IconUsers,
 	IconX,
 } from '@tabler/icons-react'
 import { type CSSProperties, type ReactNode, useState } from 'react'
@@ -288,6 +289,11 @@ function BoardMenu({ boardID }: { boardID: string }) {
 	return (
 		<>
 			<RibbonSection label="Share">
+				<RibbonItem
+					icon={<IconUsers size={17} stroke={1.7} />}
+					label={chrome.role === 'owner' ? 'Manage access' : 'View members'}
+					onSelect={chrome.openShare}
+				/>
 				<RibbonItem
 					icon={chrome.didCopyBoardLink
 						? <IconCheck size={17} key="check" />

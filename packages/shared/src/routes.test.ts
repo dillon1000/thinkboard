@@ -43,6 +43,18 @@ describe('route builders', () => {
 		)
 	})
 
+	it('builds course and sharing routes', () => {
+		expect(apiRoutes.course('organic chemistry')).toBe('/api/courses/organic%20chemistry')
+		expect(apiRoutes.boardMembers('biology/week 1')).toBe(
+			'/api/boards/biology%2Fweek%201/members'
+		)
+		expect(apiRoutes.boardInvitation('biology/week 1', 'invite one')).toBe(
+			'/api/boards/biology%2Fweek%201/invitations/invite%20one'
+		)
+		expect(apiRoutes.invitation('token/value')).toBe('/api/invitations/token%2Fvalue')
+		expect(appRoutes.invitation('token/value')).toBe('/invite/token%2Fvalue')
+	})
+
 	it('builds learning-science routes', () => {
 		expect(apiRoutes.boardFlashcards('biology/week 1')).toBe(
 			'/api/boards/biology%2Fweek%201/flashcards'

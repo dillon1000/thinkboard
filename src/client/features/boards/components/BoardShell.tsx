@@ -7,6 +7,7 @@ import { LockInSetup } from '../../lock-in/LockInSetup'
 import { LockInCelebration } from '../../lock-in/LockInCelebration'
 import { useLockIn } from '../../lock-in/LockInProvider'
 import { useProjectorMode } from '../lib/ProjectorModeProvider'
+import { SpaceShareDialog } from '../../workspace/components/SpaceShareDialog'
 
 const STUDY_PANEL_STORAGE_KEY = 'agentboard.study-panel'
 
@@ -20,6 +21,7 @@ interface BoardShellProps {
 
 export function BoardShell({ boardID, children, role, studyPanel, title }: BoardShellProps) {
 	const [didCopy, setDidCopy] = useState(false)
+	const [isShareOpen, setIsShareOpen] = useState(false)
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
 	const [isOnline, setIsOnline] = useState(navigator.onLine)
 	const zen = useZenMode()
@@ -83,6 +85,7 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 		didCopyBoardLink: didCopy,
 		isOnline,
 		isStudyOpen,
+		openShare: () => setIsShareOpen(true),
 		role,
 		setStudyOpen: setStudyPanelOpen,
 		title,
@@ -119,6 +122,9 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 				<LockInSetup />
 				<LockInCelebration />
 			</div>
+			{isShareOpen ? (
+				<SpaceShareDialog boardID={boardID} onClose={() => setIsShareOpen(false)} />
+			) : null}
 		</div>
 	)
 }
