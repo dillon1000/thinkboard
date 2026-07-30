@@ -14,6 +14,8 @@ import {
 	IconDeviceProjector,
 	IconDeviceTablet,
 	IconEraser,
+	IconFileTypeCsv,
+	IconFileTypePdf,
 	IconFocusCentered,
 	IconHandStop,
 	IconHighlight,
@@ -35,6 +37,7 @@ import {
 	IconSquare,
 	IconSun,
 	IconSchool,
+	IconTableExport,
 	IconTrash,
 	IconUsers,
 	IconWriting,
@@ -87,6 +90,12 @@ import { RibbonSection } from './RibbonSection'
 import { HandwritingCheckDialog } from '../../study/components/HandwritingCheckDialog'
 import { capturePDFTextSelection } from '../../study/lib/pdfTextSelection'
 import { LectureImportControl } from '../../study/components/LectureImportControl'
+import {
+	collectSpaceFlashcards,
+	downloadFlashcardAnkiText,
+	downloadFlashcardCSV,
+	exportSpacePDF,
+} from '../lib/spaceExport'
 
 const ZOOM_ANIMATION = { animation: { duration: 140 } } as const
 
@@ -374,6 +383,9 @@ function BoardMenu({ boardID }: { boardID: string }) {
 				<PDFImportControl boardID={boardID} editor={editor} />
 				<LectureImportControl boardID={boardID} editor={editor} />
 			</RibbonSection>
+			<RibbonSection label="Export">
+				<SpaceExportControls editor={editor} title={chrome.title} />
+			</RibbonSection>
 			<RibbonSection label="Session">
 				<RibbonItem
 					disabled={Boolean(session)}
@@ -386,6 +398,59 @@ function BoardMenu({ boardID }: { boardID: string }) {
 				/>
 				<CanvasTimer />
 			</RibbonSection>
+		</>
+	)
+}
+
+function SpaceExportControls({
+	editor,
+	title,
+}: {
+	editor: ReturnType<typeof useEditor>
+	title: string
+}) {
+	const [isExportingPDF, setIsExportingPDF] = useState(false)
+
+	async function exportPDF() {
+		if (isExportingPDF) return
+		setIsExportingPDF(true)
+		try {
+			await exportSpacePDF(editor, title)
+		} catch (error) {
+			window.alert(error instanceof Error ? error.message : 'Unable to export this space')
+		} finally {
+			setIsExportingPDF(false)
+		}
+	}
+
+	function exportCards(format: 'anki' | 'csv') {
+		try {
+			const cards = collectSpaceFlashcards(editor)
+			if (format === 'anki') downloadFlashcardAnkiText(cards, title)
+			else downloadFlashcardCSV(cards, title)
+		} catch (error) {
+			window.alert(error instanceof Error ? error.message : 'Unable to export these flashcards')
+		}
+	}
+
+	return (
+		<>
+			<RibbonItem
+				disabled={isExportingPDF}
+				icon={<IconFileTypePdf size={17} stroke={1.7} />}
+				label={isExportingPDF ? 'Building PDF…' : 'Export space as PDF'}
+				onSelect={() => void exportPDF()}
+			/>
+			<RibbonItem
+				icon={<IconFileTypeCsv size={17} stroke={1.7} />}
+				label="Export deck as CSV"
+				onSelect={() => exportCards('csv')}
+			/>
+			<RibbonItem
+				icon={<IconTableExport size={17} stroke={1.7} />}
+				label="Export deck for Anki"
+				onSelect={() => exportCards('anki')}
+			/>
 		</>
 	)
 }
