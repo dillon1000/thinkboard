@@ -5,12 +5,12 @@ import {
 	IconLayoutSidebarLeftCollapse,
 	IconLayoutSidebarLeftExpand,
 	IconLogout2,
-	IconSparkles,
 	IconSettings,
 	IconSun,
 } from '@tabler/icons-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
 import { ThemeToggle } from '../../theme/ThemeToggle'
@@ -60,8 +60,7 @@ export function WorkspaceShell({
 			<aside className="Dashboard-sidebar" inert={!isSidebarOpen}>
 				<div className="Dashboard-sidebarTop">
 					<Link className="Wordmark" to={appRoutes.home}>
-						<span><IconSparkles aria-hidden="true" size={15} stroke={1.8} /></span>
-						Agentboard
+						<ThinkspaceWordmark />
 					</Link>
 					<button aria-label="Collapse sidebar" className="IconButton" onClick={() => setSidebarOpen(false)} title="Collapse sidebar" type="button">
 						<IconLayoutSidebarLeftCollapse aria-hidden="true" size={17} stroke={1.7} />

@@ -1,5 +1,5 @@
 const CACHE_NAME = 'agentboard-shell-v1'
-const APP_SHELL = ['/', '/boards', '/manifest.webmanifest', '/favicon.ico']
+const APP_SHELL = ['/', '/boards', '/manifest.webmanifest', '/thinkspace.webp']
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)))

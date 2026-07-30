@@ -5,10 +5,10 @@ import {
 	IconBrandOauth,
 	IconLock,
 	IconSettings,
-	IconSparkles,
 } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router'
+import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { ThemeToggle } from '../../theme/ThemeToggle'
@@ -53,8 +53,7 @@ export function Component() {
 			<ThemeToggle className="ThemeToggle--corner" />
 			<section className="AuthCard" aria-labelledby="sign-in-heading">
 				<a className="Wordmark" href={appRoutes.home}>
-					<span><IconSparkles aria-hidden="true" size={18} stroke={1.8} /></span>
-					Agentboard
+					<ThinkspaceWordmark />
 				</a>
 
 				<div className="AuthCard-copy">

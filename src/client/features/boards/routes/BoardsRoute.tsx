@@ -16,12 +16,12 @@ import {
 	IconPlus,
 	IconRestore,
 	IconSettings,
-	IconSparkles,
 	IconSun,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Streamdown } from 'streamdown'
+import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
@@ -192,8 +192,7 @@ export function Component() {
 			<aside className="Dashboard-sidebar" inert={!isSidebarOpen}>
 				<div className="Dashboard-sidebarTop">
 					<a className="Wordmark" href={appRoutes.home}>
-						<span><IconSparkles aria-hidden="true" size={15} stroke={1.8} /></span>
-						Agentboard
+						<ThinkspaceWordmark />
 					</a>
 					<button aria-label="Collapse sidebar" className="IconButton" onClick={() => setSidebarOpen(false)} title="Collapse sidebar" type="button">
 						<IconLayoutSidebarLeftCollapse aria-hidden="true" size={17} stroke={1.7} />

@@ -8,9 +8,9 @@
 	"theme_color": "#153f31",
 	"icons": [
 		{
-			"src": "/favicon.ico",
-			"sizes": "48x48",
-			"type": "image/x-icon"
+			"src": "/thinkspace.webp",
+			"sizes": "2542x484",
+			"type": "image/webp"
 		}
 	]
 }
