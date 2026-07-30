@@ -122,11 +122,13 @@ export function applyProposal(
 	if (toolName === 'createFlashcards') {
 		const proposal = place(flashcardProposalSchema.parse(input))
 		const shapeIDs = proposal.cards.map(() => createShapeId())
+		/** Tight spacing keeps a generated card set visually grouped on the canvas. */
+		const cardGap = 16
 		const shapes: TLShapePartial<FlashcardShape>[] = proposal.cards.map((card, index) => ({
 			id: shapeIDs[index],
 			type: FLASHCARD_SHAPE_TYPE,
-			x: proposal.x + (index % 3) * 325,
-			y: proposal.y + Math.floor(index / 3) * 215,
+			x: proposal.x + (index % 3) * (FLASHCARD_CANVAS_WIDTH + cardGap),
+			y: proposal.y + Math.floor(index / 3) * (FLASHCARD_CANVAS_HEIGHT + cardGap),
 			meta: { agentboard: { createdBy: 'study-agent', proposalType: 'flashcard' } },
 			props: {
 				w: FLASHCARD_CANVAS_WIDTH,

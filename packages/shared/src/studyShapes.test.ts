@@ -112,6 +112,19 @@ describe('study shape contracts', () => {
 		expect(props).toMatchObject({ alternateAnswers: [] })
 	})
 
+	it('compacts default-sized existing flashcards without changing custom sizes', () => {
+		const defaultSize = { w: 300, h: 190 }
+		const customSize = { w: 360, h: 240 }
+		const migration = flashcardShapeMigrations.sequence[1]
+		if (!('up' in migration)) throw new Error('Expected a flashcard size migration')
+
+		migration.up(defaultSize)
+		migration.up(customSize)
+
+		expect(defaultSize).toEqual({ w: 220, h: 118 })
+		expect(customSize).toEqual({ w: 360, h: 240 })
+	})
+
 	it('validates worked walkthroughs and connected concept maps', () => {
 		expect(walkthroughProposalSchema.safeParse({
 			x: 10,

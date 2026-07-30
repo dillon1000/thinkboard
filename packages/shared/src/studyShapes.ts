@@ -166,15 +166,30 @@ export const pdfPageShapeMigrations = createShapePropsMigrationSequence({
 })
 
 export const flashcardShapeMigrations = createShapePropsMigrationSequence({
-	sequence: [{
-		id: 'com.tldraw.shape.agentboard-flashcard/1',
-		up: (props) => {
-			props.alternateAnswers = []
+	sequence: [
+		{
+			id: 'com.tldraw.shape.agentboard-flashcard/1',
+			up: (props) => {
+				props.alternateAnswers = []
+			},
+			down: (props) => {
+				delete props.alternateAnswers
+			},
 		},
-		down: (props) => {
-			delete props.alternateAnswers
+		{
+			id: 'com.tldraw.shape.agentboard-flashcard/2',
+			up: (props) => {
+				if (props.w !== 300 || props.h !== 190) return
+				props.w = FLASHCARD_CANVAS_WIDTH
+				props.h = FLASHCARD_CANVAS_HEIGHT
+			},
+			down: (props) => {
+				if (props.w !== FLASHCARD_CANVAS_WIDTH || props.h !== FLASHCARD_CANVAS_HEIGHT) return
+				props.w = 300
+				props.h = 190
+			},
 		},
-	}],
+	],
 })
 
 export const flashcardShapeValidator = T.object(flashcardShapeProps)
