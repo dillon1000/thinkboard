@@ -24,6 +24,8 @@ import { canvasThemes } from '../lib/canvasThemes'
 import { useTheme } from '../../theme/ThemeProvider'
 import { LockInProvider } from '../../lock-in/LockInProvider'
 import { ZenModeProvider } from '../lib/ZenModeProvider'
+import { ProjectorModeProvider } from '../lib/ProjectorModeProvider'
+import { getProjectorUserPresence } from '../lib/projectorMode'
 import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
 
 export function Component() {
@@ -42,6 +44,7 @@ export function Component() {
 	const store = useSync({
 		uri: `${window.location.origin}${apiRoutes.boardSocket(resolvedBoardID)}`,
 		assets,
+		getUserPresence: getProjectorUserPresence,
 		shapeUtils: synchronizedShapeUtils,
 	})
 
@@ -100,6 +103,7 @@ export function Component() {
 	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your board" /></div>
 
 	return (
+		<ProjectorModeProvider>
 		<ZenModeProvider>
 		<LockInProvider boardID={boardID} editor={editor}>
 			<CraftDocumentsController
@@ -128,5 +132,6 @@ export function Component() {
 			</BoardShell>
 		</LockInProvider>
 		</ZenModeProvider>
+		</ProjectorModeProvider>
 	)
 }

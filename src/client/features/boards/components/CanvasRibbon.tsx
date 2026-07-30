@@ -8,6 +8,8 @@ import {
 	IconChevronRight,
 	IconCircle,
 	IconCopy,
+	IconDeviceProjector,
+	IconDeviceTablet,
 	IconEraser,
 	IconFocusCentered,
 	IconHandStop,
@@ -64,6 +66,7 @@ import { SpotifyPlayer } from '../../spotify/components/SpotifyPlayer'
 import { PDFImportControl } from '../../study/components/PDFImportControl'
 import { useBoardChrome } from '../lib/BoardChromeProvider'
 import { useZenMode } from '../lib/ZenModeProvider'
+import { useProjectorMode } from '../lib/ProjectorModeProvider'
 import { RIBBON_MENU_IDS, type RibbonMenuID } from '../lib/ribbonPreference'
 import {
 	CanvasColourControls,
@@ -377,6 +380,7 @@ function ToolMenu() {
 function ViewMenu() {
 	const editor = useEditor()
 	const zen = useZenMode()
+	const projector = useProjectorMode()
 	const chrome = useBoardChrome()
 	const { theme, toggleTheme } = useTheme()
 	const [showMinimap, setShowMinimap] = useState(false)
@@ -428,6 +432,21 @@ function ViewMenu() {
 					icon={<IconFocusCentered size={17} stroke={1.7} />}
 					label="Zen mode"
 					onSelect={() => zen.setEnabled(true)}
+				/>
+				<RibbonItem
+					icon={<IconDeviceProjector size={17} stroke={1.7} />}
+					label="Projector mode"
+					onSelect={() => {
+						zen.setEnabled(false)
+						chrome.setStudyOpen(false)
+						projector.enter(editor)
+					}}
+				/>
+				<RibbonItem
+					active={Boolean(projector.controllerCode)}
+					icon={<IconDeviceTablet size={17} stroke={1.7} />}
+					label={projector.controllerCode ? 'Projector connected' : 'Control projector'}
+					onSelect={projector.openPairing}
 				/>
 				<RibbonItem
 					active={chrome.isStudyOpen}

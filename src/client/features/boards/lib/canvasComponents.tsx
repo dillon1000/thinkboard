@@ -3,6 +3,7 @@ import { CanvasRibbon } from '../components/CanvasRibbon'
 import { InlinePrompt } from '../components/InlinePrompt'
 import { ZenRadialMenu } from '../components/ZenRadialMenu'
 import { LockInCanvasOverlay } from '../../lock-in/LockInCanvasOverlay'
+import { ProjectorModeLayer } from '../components/ProjectorModeLayer'
 
 /**
  * The canvas carries one piece of chrome: a ribbon along the top that absorbs everything that
@@ -22,6 +23,7 @@ export function createCanvasComponents(boardID: string): TLComponents {
 				<LockInCanvasOverlay />
 				<InlinePrompt boardID={boardID} />
 				<ZenRadialMenu />
+				<ProjectorModeLayer />
 			</>
 		),
 		/* The top-left slot is stretched to the full width in CSS; the ribbon owns that whole row. */

@@ -6,6 +6,7 @@ import { useZenMode } from '../lib/ZenModeProvider'
 import { LockInSetup } from '../../lock-in/LockInSetup'
 import { LockInCelebration } from '../../lock-in/LockInCelebration'
 import { useLockIn } from '../../lock-in/LockInProvider'
+import { useProjectorMode } from '../lib/ProjectorModeProvider'
 
 const STUDY_PANEL_STORAGE_KEY = 'agentboard.study-panel'
 
@@ -22,6 +23,7 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
 	const [isOnline, setIsOnline] = useState(navigator.onLine)
 	const zen = useZenMode()
+	const projector = useProjectorMode()
 	const { session } = useLockIn()
 
 	useEffect(() => {
@@ -56,6 +58,11 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 		if (zen.enabled) setStudyPanelOpen(false)
 	}, [zen.enabled])
 
+	/* Projector mode reserves the full screen for the followed canvas and its pairing status. */
+	useEffect(() => {
+		if (projector.enabled) setStudyPanelOpen(false)
+	}, [projector.enabled])
+
 	async function copyBoardLink() {
 		await navigator.clipboard.writeText(window.location.href)
 		setDidCopy(true)
@@ -82,7 +89,13 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 	}), [boardID, didCopy, isOnline, isStudyOpen, role, title])
 
 	return (
-		<div className="BoardShell" data-lock-in={Boolean(session)} data-study-open={isStudyOpen} data-zen={zen.enabled}>
+		<div
+			className="BoardShell"
+			data-lock-in={Boolean(session)}
+			data-projector={projector.enabled}
+			data-study-open={isStudyOpen}
+			data-zen={zen.enabled}
+		>
 			<div className="BoardShell-workspace">
 				<main className="BoardShell-content">
 					<BoardChromeProvider value={chrome}>{children}</BoardChromeProvider>
