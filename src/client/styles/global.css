@@ -453,6 +453,10 @@ img { max-width: 100%; }
 .Ribbon-divider { width: 1px; height: 17px; flex: 0 0 auto; margin: 0 3px; background: var(--line); }
 .Ribbon-crumbs { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 2px; font-size: 13.5px; }
 .Ribbon-crumbs a { border-radius: 4px; padding: 3px 6px; color: var(--muted); text-decoration: none; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.Ribbon-home { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+.Ribbon-home .Wordmark-image { width: 88px; }
+.ThinkspaceIcon { display: block; width: 22px; height: 22px; object-fit: contain; }
+.Ribbon-home .ThinkspaceIcon { display: none; }
 .Ribbon-crumbs > svg { flex: 0 0 auto; color: var(--faint); }
 .Ribbon-title { min-width: 0; max-width: 18ch; overflow: hidden; padding: 3px 6px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
 .Ribbon-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin: 0 6px 0 4px; color: var(--faint); font-size: 12px; }
@@ -1719,6 +1723,8 @@ img { max-width: 100%; }
 @media (max-width: 1024px) {
 	.Ribbon-status { margin-right: 2px; font-size: 0; }
 	.Ribbon-title { max-width: 18ch; }
+	.Ribbon-home .Wordmark-image { display: none; }
+	.Ribbon-home .ThinkspaceIcon { display: block; }
 	.LockInTimer-progress { width: 34px; }
 	/* The pane becomes a drawer over the canvas, so tldraw keeps the full width. */
 	.BoardShell, .BoardShell[data-study-open='true'] { --study-panel-width: min(420px, 92vw); --chrome-side-inset: 0px; }
@@ -1759,7 +1765,8 @@ img { max-width: 100%; }
 	.BoardShell-study { z-index: 6; width: 100vw; padding: 0; }
 	.BoardShell-studyInner { border-radius: 0; background: var(--panel); box-shadow: none; }
 	.BoardShell-studyScrim { display: none; }
-	.Ribbon-crumbs a, .Ribbon-crumbs > svg { display: none; }
+	.Ribbon-crumbs > svg, .Ribbon-home > span { display: none; }
+	.Ribbon-home { padding-inline: 3px; }
 	.Ribbon-title { max-width: 14ch; padding-left: 4px; }
 	.Ribbon-studyToggle span { display: none; }
 	.LockInSetup { inset: 0; width: 100vw; border-radius: 0; background: var(--panel); }

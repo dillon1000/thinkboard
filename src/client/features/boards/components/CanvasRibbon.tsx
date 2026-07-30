@@ -55,6 +55,7 @@ import {
 	useUnlockedSelectedShapesCount,
 	useValue,
 } from 'tldraw'
+import { ThinkspaceIcon, ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { useTheme } from '../../theme/ThemeProvider'
 import { useLockIn } from '../../lock-in/LockInProvider'
 import {
@@ -170,7 +171,11 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 			<DockablePanel className="Dockable--ribbon" edge="top" id="ribbon" label="menu bar">
 				<div aria-label="Board menu bar" className="Ribbon" role="menubar">
 					<nav aria-label="Breadcrumb" className="Ribbon-crumbs">
-						<a href={appRoutes.home}>Boards</a>
+						<a aria-label="Thinkspace Boards" className="Ribbon-home" href={appRoutes.home}>
+							<ThinkspaceWordmark />
+							<ThinkspaceIcon />
+							<span>Boards</span>
+						</a>
 						<IconChevronRight aria-hidden="true" size={13} stroke={1.8} />
 						<span className="Ribbon-title" data-board-id={boardID} title={chrome.title}>{chrome.title}</span>
 					</nav>

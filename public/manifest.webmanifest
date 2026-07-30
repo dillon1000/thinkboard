@@ -8,8 +8,8 @@
 	"theme_color": "#153f31",
 	"icons": [
 		{
-			"src": "/thinkspace.webp",
-			"sizes": "2542x484",
+			"src": "/thinkspace-icon.webp",
+			"sizes": "383x375",
 			"type": "image/webp"
 		}
 	]
