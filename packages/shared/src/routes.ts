@@ -40,6 +40,7 @@ export const apiRoutePatterns = {
 	examPlans: '/api/study/exams',
 	examPlan: '/api/study/exams/:examID',
 	examPractice: '/api/study/exams/:examID/practice',
+	globalSearch: '/api/search',
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: '/api/study/memory/:memoryKey',
 	studyAgentProfile: '/api/study/agent-profile',
@@ -132,6 +133,7 @@ export const apiRoutes = {
 	examPlan: (examID: string) => `/api/study/exams/${encodeURIComponent(examID)}`,
 	examPractice: (examID: string) =>
 		`/api/study/exams/${encodeURIComponent(examID)}/practice`,
+	globalSearch: (query: string) => `/api/search?q=${encodeURIComponent(query)}`,
 	studyMemory: '/api/study/memory',
 	studyMemoryItem: (memoryKey: string) =>
 		`/api/study/memory/${encodeURIComponent(memoryKey)}`,

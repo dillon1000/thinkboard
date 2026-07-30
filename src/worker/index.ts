@@ -90,6 +90,7 @@ import {
 	handleExamPlans,
 	handleExamPractice,
 } from './routes/exams'
+import { handleGlobalSearch } from './routes/search'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
 export { StudyAgent }
@@ -103,6 +104,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 	.get(apiRoutePatterns.config, (_request, env) => {
 		return Response.json(getPublicConfig(env))
 	})
+	.get(apiRoutePatterns.globalSearch, handleGlobalSearch)
 	.get(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerGet)
 	.post(apiRoutePatterns.spotifyPlayer, handleSpotifyPlayerAction)
 	.get('/api/integrations/craft', handleCraftConnectionGet)

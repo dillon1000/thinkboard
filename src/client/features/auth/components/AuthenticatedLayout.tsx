@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
+import { GlobalSearch } from '../../search/components/GlobalSearch'
 
 export function AuthenticatedLayout() {
 	const session = authClient.useSession()
@@ -28,5 +29,10 @@ export function AuthenticatedLayout() {
 		return <Navigate replace state={{ from: location.pathname }} to={appRoutes.login} />
 	}
 
-	return <Outlet />
+	return (
+		<>
+			<Outlet />
+			<GlobalSearch />
+		</>
+	)
 }

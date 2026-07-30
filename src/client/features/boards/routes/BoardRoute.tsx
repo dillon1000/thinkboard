@@ -9,7 +9,7 @@ import {
 } from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
-import { Editor, Tldraw } from 'tldraw'
+import { Editor, Tldraw, type TLShape, type TLShapeId } from 'tldraw'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
@@ -28,6 +28,7 @@ import { ProjectorModeProvider } from '../lib/ProjectorModeProvider'
 import { getProjectorUserPresence } from '../lib/projectorMode'
 import { CraftDocumentsController } from '../../craft/components/CraftDocumentsController'
 import { ExamPracticeImport } from '../components/ExamPracticeImport'
+import { useCanvasArtifactIndex } from '../../study/lib/useCanvasArtifactIndex'
 
 export function Component() {
 	const { boardID } = useParams<{ boardID: string }>()
@@ -41,8 +42,12 @@ export function Component() {
 	const [role, setRole] = useState<BoardRole>('viewer')
 	const [searchParameters, setSearchParameters] = useSearchParams()
 	const examID = searchParameters.get('examPlan')
+	const focusShapeID = searchParameters.get('focusShape')
+	const focusDocumentID = searchParameters.get('focusDocument')
+	const focusPage = Number(searchParameters.get('focusPage'))
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
+	useCanvasArtifactIndex(editor, resolvedBoardID, role !== 'viewer')
 
 	const store = useSync({
 		uri: `${window.location.origin}${apiRoutes.boardSocket(resolvedBoardID)}`,
@@ -79,6 +84,41 @@ export function Component() {
 		// Viewer mode blocks shared canvas mutations while custom flashcard controls stay interactive.
 		editor.updateInstanceState({ isReadonly: role === 'viewer' })
 	}, [editor, role])
+
+	useEffect(() => {
+		if (!editor || (!focusShapeID && (!focusDocumentID || !Number.isInteger(focusPage)))) return
+		const focusTarget = () => {
+			const target = focusShapeID
+				? editor.getShape(focusShapeID as TLShapeId)
+				: findPDFPageShape(editor, focusDocumentID ?? '', focusPage)
+			if (!target) return false
+			const pageID = editor.getAncestorPageId(target)
+			if (pageID && pageID !== editor.getCurrentPageId()) editor.setCurrentPage(pageID)
+			editor.setSelectedShapes([target.id])
+			editor.zoomToSelection({ animation: { duration: 280 } })
+			const nextParameters = new URLSearchParams(searchParameters)
+			nextParameters.delete('focusShape')
+			nextParameters.delete('focusDocument')
+			nextParameters.delete('focusPage')
+			setSearchParameters(nextParameters, { replace: true })
+			return true
+		}
+		if (focusTarget()) return
+		const stopListening = editor.store.listen(() => {
+			if (focusTarget()) stopListening()
+		}, { scope: 'document' })
+		const timeout = window.setTimeout(stopListening, 8_000)
+		return () => {
+			window.clearTimeout(timeout)
+			stopListening()
+		}
+	}, [
+		editor,
+		focusDocumentID,
+		focusPage,
+		focusShapeID,
+		setSearchParameters,
+	])
 
 	useEffect(() => {
 		if (!editor) return
@@ -152,4 +192,18 @@ export function Component() {
 		</ZenModeProvider>
 		</ProjectorModeProvider>
 	)
+}
+
+function findPDFPageShape(editor: Editor, documentID: string, pageNumber: number): TLShape | undefined {
+	for (const page of editor.getPages()) {
+		for (const shapeID of editor.getPageShapeIds(page)) {
+			const shape = editor.getShape(shapeID)
+			if (
+				shape?.type === PDF_PAGE_SHAPE_TYPE &&
+				Reflect.get(shape.props, 'documentId') === documentID &&
+				Reflect.get(shape.props, 'pageNumber') === pageNumber
+			) return shape
+		}
+	}
+	return undefined
 }

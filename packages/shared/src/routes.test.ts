@@ -85,4 +85,10 @@ describe('route builders', () => {
 		expect(appRoutes.settings).toBe('/settings')
 		expect(apiRoutes.spotifyPlayer).toBe('/api/integrations/spotify/player')
 	})
+
+	it('encodes workspace search queries', () => {
+		expect(apiRoutes.globalSearch('entropy & heat')).toBe(
+			'/api/search?q=entropy%20%26%20heat'
+		)
+	})
 })

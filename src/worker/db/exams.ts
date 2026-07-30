@@ -8,7 +8,7 @@ import {
 	type PracticeSetProposal,
 	type StudyArtifactInput,
 } from '@agentboard/shared'
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm'
 import type { Database } from './client'
 import {
 	board,
@@ -62,6 +62,36 @@ export async function removeStudyArtifact(
 	await database
 		.delete(studyArtifact)
 		.where(and(eq(studyArtifact.boardID, boardID), eq(studyArtifact.shapeID, shapeID)))
+}
+
+/**
+ * Replaces the indexed artifact kinds with one canvas snapshot. It returns removed shape IDs so
+ * the vector index can delete stale entries after the D1 change succeeds.
+ */
+export async function replaceStudyArtifacts(
+	database: Database,
+	boardID: string,
+	artifacts: readonly StudyArtifactInput[],
+	replaceKinds: readonly StudyArtifactInput['kind'][]
+) {
+	const kinds = [...new Set(replaceKinds)]
+	if (!kinds.length) {
+		await registerStudyArtifacts(database, boardID, artifacts)
+		return []
+	}
+	const keptShapeIDs = artifacts
+		.filter(({ kind }) => kinds.includes(kind))
+		.map(({ shapeID }) => shapeID)
+	const scope = and(
+		eq(studyArtifact.boardID, boardID),
+		inArray(studyArtifact.kind, kinds)
+	)
+	const removed = await database
+		.delete(studyArtifact)
+		.where(keptShapeIDs.length ? and(scope, notInArray(studyArtifact.shapeID, keptShapeIDs)) : scope)
+		.returning({ shapeID: studyArtifact.shapeID })
+	await registerStudyArtifacts(database, boardID, artifacts)
+	return removed.map(({ shapeID }) => shapeID)
 }
 
 /**

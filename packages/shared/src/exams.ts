@@ -5,9 +5,11 @@ export const studyArtifactKindSchema = z.enum([
 	'concept-map',
 	'equation',
 	'flashcard',
+	'note',
 	'practice-problem',
 	'quiz',
 	'review-note',
+	'teach-back',
 	'walkthrough',
 ])
 
@@ -30,7 +32,8 @@ export const studyArtifactInputSchema = z.object({
 })
 
 export const registerStudyArtifactsSchema = z.object({
-	artifacts: z.array(studyArtifactInputSchema).min(1).max(40),
+	artifacts: z.array(studyArtifactInputSchema).max(100),
+	replaceKinds: z.array(studyArtifactKindSchema).max(12).optional(),
 })
 
 export const examPlanInputSchema = z.object({

@@ -10,10 +10,15 @@ import {
 	createExamPlan,
 	listExamPlans,
 	registerStudyArtifacts,
+	replaceStudyArtifacts,
 	removeExamPlan,
 	removeStudyArtifact,
 } from '../db/exams'
 import { buildExamPracticeSet } from '../exams/practice'
+import {
+	indexStudyArtifacts,
+	removeStudyArtifactVectors,
+} from '../search/artifactIndex'
 
 export async function handleExamPlans(request: IRequest, env: Env) {
 	const authentication = await requireSession(request, env)
@@ -63,16 +68,37 @@ export async function handleExamPractice(request: IRequest, env: Env) {
 	return Response.json({ practice })
 }
 
-export async function handleBoardArtifacts(request: IRequest, env: Env) {
+export async function handleBoardArtifacts(
+	request: IRequest,
+	env: Env,
+	ctx: ExecutionContext
+) {
 	const authorization = await authorizeEditableBoard(request, env)
 	if ('response' in authorization) return authorization.response
 	const parsed = registerStudyArtifactsSchema.safeParse(await readBody(request))
 	if (!parsed.success) return invalidInput(parsed.error.issues[0]?.message)
-	await registerStudyArtifacts(
-		authorization.database,
-		request.params.boardID,
-		parsed.data.artifacts
-	)
+	const removedShapeIDs = parsed.data.replaceKinds
+		? await replaceStudyArtifacts(
+			authorization.database,
+			request.params.boardID,
+			parsed.data.artifacts,
+			parsed.data.replaceKinds
+		)
+		: (await registerStudyArtifacts(
+			authorization.database,
+			request.params.boardID,
+			parsed.data.artifacts
+		), [])
+	ctx.waitUntil(Promise.all([
+		indexStudyArtifacts(env, request.params.boardID, parsed.data.artifacts),
+		removeStudyArtifactVectors(env, request.params.boardID, removedShapeIDs),
+	]).then(() => undefined).catch((error) => {
+		console.warn(JSON.stringify({
+			boardID: request.params.boardID,
+			error: error instanceof Error ? error.message : 'Unknown artifact indexing error',
+			pipeline: 'artifact-index',
+		}))
+	}))
 	return Response.json({ registered: parsed.data.artifacts.length }, { status: 201 })
 }
 
@@ -84,6 +110,7 @@ export async function handleBoardArtifact(request: IRequest, env: Env) {
 		request.params.boardID,
 		request.params.shapeID
 	)
+	await removeStudyArtifactVectors(env, request.params.boardID, [request.params.shapeID])
 	return new Response(null, { status: 204 })
 }
 

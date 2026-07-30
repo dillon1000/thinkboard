@@ -24,6 +24,12 @@ export {
 	studyArtifactInputSchema,
 	studyArtifactKindSchema,
 } from './exams'
+export { globalSearchQuerySchema } from './search'
+export type {
+	GlobalSearchDocumentResult,
+	GlobalSearchResult,
+	GlobalSearchShapeResult,
+} from './search'
 export type {
 	ExamDeckStatus,
 	ExamPattern,

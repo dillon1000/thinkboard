@@ -1,0 +1,174 @@
+import {
+	CONCEPT_MAP_SHAPE_TYPE,
+	FLASHCARD_SHAPE_TYPE,
+	MATH_SHAPE_TYPE,
+	QUIZ_SHAPE_TYPE,
+	REVIEW_SHAPE_TYPE,
+	WALKTHROUGH_SHAPE_TYPE,
+	apiRoutes,
+	type StudyArtifactInput,
+	type StudyArtifactKind,
+} from '@agentboard/shared'
+import { useEffect } from 'react'
+import type { Editor, TLShape } from 'tldraw'
+import { apiRequest } from '../../../lib/api'
+
+const INDEX_DELAY_MS = 1_500
+const MAX_INDEXED_SHAPES = 100
+const INDEXED_KINDS = [
+	'concept-map',
+	'equation',
+	'flashcard',
+	'note',
+	'quiz',
+	'review-note',
+	'walkthrough',
+] as const satisfies readonly StudyArtifactKind[]
+
+/**
+ * Mirrors text-bearing canvas shapes into the search index after edits settle. The Worker replaces
+ * a full snapshot only when the canvas fits within the request limit, so a large board cannot lose
+ * older index entries because the client truncated its upload.
+ */
+export function useCanvasArtifactIndex(
+	editor: Editor | null,
+	boardID: string,
+	enabled: boolean
+) {
+	useEffect(() => {
+		if (!editor || !enabled) return
+		let timer: number | undefined
+		let stopped = false
+
+		const schedule = () => {
+			if (timer) window.clearTimeout(timer)
+			timer = window.setTimeout(() => {
+				timer = undefined
+				const snapshot = collectCanvasArtifacts(editor)
+				void apiRequest(apiRoutes.boardArtifacts(boardID), {
+					body: JSON.stringify({
+						artifacts: snapshot.artifacts,
+						...(!snapshot.truncated ? { replaceKinds: INDEXED_KINDS } : {}),
+					}),
+					method: 'POST',
+				}).catch(() => undefined)
+			}, INDEX_DELAY_MS)
+		}
+		const stopListening = editor.store.listen((entry) => {
+			const hasShapeChanges = [
+				entry.changes.added,
+				entry.changes.updated,
+				entry.changes.removed,
+			].some((changes) => Object.values(changes).some((record) => {
+				const value = Array.isArray(record) ? record[1] : record
+				return value.typeName === 'shape'
+			}))
+			if (hasShapeChanges && !stopped) schedule()
+		}, { scope: 'document' })
+		schedule()
+		return () => {
+			stopped = true
+			if (timer) window.clearTimeout(timer)
+			stopListening()
+		}
+	}, [boardID, editor, enabled])
+}
+
+export function collectCanvasArtifacts(editor: Editor) {
+	const artifacts: StudyArtifactInput[] = []
+	let textShapeCount = 0
+	for (const page of editor.getPages()) {
+		for (const shapeID of editor.getPageShapeIds(page)) {
+			const shape = editor.getShape(shapeID)
+			if (!shape) continue
+			const artifact = toArtifact(editor, shape)
+			if (!artifact) continue
+			textShapeCount += 1
+			if (artifacts.length < MAX_INDEXED_SHAPES) artifacts.push(artifact)
+		}
+	}
+	return {
+		artifacts,
+		truncated: textShapeCount > MAX_INDEXED_SHAPES,
+	}
+}
+
+function toArtifact(editor: Editor, shape: TLShape): StudyArtifactInput | null {
+	const text = (editor.getShapeUtil(shape).getText(shape) ?? '').trim().slice(0, 8_000)
+	if (!text) return null
+	const props = shape.props
+	if (shape.type === 'note' || shape.type === 'text') {
+		return artifact('note', shape, firstLine(text), text)
+	}
+	if (shape.type === FLASHCARD_SHAPE_TYPE) {
+		const front = readString(props, 'front')
+		const back = readString(props, 'back')
+		return artifact('flashcard', shape, front || firstLine(text), text, {
+			alternateAnswers: readStringArray(props, 'alternateAnswers'),
+			back,
+			front,
+		})
+	}
+	if (shape.type === QUIZ_SHAPE_TYPE) {
+		const question = readString(props, 'question')
+		const options = readStringArray(props, 'options')
+		const correctIndex = readNumber(props, 'correctIndex')
+		const explanation = readString(props, 'explanation')
+		return artifact('quiz', shape, question || firstLine(text), text, {
+			correctIndex,
+			explanation,
+			options,
+			question,
+		})
+	}
+	if (shape.type === REVIEW_SHAPE_TYPE) {
+		return artifact('review-note', shape, readString(props, 'title') || firstLine(text), text)
+	}
+	if (shape.type === WALKTHROUGH_SHAPE_TYPE) {
+		return artifact('walkthrough', shape, readString(props, 'title') || firstLine(text), text)
+	}
+	if (shape.type === CONCEPT_MAP_SHAPE_TYPE) {
+		return artifact('concept-map', shape, readString(props, 'title') || firstLine(text), text)
+	}
+	if (shape.type === MATH_SHAPE_TYPE) {
+		return artifact('equation', shape, 'Equation', text)
+	}
+	return null
+}
+
+function artifact(
+	kind: StudyArtifactKind,
+	shape: TLShape,
+	title: string,
+	text: string,
+	payload?: unknown
+): StudyArtifactInput {
+	return {
+		kind,
+		payload,
+		shapeID: shape.id,
+		text,
+		title: title.slice(0, 160),
+	}
+}
+
+function firstLine(value: string) {
+	return value.split(/\r?\n/, 1)[0].slice(0, 160) || 'Canvas note'
+}
+
+function readString(value: object, key: string) {
+	const field = Reflect.get(value, key)
+	return typeof field === 'string' ? field : ''
+}
+
+function readNumber(value: object, key: string) {
+	const field = Reflect.get(value, key)
+	return typeof field === 'number' ? field : 0
+}
+
+function readStringArray(value: object, key: string) {
+	const field = Reflect.get(value, key)
+	return Array.isArray(field)
+		? field.filter((entry): entry is string => typeof entry === 'string')
+		: []
+}
