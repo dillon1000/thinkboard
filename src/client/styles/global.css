@@ -1153,16 +1153,25 @@ img { max-width: 100%; }
 .StudyShape-heading button:hover { background: rgba(74, 88, 153, .1); }
 .StudyShape-heading button:active { scale: .96; }
 .Flashcard-face { display: grid; min-height: 0; align-content: center; gap: 6px; padding: 9px 10px; color: #37352f; text-align: center; }
-.Flashcard-reveal { display: grid; min-height: 58px; max-height: 82px; overflow-y: auto; align-content: center; gap: 5px; border-radius: 6px; padding: 5px 7px; cursor: pointer; pointer-events: all; transition-property: background-color, box-shadow, scale; transition-duration: 140ms; transition-timing-function: var(--ease-out); }
-.Flashcard-reveal:hover { background: rgba(74, 88, 153, .055); }
-.Flashcard-reveal:focus-visible { outline: 0; box-shadow: inset 0 0 0 1.5px rgba(74, 88, 153, .34); }
-.Flashcard-reveal:active { scale: .96; }
-.Flashcard-reveal > span { color: #8a8985; font-size: 9px; font-weight: 560; letter-spacing: .01em; }
-.Flashcard-reveal.is-revealed > span { color: #6670a3; }
+.Flashcard-trigger { display: grid; min-height: 58px; max-height: 82px; overflow-y: auto; align-content: center; gap: 5px; border-radius: 6px; padding: 5px 7px; cursor: pointer; pointer-events: all; transition-property: background-color, box-shadow, scale; transition-duration: 140ms; transition-timing-function: var(--ease-out); }
+.Flashcard-trigger:hover { background: rgba(74, 88, 153, .055); }
+.Flashcard-trigger:focus-visible { outline: 0; box-shadow: inset 0 0 0 1.5px rgba(74, 88, 153, .34); }
+.Flashcard-trigger:active { scale: .96; }
+.Flashcard-trigger > span { color: #8a8985; font-size: 9px; font-weight: 560; letter-spacing: .01em; }
+.Flashcard-trigger.is-revealed > span { color: #6670a3; }
 .Flashcard-copy { max-width: 100%; font-size: clamp(13px, 1.7em, 16px); font-weight: 550; line-height: 1.25; letter-spacing: -.012em; text-wrap: pretty; }
-.Flashcard-copy > :first-child, .Quiz-question > :first-child, .Quiz-optionText > :first-child, .Quiz-explanation > :first-child, .Review-title > :first-child, .Review-body > :first-child, .Walkthrough-title > :first-child, .Walkthrough-prompt > :first-child, .Walkthrough-explanation > :first-child, .ConceptMap-title > :first-child, .ConceptMap-nodeLabel > :first-child { margin-top: 0; }
-.Flashcard-copy > :last-child, .Quiz-question > :last-child, .Quiz-optionText > :last-child, .Quiz-explanation > :last-child, .Review-title > :last-child, .Review-body > :last-child, .Walkthrough-title > :last-child, .Walkthrough-prompt > :last-child, .Walkthrough-explanation > :last-child, .ConceptMap-title > :last-child, .ConceptMap-nodeLabel > :last-child { margin-bottom: 0; }
-.Flashcard-copy .katex-display, .Quiz-content .katex-display, .Review-content .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.Flashcard-copy > :first-child, .FlashcardAnswerDialog-question > :first-child, .Quiz-question > :first-child, .Quiz-optionText > :first-child, .Quiz-explanation > :first-child, .Review-title > :first-child, .Review-body > :first-child, .Walkthrough-title > :first-child, .Walkthrough-prompt > :first-child, .Walkthrough-explanation > :first-child, .ConceptMap-title > :first-child, .ConceptMap-nodeLabel > :first-child { margin-top: 0; }
+.Flashcard-copy > :last-child, .FlashcardAnswerDialog-question > :last-child, .Quiz-question > :last-child, .Quiz-optionText > :last-child, .Quiz-explanation > :last-child, .Review-title > :last-child, .Review-body > :last-child, .Walkthrough-title > :last-child, .Walkthrough-prompt > :last-child, .Walkthrough-explanation > :last-child, .ConceptMap-title > :last-child, .ConceptMap-nodeLabel > :last-child { margin-bottom: 0; }
+.Flashcard-copy .katex-display, .FlashcardAnswerDialog-question .katex-display, .Quiz-content .katex-display, .Review-content .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.FlashcardAnswerDialog-backdrop { position: fixed; z-index: 10000; display: grid; overflow-y: auto; inset: 0; place-items: center; background: rgba(20, 20, 18, .34); padding: 24px; pointer-events: all; backdrop-filter: blur(4px); }
+.FlashcardAnswerDialog { display: grid; width: min(440px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; gap: 15px; border-radius: 12px; background: var(--panel); padding: 18px; color: var(--ink); box-shadow: var(--shadow-pop); font-family: var(--font-sans); animation: pop-in 160ms var(--ease-out) backwards; }
+.FlashcardAnswerDialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.FlashcardAnswerDialog header > div { display: grid; gap: 2px; }
+.FlashcardAnswerDialog header small { color: var(--faint); font-size: 10px; font-weight: 620; letter-spacing: .07em; text-transform: uppercase; }
+.FlashcardAnswerDialog h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; text-wrap: balance; }
+.FlashcardAnswerDialog header > button { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; background: var(--surface); color: var(--muted); cursor: pointer; transition-property: background-color, color, scale; transition-duration: 140ms; transition-timing-function: var(--ease-out); }
+.FlashcardAnswerDialog header > button:active { scale: .96; }
+.FlashcardAnswerDialog-question { border-radius: 8px; background: var(--sidebar); padding: 11px 12px; box-shadow: inset 0 0 0 1px var(--line); font-size: 14px; font-weight: 580; line-height: 1.4; text-wrap: pretty; }
 .FlashcardEditor-backdrop { position: fixed; z-index: 10000; display: grid; overflow-y: auto; inset: 0; place-items: center; background: rgba(20, 20, 18, .34); padding: 24px; pointer-events: all; backdrop-filter: blur(4px); }
 .FlashcardEditor { display: grid; width: min(520px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; gap: 16px; border-radius: 12px; background: var(--panel); padding: 20px; color: var(--ink); box-shadow: var(--shadow-pop); font-family: var(--font-sans); animation: pop-in 160ms var(--ease-out) backwards; }
 .FlashcardEditor header, .FlashcardEditor footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

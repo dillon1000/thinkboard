@@ -44,7 +44,9 @@ import {
 	type TLShape,
 	useEditor,
 } from 'tldraw'
+import { FlashcardAnswerPanel } from '../components/FlashcardAnswerPanel'
 import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
+import { readBoardFlashcardDirectReveal } from '../lib/boardFlashcardPreferences'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import { focusPDFCitation } from '../lib/pdfCitation'
 import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
@@ -149,12 +151,18 @@ export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 	const chrome = useBoardChrome()
 	const [isEditing, setIsEditing] = useState(false)
-	// Answer visibility is private UI state, so a click does not reveal it for collaborators.
+	const [isAnswering, setIsAnswering] = useState(false)
+	const directReveal = readBoardFlashcardDirectReveal()
+	// Direct reveal stays private, so one student's setting cannot expose an answer to collaborators.
 	const [isRevealed, setIsRevealed] = useState(false)
 	const fitRef = useAutoFitHeight(shape, FLASHCARD_CANVAS_HEIGHT)
 
-	function toggleAnswer() {
-		setIsRevealed((current) => !current)
+	function openFlashcard() {
+		if (directReveal) {
+			setIsRevealed((current) => !current)
+			return
+		}
+		setIsAnswering(true)
 	}
 
 	return (
@@ -178,13 +186,15 @@ function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 			</div>
 			<div className="Flashcard-face" ref={fitRef} {...canvasInteractionHandlers}>
 				<div
-					aria-label={isRevealed ? 'Show flashcard question' : 'Reveal flashcard answer'}
-					className={`Flashcard-reveal${isRevealed ? ' is-revealed' : ''}`}
-					onClick={toggleAnswer}
+					aria-label={directReveal
+						? isRevealed ? 'Show flashcard question' : 'Reveal flashcard answer'
+						: 'Answer flashcard'}
+					className={`Flashcard-trigger${isRevealed ? ' is-revealed' : ''}`}
+					onClick={openFlashcard}
 					onKeyDown={(event) => {
 						if (event.key !== 'Enter' && event.key !== ' ') return
 						event.preventDefault()
-						toggleAnswer()
+						openFlashcard()
 					}}
 					role="button"
 					tabIndex={0}
@@ -192,12 +202,79 @@ function FlashcardComponent({ shape }: { shape: FlashcardShape }) {
 					<StudyMath className="Flashcard-copy">
 						{isRevealed ? shape.props.back : shape.props.front}
 					</StudyMath>
-					<span>{isRevealed ? 'Click for question' : 'Click to reveal'}</span>
+					<span>{directReveal
+						? isRevealed ? 'Click for question' : 'Click to reveal'
+						: 'Click to answer'}</span>
 				</div>
 				<StudySources shape={shape} />
 			</div>
+			{isAnswering ? (
+				<FlashcardAnswerDialog
+					onClose={() => setIsAnswering(false)}
+					shape={shape}
+				/>
+			) : null}
 			{isEditing ? <FlashcardEditorDialog onClose={() => setIsEditing(false)} shape={shape} /> : null}
 		</HTMLContainer>
+	)
+}
+
+function FlashcardAnswerDialog({
+	onClose,
+	shape,
+}: {
+	onClose: () => void
+	shape: FlashcardShape
+}) {
+	const chrome = useBoardChrome()
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') onClose()
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [onClose])
+
+	return createPortal(
+		<div
+			className="FlashcardAnswerDialog-backdrop"
+			onClick={(event) => {
+				if (event.target === event.currentTarget) onClose()
+			}}
+			role="presentation"
+			{...canvasInteractionHandlers}
+		>
+			<section
+				aria-labelledby="flashcard-answer-dialog-title"
+				aria-modal="true"
+				className="FlashcardAnswerDialog"
+				role="dialog"
+			>
+				<header>
+					<div>
+						<small>Flashcard</small>
+						<h2 id="flashcard-answer-dialog-title">Answer this question</h2>
+					</div>
+					<button aria-label="Close answer dialog" onClick={onClose} type="button">
+						<IconX aria-hidden="true" size={17} stroke={1.8} />
+					</button>
+				</header>
+				<StudyMath className="FlashcardAnswerDialog-question">{shape.props.front}</StudyMath>
+				<FlashcardAnswerPanel
+					onCompleted={onClose}
+					source={{
+						alternateAnswers: shape.props.alternateAnswers,
+						back: shape.props.back,
+						boardID: chrome.boardID,
+						front: shape.props.front,
+						kind: 'canvas',
+						shapeID: shape.id,
+					}}
+				/>
+			</section>
+		</div>,
+		document.body
 	)
 }
 

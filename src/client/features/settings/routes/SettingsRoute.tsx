@@ -28,6 +28,10 @@ import {
 	readRadialMenuAlwaysOn,
 	writeRadialMenuAlwaysOn,
 } from '../../boards/lib/radialMenuPreference'
+import {
+	readBoardFlashcardDirectReveal,
+	writeBoardFlashcardDirectReveal,
+} from '../../study/lib/boardFlashcardPreferences'
 import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
 export function Component() {
@@ -37,6 +41,9 @@ export function Component() {
 	const [showSpotifyStatus, setShowSpotifyStatus] = useState(readSpotifyStatusVisibility)
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [radialMenuAlwaysOn, setRadialMenuAlwaysOn] = useState(readRadialMenuAlwaysOn)
+	const [boardFlashcardDirectReveal, setBoardFlashcardDirectReveal] = useState(
+		readBoardFlashcardDirectReveal
+	)
 	const [isLoading, setIsLoading] = useState(true)
 	const [isLinking, setIsLinking] = useState(false)
 	const [isUnlinking, setIsUnlinking] = useState(false)
@@ -246,10 +253,37 @@ export function Component() {
 				<section aria-labelledby="canvas-heading" className="Settings-section">
 					<div className="Settings-sectionHeading">
 						<h2 id="canvas-heading">Canvas</h2>
-						<p>How you reach the board's controls while you work.</p>
+						<p>Choose how board controls and study cards behave while you work.</p>
 					</div>
 
 					<div className="ConnectionList">
+						<article className="ConnectionCard">
+							<div className="ConnectionCard-icon ConnectionCard-icon--identity">
+								<IconCards aria-hidden="true" size={20} stroke={1.8} />
+							</div>
+							<div className="ConnectionCard-copy">
+								<div>
+									<h3>Board flashcards</h3>
+								</div>
+								<p>Choose what happens when you click a compact flashcard on a board.</p>
+								<label className="SpotifyPreference">
+									<span>
+										<strong>Reveal answers immediately</strong>
+										<small>Skip the answering UI and show the answer on the card.</small>
+									</span>
+									<input
+										checked={boardFlashcardDirectReveal}
+										onChange={(event) => {
+											setBoardFlashcardDirectReveal(event.target.checked)
+											writeBoardFlashcardDirectReveal(event.target.checked)
+										}}
+										type="checkbox"
+									/>
+									<span aria-hidden="true" className="SpotifyPreference-control"><span /></span>
+								</label>
+							</div>
+						</article>
+
 						<article className="ConnectionCard">
 							<div className="ConnectionCard-icon ConnectionCard-icon--identity">
 								<IconFocusCentered aria-hidden="true" size={20} stroke={1.8} />
