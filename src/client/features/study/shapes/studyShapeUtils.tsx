@@ -7,6 +7,7 @@ import {
 	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
 	conceptMapShapeProps,
+	flashcardShapeMigrations,
 	flashcardShapeProps,
 	quizShapeProps,
 	reviewShapeProps,
@@ -108,6 +109,7 @@ function useAutoFitHeight(shape: AutoFitShape, minHeight: number) {
 
 export class FlashcardShapeUtil extends BaseBoxShapeUtil<FlashcardShape> {
 	static override type = FLASHCARD_SHAPE_TYPE
+	static override migrations = flashcardShapeMigrations
 	static override props = flashcardShapeProps
 
 	override canResize() {
