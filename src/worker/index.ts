@@ -92,6 +92,7 @@ import {
 } from './routes/exams'
 import { handleGlobalSearch } from './routes/search'
 import { handleActiveRecallGrade } from './routes/activeRecall'
+import { handlePostHogProxy } from './routes/analyticsProxy'
 import {
 	handleLecture,
 	handleLectureAudio,
@@ -246,6 +247,7 @@ const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({
 		if ('response' in authentication) return authentication.response
 		return handleUnfurlRequest(request)
 	})
+	.all('/ingest/*', handlePostHogProxy)
 	.all('*', () => {
 		return new Response('Not found', { status: 404 })
 	})

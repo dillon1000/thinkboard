@@ -42,7 +42,7 @@
 		"binding": "ASSETS",
 		"not_found_handling": "single-page-application",
 		"directory": "../../dist/client",
-		"run_worker_first": ["/api/*"]
+		"run_worker_first": ["/api/*", "/ingest/*"]
 	},
 	"durable_objects": {
 		"bindings": [

@@ -11,11 +11,14 @@ import { ThemeProvider } from './features/theme/ThemeProvider'
 import './styles/global.css'
 
 const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN as string | undefined
-const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined
 
 if (posthogToken) {
 	posthog.init(posthogToken, {
-		api_host: posthogHost,
+		// Capture through the same-origin `/ingest` Worker proxy so ad blockers that target the
+		// PostHog ingestion host by name cannot silently drop events. `ui_host` keeps in-app links
+		// pointing at the PostHog UI.
+		api_host: `${window.location.origin}/ingest`,
+		ui_host: 'https://us.posthog.com',
 		defaults: '2026-01-30',
 	})
 } else if (import.meta.env.DEV) {
