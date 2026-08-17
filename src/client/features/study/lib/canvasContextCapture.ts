@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,
@@ -102,8 +103,8 @@ export function getOverlappingPDFPageRegions(
 	return editor.getCurrentPageShapesSorted().flatMap((shape) => {
 		if (shape.type !== PDF_PAGE_SHAPE_TYPE) return []
 		const bounds = editor.getShapePageBounds(shape)
-		const documentID = Reflect.get(shape.props, 'documentId')
-		const pageNumber = Reflect.get(shape.props, 'pageNumber')
+		const documentID = readProperty(shape.props, 'documentId')
+		const pageNumber = readProperty(shape.props, 'pageNumber')
 		if (!bounds || !isString(documentID) || !isNumber(pageNumber)) return []
 		const intersection = intersectRectangles(selectionBounds, bounds)
 		if (!intersection) return []
@@ -184,16 +185,16 @@ function extractShapeStyle(shape: TLShape) {
 		'arrowheadEnd',
 	] as const
 	const entries = keys.flatMap((key) => {
-		const value = Reflect.get(shape.props, key)
+		const value = readProperty(shape.props, key)
 		return isString(value) ? [[key, value] as const] : []
 	})
 	return entries.length ? Object.fromEntries(entries) : undefined
 }
 
 function getRichText(shape: TLShape): TLRichText | undefined {
-	const value = Reflect.get(shape.props, 'richText')
+	const value = readProperty(shape.props, 'richText')
 	if (!value || !hasObjectType(value)) return undefined
-	if (Reflect.get(value, 'type') !== 'doc' || !Array.isArray(Reflect.get(value, 'content'))) {
+	if (readProperty(value, 'type') !== 'doc' || !Array.isArray(readProperty(value, 'content'))) {
 		return undefined
 	}
 	return value as TLRichText
@@ -210,8 +211,8 @@ function extractRelationships(editor: Editor, shapes: readonly TLShape[]) {
 	return [...bindings.values()]
 		.slice(0, MAX_RELATIONSHIPS)
 		.map((binding): CanvasShapeRelationship => {
-			const terminal = Reflect.get(binding.props, 'terminal')
-			const normalizedAnchor = Reflect.get(binding.props, 'normalizedAnchor')
+			const terminal = readProperty(binding.props, 'terminal')
+			const normalizedAnchor = readProperty(binding.props, 'normalizedAnchor')
 			return {
 				bindingID: binding.id,
 				type: binding.type,
@@ -261,8 +262,8 @@ function isPoint(value: unknown): value is { x: number; y: number } {
 	return Boolean(
 		value &&
 		hasObjectType(value) &&
-		isNumber(Reflect.get(value, 'x')) &&
-		isNumber(Reflect.get(value, 'y'))
+		isNumber(readProperty(value, 'x')) &&
+		isNumber(readProperty(value, 'y'))
 	)
 }
 

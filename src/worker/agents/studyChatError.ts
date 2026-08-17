@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import { APICallError } from '@ai-sdk/provider'
 import { RetryError } from 'ai'
@@ -60,9 +61,9 @@ function parseResponseBody(responseBody: string | undefined): unknown {
 
 function readProviderMessage(value: unknown): string | null {
 	if (!value || !hasObjectType(value)) return null
-	const error = Reflect.get(value, 'error')
+	const error = readProperty(value, 'error')
 	if (!error || !hasObjectType(error)) return null
-	const message = Reflect.get(error, 'message')
+	const message = readProperty(error, 'message')
 	return isString(message) && message.trim() ? message : null
 }
 

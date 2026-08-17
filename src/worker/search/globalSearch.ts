@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	studyArtifactKindSchema,
@@ -134,7 +135,7 @@ export function parseGlobalSearchMatches(
 		if (readString(metadata, 'resultKind') === 'lecture') {
 			const lectureID = readString(metadata, 'lectureId')
 			const title = readString(metadata, 'lectureTitle')
-			const startSecond = Reflect.get(metadata, 'startSecond')
+			const startSecond = readProperty(metadata, 'startSecond')
 			if (!lectureID || !title || !isNumber(startSecond)) return []
 			return [{
 				boardID,
@@ -165,7 +166,7 @@ export function parseGlobalSearchMatches(
 		}
 		const documentID = readString(metadata, 'documentId')
 		const title = readString(metadata, 'documentTitle')
-		const pageNumber = Reflect.get(metadata, 'pageNumber')
+		const pageNumber = readProperty(metadata, 'pageNumber')
 		if (!documentID || !title || !isNumber(pageNumber)) return []
 		return [{
 			boardID,
@@ -181,13 +182,13 @@ export function parseGlobalSearchMatches(
 }
 
 function readString(value: object, key: string) {
-	const field = Reflect.get(value, key)
+	const field = readProperty(value, key)
 	return isString(field) ? field : ''
 }
 
 function readFirstEmbedding(value: unknown) {
 	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
+	const data = readProperty(value, 'data')
 	const first = Array.isArray(data) ? data[0] : null
 	if (!Array.isArray(first) || !first.every((entry) => isNumber(entry))) {
 		throw new Error('Embedding response did not contain a vector')

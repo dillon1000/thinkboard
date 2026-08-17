@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { LECTURE_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor, TLShape } from 'tldraw'
 
@@ -24,7 +25,7 @@ export function findLectureCitationShape(
 	for (const shape of shapes) {
 		if (
 			shape.type === LECTURE_SHAPE_TYPE &&
-			Reflect.get(shape.props, 'lectureID') === target.lectureID
+			readProperty(shape.props, 'lectureID') === target.lectureID
 		) return shape
 	}
 	return null

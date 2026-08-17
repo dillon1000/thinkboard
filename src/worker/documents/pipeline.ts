@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import type { DocumentStatus } from '@agentboard/shared'
 import { createDatabase } from '../db/client'
@@ -250,7 +251,7 @@ function needsOCR(text: string) {
 
 function readEmbeddings(value: unknown): number[][] {
 	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
+	const data = readProperty(value, 'data')
 	if (!Array.isArray(data)) throw new Error('Embedding response did not contain vectors')
 	const embeddings = data.map((embedding) => {
 		if (!Array.isArray(embedding) || !embedding.every((entry) => isNumber(entry))) {
@@ -264,7 +265,7 @@ function readEmbeddings(value: unknown): number[][] {
 function readGeneratedText(value: unknown) {
 	if (!value || !hasObjectType(value)) return ''
 	for (const key of ['response', 'result', 'text']) {
-		const candidate = Reflect.get(value, key)
+		const candidate = readProperty(value, key)
 		if (isString(candidate)) return candidate
 	}
 	return ''

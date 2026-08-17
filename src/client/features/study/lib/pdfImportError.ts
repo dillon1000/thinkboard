@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { isNumber, isString } from '@agentboard/shared'
 export interface PDFImportFailure {
 	details: string
@@ -42,7 +43,7 @@ function formatError(error: unknown, label = 'Error'): string {
 			`Message: ${error.message}`,
 			...(error.stack ? [`Stack:\n${error.stack}`] : []),
 		]
-		const cause = Reflect.get(error, 'cause')
+		const cause = readProperty(error, 'cause')
 		return cause === undefined
 			? lines.join('\n')
 			: `${lines.join('\n')}\n\n${formatError(cause, 'Cause')}`

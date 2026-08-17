@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import {
 	createTLSchemaFromUtils,
 	type IndexKey,
@@ -67,7 +68,7 @@ describe('synchronizedShapeUtils', () => {
 
 		expect(result.type).toBe('success')
 		if (result.type !== 'success' || result.value.typeName !== 'shape') return
-		expect(Reflect.get(result.value.props, 'alternateAnswers')).toEqual([])
+		expect(readProperty(result.value.props, 'alternateAnswers')).toEqual([])
 		expect(() => schema.types.shape.validator.validate(result.value)).not.toThrow()
 	})
 })

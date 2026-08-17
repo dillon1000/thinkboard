@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	activeRecallGradeRequestSchema,
@@ -191,7 +192,7 @@ export async function gradeActiveRecall(
 }
 
 export function parseActiveRecallGrade(value: unknown) {
-	const response = value && hasObjectType(value) ? Reflect.get(value, 'response') : value
+	const response = value && hasObjectType(value) ? readProperty(value, 'response') : value
 	if (response && hasObjectType(response)) {
 		return activeRecallGradeResponseSchema.parse(response)
 	}

@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { useSync } from '@tldraw/sync'
 import {
 	FLASHCARD_SHAPE_TYPE,
@@ -224,8 +225,8 @@ function findPDFPageShape(editor: Editor, documentID: string, pageNumber: number
 			const shape = editor.getShape(shapeID)
 			if (
 				shape?.type === PDF_PAGE_SHAPE_TYPE &&
-				Reflect.get(shape.props, 'documentId') === documentID &&
-				Reflect.get(shape.props, 'pageNumber') === pageNumber
+				readProperty(shape.props, 'documentId') === documentID &&
+				readProperty(shape.props, 'pageNumber') === pageNumber
 			) return shape
 		}
 	}

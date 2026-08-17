@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import type { AIRunner } from '../routes/lockIn'
 
@@ -57,7 +58,7 @@ export function cleanTitle(raw: string): string | null {
 function readGeneratedText(value: unknown): string {
 	if (!value || !hasObjectType(value)) return ''
 	for (const key of ['response', 'result', 'text']) {
-		const candidate = Reflect.get(value, key)
+		const candidate = readProperty(value, key)
 		if (isString(candidate)) return candidate
 	}
 	return ''

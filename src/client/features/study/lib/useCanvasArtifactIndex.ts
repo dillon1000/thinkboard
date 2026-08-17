@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { isNumber, isString } from '@agentboard/shared'
 import {
 	CONCEPT_MAP_SHAPE_TYPE,
@@ -168,17 +169,17 @@ function firstLine(value: string) {
 }
 
 function readString(value: object, key: string) {
-	const field = Reflect.get(value, key)
+	const field = readProperty(value, key)
 	return isString(field) ? field : ''
 }
 
 function readNumber(value: object, key: string) {
-	const field = Reflect.get(value, key)
+	const field = readProperty(value, key)
 	return isNumber(field) ? field : 0
 }
 
 function readStringArray(value: object, key: string) {
-	const field = Reflect.get(value, key)
+	const field = readProperty(value, key)
 	return Array.isArray(field)
 		? field.filter((entry): entry is string => isString(entry))
 		: []
