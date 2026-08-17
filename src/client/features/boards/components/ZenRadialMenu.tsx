@@ -128,7 +128,7 @@ const TOOL_ACTIONS: { icon: ReactNode; id: string; label: string }[] = [
 	{ icon: <IconCircle size={18} stroke={1.7} />, id: 'ellipse', label: 'Ellipse' },
 ]
 
-const FAN_TITLES: Record<FanID, string> = {
+const FAN_TITLES = {
 	'bind-0': 'Bind 1',
 	'bind-1': 'Bind 2',
 	'bind-2': 'Bind 3',
@@ -141,7 +141,7 @@ const FAN_TITLES: Record<FanID, string> = {
 	stroke: 'Stroke',
 	style: 'Style',
 	tools: 'Tools',
-}
+} satisfies Record<FanID, string>
 
 const STYLE_FANS: FanID[] = ['colors', 'stroke', 'fill', 'size', 'opacity']
 

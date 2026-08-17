@@ -6,6 +6,7 @@ import type {
 } from '@agentboard/shared'
 import { pdfTextLayoutSchema } from '@agentboard/shared'
 import { and, asc, count, desc, eq, gte, sql, sum } from 'drizzle-orm'
+import { z } from 'zod'
 import type { Database } from './client'
 import { document, documentChunk, documentPage, documentProcessingUsage } from './schema'
 
@@ -174,7 +175,7 @@ export async function setDocumentStatus(
 	status: DocumentStatus,
 	failureReason: string | null = null
 ) {
-	let lastError: unknown = new Error('Document status update failed')
+	let lastError = new Error('Document status update failed')
 	for (let attempt = 0; attempt < 2; attempt += 1) {
 		try {
 			await database
@@ -183,7 +184,7 @@ export async function setDocumentStatus(
 				.where(eq(document.id, documentID))
 			return
 		} catch (error) {
-			lastError = error
+			lastError = error instanceof Error ? error : new Error(String(error))
 			try {
 				const [stored] = await database
 					.select({
@@ -357,9 +358,9 @@ export async function getSelectedDocumentText(
 	})
 }
 
-function parseJSON(value: string): unknown {
+function parseJSON(value: string): z.infer<ReturnType<typeof z.json>> | null {
 	try {
-		return JSON.parse(value)
+		return z.json().parse(JSON.parse(value))
 	} catch {
 		return null
 	}

@@ -1481,18 +1481,18 @@ function formatConversationDate(value: string) {
 }
 
 function formatAgentActionName(toolName: string) {
-	const labels: Record<string, string> = {
-		addReviewNote: 'Review note',
-		composeCanvas: 'Canvas plan',
-		createConceptMap: 'Concept map',
-		createFlashcards: 'Flashcards',
-		createPracticeSet: 'Practice set',
-		createQuiz: 'Quiz',
-		createStudyPack: 'Cited study pack',
-		createWalkthrough: 'Walkthrough',
-		writeEquation: 'Equation',
-	}
-	return labels[toolName] ?? 'AI canvas change'
+	const labels = new Map([
+		['addReviewNote', 'Review note'],
+		['composeCanvas', 'Canvas plan'],
+		['createConceptMap', 'Concept map'],
+		['createFlashcards', 'Flashcards'],
+		['createPracticeSet', 'Practice set'],
+		['createQuiz', 'Quiz'],
+		['createStudyPack', 'Cited study pack'],
+		['createWalkthrough', 'Walkthrough'],
+		['writeEquation', 'Equation'],
+	])
+	return labels.get(toolName) ?? 'AI canvas change'
 }
 
 function getErrorMessage(error: unknown) {
