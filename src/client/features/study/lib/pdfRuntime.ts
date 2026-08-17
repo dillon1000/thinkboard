@@ -4,6 +4,18 @@ import { ensurePDFCompatibility } from './pdfCompatibility'
 
 type PDFJS = typeof import('pdfjs-dist')
 
+type CompatiblePromiseConstructor = {
+	withResolvers?: <T>() => {
+		promise: Promise<T>
+		reject: (reason?: Error | string) => void
+		resolve: (value: T | PromiseLike<T>) => void
+	}
+}
+
+type CompatibleAbortSignalConstructor = {
+	any?: (signals: AbortSignal[]) => AbortSignal
+}
+
 let runtimePromise: Promise<PDFJS> | null = null
 
 export function loadPDFJS() {
@@ -14,8 +26,9 @@ export function loadPDFJS() {
 }
 
 export function supportsModernPDFJS() {
-	return typeof Reflect.get(Promise, 'withResolvers') === 'function' &&
-		typeof Reflect.get(AbortSignal, 'any') === 'function'
+	const promiseConstructor: CompatiblePromiseConstructor = Promise
+	const abortSignalConstructor: CompatibleAbortSignalConstructor = AbortSignal
+	return Boolean(promiseConstructor.withResolvers && abortSignalConstructor.any)
 }
 
 function loadLegacyPDFJS() {

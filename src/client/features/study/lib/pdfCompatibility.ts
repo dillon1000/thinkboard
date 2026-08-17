@@ -1,22 +1,22 @@
 interface PromiseResolvers<T> {
 	promise: Promise<T>
-	reject: (reason?: unknown) => void
+	reject: (reason?: Error | string) => void
 	resolve: (value: T | PromiseLike<T>) => void
 }
 
-type CompatiblePromiseConstructor = PromiseConstructor & {
+type CompatiblePromiseConstructor = {
 	withResolvers?: <T>() => PromiseResolvers<T>
 }
 
-type CompatibleAbortSignalConstructor = typeof AbortSignal & {
-	any?: (signals: readonly AbortSignal[]) => AbortSignal
+type CompatibleAbortSignalConstructor = {
+	any?: (signals: AbortSignal[]) => AbortSignal
 }
 
 export function ensurePDFCompatibility() {
-	const promiseConstructor = Promise as CompatiblePromiseConstructor
+	const promiseConstructor: CompatiblePromiseConstructor = Promise
 	promiseConstructor.withResolvers ??= createPromiseResolvers
 
-	const abortSignalConstructor = AbortSignal as CompatibleAbortSignalConstructor
+	const abortSignalConstructor: CompatibleAbortSignalConstructor = AbortSignal
 	abortSignalConstructor.any ??= combineAbortSignals
 }
 
@@ -38,7 +38,7 @@ function combineAbortSignals(signals: readonly AbortSignal[]) {
 			registeredSignal.removeEventListener('abort', listener)
 		}
 		listeners.clear()
-		controller.abort(Reflect.get(signal, 'reason'))
+		controller.abort(signal.reason)
 	}
 
 	for (const signal of signals) {

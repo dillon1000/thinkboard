@@ -9,6 +9,7 @@ import {
 } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router'
+import { z } from 'zod'
 import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
@@ -107,8 +108,7 @@ export function Component() {
 	)
 }
 
-function getReturnPath(state: unknown) {
-	if (!state || typeof state !== 'object') return appRoutes.home
-	const from = Reflect.get(state, 'from')
-	return typeof from === 'string' && from.startsWith('/') ? from : appRoutes.home
+function getReturnPath<State>(state: State) {
+	const parsed = z.object({ from: z.string().startsWith('/') }).safeParse(state)
+	return parsed.success ? parsed.data.from : appRoutes.home
 }
