@@ -59,9 +59,5 @@ function formatError(error: PDFImportErrorValue, label = 'Error'): string {
 	}
 	const text = z.string().safeParse(error)
 	if (text.success) return `${label}: ${text.data}`
-	try {
-		return `${label}: ${JSON.stringify(error, null, 2)}`
-	} catch {
-		return `${label}: ${String(error)}`
-	}
+	return `${label}: ${JSON.stringify(error, null, 2)}`
 }
