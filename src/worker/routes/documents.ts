@@ -33,11 +33,6 @@ const DEFAULT_DAILY_PDF_PAGE_QUOTA = 1_000
 const MAX_EXTRACTED_PAGE_TEXT_LENGTH = 200_000
 const MAX_TEXT_LAYOUT_LENGTH = 2_000_000
 
-interface DocumentErrorBody {
-	code: DocumentErrorCode
-	error: string
-	limit?: number
-}
 const ALLOWED_PAGE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export interface AuthorizedBoardContext {
@@ -436,9 +431,7 @@ function documentError(
 	error: string,
 	limit?: number
 ) {
-	const body: DocumentErrorBody = { code, error }
-	if (limit !== undefined) body.limit = limit
-	return Response.json(body, { status })
+	return Response.json({ code, error, ...(limit !== undefined && { limit }) }, { status })
 }
 
 export function getOriginalPDFKey(boardID: string, documentID: string) {
