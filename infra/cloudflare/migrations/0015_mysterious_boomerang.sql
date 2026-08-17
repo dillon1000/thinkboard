@@ -1,0 +1,1 @@
+ALTER TABLE `documents` ADD `sourceFormat` text DEFAULT 'pdf' NOT NULL;

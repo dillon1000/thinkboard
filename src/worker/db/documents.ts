@@ -9,6 +9,8 @@ import { and, asc, count, desc, eq, gte, sql, sum } from 'drizzle-orm'
 import type { Database } from './client'
 import { document, documentChunk, documentPage, documentProcessingUsage } from './schema'
 
+export type DocumentSourceFormat = 'pdf' | 'docx' | 'pptx'
+
 const D1_MAX_BOUND_PARAMETERS = 100
 const DOCUMENT_CHUNK_PARAMETERS_PER_ROW = 3
 const DOCUMENT_CHUNK_INSERT_BATCH_SIZE = Math.floor(
@@ -36,6 +38,7 @@ export async function createDocument(
 		ownerID: string
 		pageCount: number
 		r2Key: string
+		sourceFormat?: DocumentSourceFormat
 		title: string
 	}
 ) {
@@ -44,6 +47,7 @@ export async function createDocument(
 		database.insert(document).values({
 			...input,
 			createdAt: now,
+			sourceFormat: input.sourceFormat ?? 'pdf',
 			updatedAt: now,
 			status: 'processing',
 		}),
@@ -53,6 +57,39 @@ export async function createDocument(
 			ownerID: input.ownerID,
 			pageCount: input.pageCount,
 		}),
+	])
+}
+
+/**
+ * Publishes a converted PDF on the existing document record. The document stays in the
+ * processing state because the browser still needs to render and upload its page assets.
+ */
+export async function completeOfficeDocumentConversion(
+	database: Database,
+	input: {
+		byteSize: number
+		documentID: string
+		pageCount: number
+		r2Key: string
+	}
+) {
+	const now = new Date()
+	await database.batch([
+		database
+			.update(document)
+			.set({
+				byteSize: input.byteSize,
+				failureReason: null,
+				pageCount: input.pageCount,
+				r2Key: input.r2Key,
+				status: 'processing',
+				updatedAt: now,
+			})
+			.where(eq(document.id, input.documentID)),
+		database
+			.update(documentProcessingUsage)
+			.set({ pageCount: input.pageCount })
+			.where(eq(documentProcessingUsage.importID, input.documentID)),
 	])
 }
 

@@ -383,6 +383,9 @@ export const document = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		title: text('title').notNull(),
 		r2Key: text('r2Key').notNull(),
+		sourceFormat: text('sourceFormat', { enum: ['pdf', 'docx', 'pptx'] })
+			.notNull()
+			.default('pdf'),
 		pageCount: integer('pageCount').notNull(),
 		byteSize: integer('byteSize').notNull(),
 		status: text('status', { enum: ['processing', 'ready', 'failed'] })
