@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import { canvasPlanSchema } from '@agentboard/shared'
 import {
 	resolveCanvasPlanLayout,
@@ -174,7 +175,7 @@ describe('resolveCanvasPlanLayout', () => {
 	})
 })
 
-function createPlan(overrides: Record<string, unknown>) {
+function createPlan(overrides: Partial<z.input<typeof canvasPlanSchema>>) {
 	return canvasPlanSchema.parse({
 		version: 1,
 		planID: 'test-plan',

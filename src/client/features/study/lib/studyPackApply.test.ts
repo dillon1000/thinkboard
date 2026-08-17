@@ -1,21 +1,24 @@
-import type { Editor } from 'tldraw'
+import { Editor, type TLShapePartial } from 'tldraw'
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { applyProposal } from './studyProposalApply'
 
 describe('applyProposal study pack', () => {
 	it('creates one cited artifact group and registers its flashcards', () => {
-		const createdShapes: Array<Record<string, unknown>> = []
-		const editor = {
-			createShape: (shape: Record<string, unknown>) => {
+		const createdShapes: TLShapePartial[] = []
+		const fixture = {
+			createShape: (shape: TLShapePartial) => {
 				createdShapes.push(shape)
 			},
-			createShapes: (shapes: Array<Record<string, unknown>>) => {
+			createShapes: (shapes: TLShapePartial[]) => {
 				createdShapes.push(...shapes)
 			},
 			markHistoryStoppingPoint: vi.fn(),
 			run: (callback: () => void) => callback(),
 			setSelectedShapes: vi.fn(),
-		} as unknown as Editor
+		}
+		// SAFETY: The fixture implements every Editor method used by applyProposal in this test.
+		const editor = Object.assign(Object.create(Editor.prototype), fixture) as Editor
 
 		const effect = applyProposal(editor, 'createStudyPack', {
 			x: 100,
@@ -57,10 +60,11 @@ describe('applyProposal study pack', () => {
 			JSON.stringify(shape.meta).includes('"documentID":"biology-notes"')
 		)).toBe(true)
 		const flashcards = createdShapes.filter((shape) => shape.type === 'agentboard-flashcard')
-		expect(flashcards.every((shape) => (
-			Reflect.get(shape.props as object, 'w') === 220
-			&& Reflect.get(shape.props as object, 'h') === 118
-		))).toBe(true)
+		const dimensions = z.object({ h: z.number(), w: z.number() })
+		expect(flashcards.every((shape) => {
+			const props = dimensions.safeParse(shape.props)
+			return props.success && props.data.w === 220 && props.data.h === 118
+		})).toBe(true)
 		expect(effect.flashcards).toHaveLength(2)
 		expect(effect.shapeIDs).toHaveLength(4)
 	})

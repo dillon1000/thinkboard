@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import {
 	gradeDeterministicAnswer,
 	gradeFlashcardAnswer,
@@ -57,11 +58,11 @@ describe('flashcard answer grading', () => {
 
 	it('calls AI once only when deterministic checks cannot decide', async () => {
 		let callCount = 0
-		let receivedInput: unknown = null
+		let receivedInput: z.infer<ReturnType<typeof z.json>> | null = null
 		const ai = {
-			run: (_model: string, input: unknown) => {
+			run: <Input>(_model: string, input: Input) => {
 				callCount += 1
-				receivedInput = input
+				receivedInput = z.json().parse(input)
 				return Promise.resolve({
 					response: {
 						matchedAnswerIndex: 0,
@@ -97,10 +98,10 @@ describe('flashcard answer grading', () => {
 	})
 
 	it('tells AI to accept answers that omit optional accepted-answer context', async () => {
-		let receivedInput: unknown = null
+		let receivedInput: z.infer<ReturnType<typeof z.json>> | null = null
 		const ai = {
-			run: (_model: string, input: unknown) => {
-				receivedInput = input
+			run: <Input>(_model: string, input: Input) => {
+				receivedInput = z.json().parse(input)
 				return Promise.resolve({
 					response: {
 						matchedAnswerIndex: 0,

@@ -4,16 +4,21 @@ import { streamText, tool } from 'ai'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
+interface CapturedRequest {
+	body: z.infer<ReturnType<typeof z.json>>
+	url: string
+}
+
 describe('Study model providers on AI SDK 6', () => {
 	it('adapts the quicker model to the AI SDK 6 runtime', async () => {
 		const encoder = new TextEncoder()
-		let capturedRequest: unknown
+		let capturedRequest: CapturedRequest | undefined
 		const openRouter = createOpenRouter({
 			apiKey: 'test-key',
 			compatibility: 'strict',
 			fetch: async (input, init) => {
 				capturedRequest = {
-					body: JSON.parse(String(init?.body)),
+					body: z.json().parse(JSON.parse(String(init?.body))),
 					url: input.toString(),
 				}
 				const stream = new ReadableStream<Uint8Array>({
@@ -42,13 +47,13 @@ describe('Study model providers on AI SDK 6', () => {
 
 	it('streams reasoning from the smarter model as reasoning text', async () => {
 		const encoder = new TextEncoder()
-		let capturedRequest: unknown
+		let capturedRequest: CapturedRequest | undefined
 		const openRouter = createOpenRouter({
 			apiKey: 'test-key',
 			compatibility: 'strict',
 			fetch: async (input, init) => {
 				capturedRequest = {
-					body: JSON.parse(String(init?.body)),
+					body: z.json().parse(JSON.parse(String(init?.body))),
 					url: input.toString(),
 				}
 				const stream = new ReadableStream<Uint8Array>({
