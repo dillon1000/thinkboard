@@ -17,6 +17,11 @@ interface AgentActionMetadata {
 	toolName: string
 }
 
+interface CanvasRecordLike {
+	id: string
+	typeName: string
+}
+
 export function captureCanvasRecords(editor: Editor) {
 	return structuredClone(editor.store.allRecords().filter((record) =>
 		record.typeName === 'shape' || record.typeName === 'binding'
@@ -27,9 +32,9 @@ export function captureCanvasRecords(editor: Editor) {
  * Keeps only records changed by one proposal. The after records also serve as
  * version checks before a later undo, including on a different device.
  */
-export function createAgentAction(
-	before: readonly TLRecord[],
-	after: readonly TLRecord[],
+export function createAgentAction<Record extends CanvasRecordLike>(
+	before: readonly Record[],
+	after: readonly Record[],
 	metadata: AgentActionMetadata
 ): AgentActionCreate | null {
 	const beforeByID = new Map(before.map((record) => [record.id, record]))
@@ -121,10 +126,10 @@ function restoreRecords(
 	})
 }
 
-export function assertRecordsUnchanged(
-	editor: Editor,
-	beforeRecords: readonly TLRecord[],
-	afterRecords: readonly TLRecord[]
+export function assertRecordsUnchanged<Record extends CanvasRecordLike>(
+	editor: { store: { get(id: Record['id']): object | undefined } },
+	beforeRecords: readonly Record[],
+	afterRecords: readonly Record[]
 ) {
 	const afterByID = new Map(afterRecords.map((record) => [record.id, record]))
 	for (const record of afterRecords) {
@@ -140,11 +145,11 @@ export function assertRecordsUnchanged(
 }
 
 function parseCanvasRecords(editor: Editor, records: CanvasRecordSnapshot[]): TLRecord[] {
-	return canvasRecordSchema.array().parse(records).map((record) =>
-		editor.store.schema.types[record.typeName].validator.validate(record)
-	)
+	return canvasRecordSchema.array().parse(records).map((record) => record.typeName === 'shape'
+		? editor.store.schema.types.shape.validator.validate(record)
+		: editor.store.schema.types.binding.validator.validate(record))
 }
 
-function serializeRecord(record: TLRecord | undefined) {
+function serializeRecord<Value>(record: Value | undefined) {
 	return record ? JSON.stringify(record) : ''
 }

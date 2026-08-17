@@ -1,9 +1,9 @@
 import {
+	createShapeId,
 	createTLSchemaFromUtils,
-	type IndexKey,
-	type TLPageId,
+	getIndexAbove,
+	PageRecordType,
 	type TLRecord,
-	type TLShapeId,
 	type TLUnknownShape,
 } from 'tldraw'
 import { describe, expect, it } from 'vitest'
@@ -43,12 +43,12 @@ describe('synchronizedShapeUtils', () => {
 		if (legacySchema.schemaVersion !== 2) throw new Error('Expected the current schema format')
 		delete legacySchema.sequences['com.tldraw.shape.agentboard-flashcard']
 		const legacyShape: TLUnknownShape = {
-			id: 'shape:legacy-flashcard' as TLShapeId,
-			index: 'a1' as IndexKey,
+			id: createShapeId('legacy-flashcard'),
+			index: getIndexAbove(),
 			isLocked: false,
 			meta: {},
 			opacity: 1,
-			parentId: 'page:test' as TLPageId,
+			parentId: PageRecordType.createId('test'),
 			props: {
 				back: 'Answer',
 				front: 'Question',
@@ -64,6 +64,7 @@ describe('synchronizedShapeUtils', () => {
 			y: 0,
 		}
 
+		// SAFETY: This complete persisted shape intentionally uses pre-migration flashcard props.
 		const result = schema.migratePersistedRecord(legacyShape as TLRecord, legacySchema)
 
 		expect(result.type).toBe('success')
