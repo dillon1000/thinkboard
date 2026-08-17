@@ -1,5 +1,16 @@
 export { apiRoutePatterns, apiRoutes, appRoutes } from './routes'
 export {
+	hasObjectType,
+	isBigInt,
+	isBoolean,
+	isFunction,
+	isNumber,
+	isString,
+	isSymbol,
+	isUndefined,
+} from './untrusted'
+export type { UntrustedInput } from './untrusted'
+export {
 	activeRecallGradeRequestSchema,
 	activeRecallGradeResponseSchema,
 	activeRecallModeSchema,
