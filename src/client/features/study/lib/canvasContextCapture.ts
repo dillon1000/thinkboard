@@ -7,6 +7,7 @@ import {
 	type CanvasShape,
 	type CanvasShapeRelationship,
 } from '@agentboard/shared'
+import { z } from 'zod'
 import {
 	Editor,
 	isShapeId,
@@ -23,6 +24,33 @@ const MAX_SELECTION_SHAPES = 30
 const MAX_VIEWPORT_SHAPES = 40
 const MAX_RELATED_SHAPES = 30
 const MAX_RELATIONSHIPS = 60
+const PDFPagePropsSchema = z.object({
+	documentId: z.string(),
+	pageNumber: z.number(),
+})
+const shapeStylePropsSchema = z.looseObject({
+	arrowheadEnd: z.string().optional(),
+	arrowheadStart: z.string().optional(),
+	color: z.string().optional(),
+	dash: z.string().optional(),
+	fill: z.string().optional(),
+	font: z.string().optional(),
+	geo: z.string().optional(),
+	labelColor: z.string().optional(),
+	size: z.string().optional(),
+	spline: z.string().optional(),
+	textAlign: z.string().optional(),
+	verticalAlign: z.string().optional(),
+})
+const richTextSchema = z.object({
+	content: z.array(z.looseObject({})),
+	type: z.literal('doc'),
+}).passthrough()
+const pointSchema = z.object({ x: z.number(), y: z.number() })
+const bindingPropsSchema = z.looseObject({
+	normalizedAnchor: pointSchema.optional(),
+	terminal: z.enum(['start', 'end']).optional(),
+})
 
 export async function captureCanvasContext(
 	boardID: string,
@@ -30,14 +58,15 @@ export async function captureCanvasContext(
 ): Promise<CanvasContext> {
 	const pdfTextSelection = capturePDFTextSelection()
 	if (!editor) {
-		return {
+		const context: CanvasContext = {
 			boardID,
 			documentClock: await getDocumentClock(boardID),
 			relatedShapes: [],
 			relationships: [],
 			selection: [],
-			...(pdfTextSelection ? { pdfTextSelection } : {}),
 		}
+		if (pdfTextSelection) context.pdfTextSelection = pdfTextSelection
+		return context
 	}
 
 	const viewportBounds = editor.getViewportPageBounds()
@@ -59,7 +88,7 @@ export async function captureCanvasContext(
 			: renderSelectionImage(editor, selectedShapes.map(({ id }) => id)),
 	])
 
-	return {
+	const context: CanvasContext = {
 		boardID,
 		documentClock,
 		pageID: editor.getCurrentPageId(),
@@ -75,9 +104,10 @@ export async function captureCanvasContext(
 		relatedShapes: relatedShapes.map((shape) => extractShape(editor, shape)),
 		relationships,
 		selectionImage,
-		...(pdfPageRegions.length ? { pdfPageRegions } : {}),
-		...(pdfTextSelection ? { pdfTextSelection } : {}),
 	}
+	if (pdfPageRegions.length) context.pdfPageRegions = pdfPageRegions
+	if (pdfTextSelection) context.pdfTextSelection = pdfTextSelection
+	return context
 }
 
 export function isSinglePDFFrameSelection(
@@ -101,14 +131,13 @@ export function getOverlappingPDFPageRegions(
 	return editor.getCurrentPageShapesSorted().flatMap((shape) => {
 		if (shape.type !== PDF_PAGE_SHAPE_TYPE) return []
 		const bounds = editor.getShapePageBounds(shape)
-		const documentID = Reflect.get(shape.props, 'documentId')
-		const pageNumber = Reflect.get(shape.props, 'pageNumber')
-		if (!bounds || typeof documentID !== 'string' || typeof pageNumber !== 'number') return []
+		const props = PDFPagePropsSchema.safeParse(shape.props)
+		if (!bounds || !props.success) return []
 		const intersection = intersectRectangles(selectionBounds, bounds)
 		if (!intersection) return []
 		return [{
-			documentID,
-			pageNumber,
+			documentID: props.data.documentId,
+			pageNumber: props.data.pageNumber,
 			region: {
 				h: clampUnit(intersection.h / bounds.h),
 				w: clampUnit(intersection.w / bounds.w),
@@ -144,10 +173,9 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 		: undefined
 	const style = extractShapeStyle(shape)
 
-	return {
+	const extracted: CanvasShape = {
 		id: shape.id,
 		type: shape.type,
-		...(isShapeId(shape.parentId) ? { parentShapeID: shape.parentId } : {}),
 		childShapeIDs: editor.getSortedChildIdsForParent(shape.id).slice(0, MAX_RELATED_SHAPES),
 		index: shape.index,
 		isLocked: shape.isLocked,
@@ -157,14 +185,14 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 		w: bounds?.w ?? 0,
 		h: bounds?.h ?? 0,
 		rotation: editor.getShapePageTransform(shape)?.rotation() ?? shape.rotation,
-		...(style ? { style } : {}),
-		...(plainText || html ? {
-			text: {
-				plainText,
-				...(html ? { html } : {}),
-			},
-		} : {}),
 	}
+	if (isShapeId(shape.parentId)) extracted.parentShapeID = shape.parentId
+	if (style) extracted.style = style
+	if (plainText || html) {
+		extracted.text = { plainText }
+		if (html) extracted.text.html = html
+	}
+	return extracted
 }
 
 function extractShapeStyle(shape: TLShape) {
@@ -182,20 +210,22 @@ function extractShapeStyle(shape: TLShape) {
 		'arrowheadStart',
 		'arrowheadEnd',
 	] as const
+	const parsed = shapeStylePropsSchema.safeParse(shape.props)
+	if (!parsed.success) return undefined
 	const entries = keys.flatMap((key) => {
-		const value = Reflect.get(shape.props, key)
-		return typeof value === 'string' ? [[key, value] as const] : []
+		const value = parsed.data[key]
+		return value === undefined ? [] : [[key, value]]
 	})
 	return entries.length ? Object.fromEntries(entries) : undefined
 }
 
 function getRichText(shape: TLShape): TLRichText | undefined {
-	const value = Reflect.get(shape.props, 'richText')
-	if (!value || typeof value !== 'object') return undefined
-	if (Reflect.get(value, 'type') !== 'doc' || !Array.isArray(Reflect.get(value, 'content'))) {
-		return undefined
-	}
-	return value as TLRichText
+	const props = z.looseObject({}).safeParse(shape.props)
+	if (!props.success) return undefined
+	const value = richTextSchema.safeParse(props.data.richText)
+	if (!value.success) return undefined
+	// SAFETY: The schema verifies the ProseMirror document root; nested nodes remain tldraw-owned.
+	return value.data as TLRichText
 }
 
 function extractRelationships(editor: Editor, shapes: readonly TLShape[]) {
@@ -209,18 +239,18 @@ function extractRelationships(editor: Editor, shapes: readonly TLShape[]) {
 	return [...bindings.values()]
 		.slice(0, MAX_RELATIONSHIPS)
 		.map((binding): CanvasShapeRelationship => {
-			const terminal = Reflect.get(binding.props, 'terminal')
-			const normalizedAnchor = Reflect.get(binding.props, 'normalizedAnchor')
-			return {
+			const props = bindingPropsSchema.safeParse(binding.props)
+			const relationship: CanvasShapeRelationship = {
 				bindingID: binding.id,
 				type: binding.type,
 				connectorShapeID: binding.fromId,
 				targetShapeID: binding.toId,
-				...(terminal === 'start' || terminal === 'end' ? { terminal } : {}),
-				...(isPoint(normalizedAnchor) ? {
-					anchor: { x: normalizedAnchor.x, y: normalizedAnchor.y },
-				} : {}),
 			}
+			if (props.success && props.data.terminal) relationship.terminal = props.data.terminal
+			if (props.success && props.data.normalizedAnchor) {
+				relationship.anchor = props.data.normalizedAnchor
+			}
+			return relationship
 		})
 }
 
@@ -256,15 +286,6 @@ function isShapeVisible(
 		bounds.y + bounds.h >= viewport.y
 }
 
-function isPoint(value: unknown): value is { x: number; y: number } {
-	return Boolean(
-		value &&
-		typeof value === 'object' &&
-		typeof Reflect.get(value, 'x') === 'number' &&
-		typeof Reflect.get(value, 'y') === 'number'
-	)
-}
-
 async function getDocumentClock(boardID: string) {
 	try {
 		const response = await apiRequest<{ documentClock: number }>(apiRoutes.boardContext(boardID))
@@ -274,7 +295,10 @@ async function getDocumentClock(boardID: string) {
 	}
 }
 
-async function renderSelectionImage(editor: Editor, shapeIDs: readonly TLShapeId[]) {
+async function renderSelectionImage(
+	editor: Editor,
+	shapeIDs: readonly TLShapeId[]
+): Promise<CanvasContext['selectionImage']> {
 	if (shapeIDs.length === 0) return undefined
 	const bounds = editor.getSelectionPageBounds()
 	if (!bounds) return undefined
@@ -297,7 +321,7 @@ async function renderSelectionImage(editor: Editor, shapeIDs: readonly TLShapeId
 		return {
 			data,
 			height: Math.round(image.height),
-			mediaType: 'image/jpeg' as const,
+			mediaType: 'image/jpeg',
 			width: Math.round(image.width),
 		}
 	} catch {
