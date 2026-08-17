@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Editor, Tldraw, type TLShape, type TLShapeId } from 'tldraw'
+import { z } from 'zod'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
@@ -219,13 +220,16 @@ export function Component() {
 }
 
 function findPDFPageShape(editor: Editor, documentID: string, pageNumber: number): TLShape | undefined {
+	const propsSchema = z.object({ documentId: z.string(), pageNumber: z.number().int() })
 	for (const page of editor.getPages()) {
 		for (const shapeID of editor.getPageShapeIds(page)) {
 			const shape = editor.getShape(shapeID)
+			const props = propsSchema.safeParse(shape?.props)
 			if (
 				shape?.type === PDF_PAGE_SHAPE_TYPE &&
-				Reflect.get(shape.props, 'documentId') === documentID &&
-				Reflect.get(shape.props, 'pageNumber') === pageNumber
+				props.success &&
+				props.data.documentId === documentID &&
+				props.data.pageNumber === pageNumber
 			) return shape
 		}
 	}

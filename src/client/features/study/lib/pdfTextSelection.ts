@@ -82,11 +82,12 @@ interface PDFHighlightRegistry {
 
 function getPDFHighlightRegistry() {
 	if (
-		typeof CSS === 'undefined' ||
-		typeof Highlight === 'undefined' ||
+		!globalThis.CSS ||
+		!('Highlight' in globalThis) ||
 		!('highlights' in CSS)
 	) return null
-	return CSS.highlights as unknown as PDFHighlightRegistry
+	const css: { highlights?: PDFHighlightRegistry } = CSS
+	return css.highlights ?? null
 }
 
 function setPersistentPDFHighlight(range: Range) {

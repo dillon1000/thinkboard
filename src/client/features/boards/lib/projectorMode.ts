@@ -6,9 +6,14 @@ import {
 	type TLStore,
 	type TLUser,
 } from 'tldraw'
+import { z } from 'zod'
 
 const PROJECTOR_META_KEY = 'agentboardProjector'
 const PROJECTOR_CODE_LENGTH = 6
+const projectorPresenceMetadataSchema = z.object({
+	code: z.string().regex(/^\d{6}$/),
+	mode: z.enum(['controller', 'projector']),
+})
 
 export type ProjectorPresenceMode = 'controller' | 'projector'
 
@@ -51,18 +56,8 @@ export function setProjectorPresenceMetadata(
 export function readProjectorPresenceMetadata(
 	meta: TLInstancePresence['meta'] | undefined
 ): ProjectorPresenceMetadata | null {
-	const projector = meta?.[PROJECTOR_META_KEY]
-	if (!projector || typeof projector !== 'object' || Array.isArray(projector)) return null
-
-	const code = projector.code
-	const mode = projector.mode
-	if (
-		typeof code !== 'string' ||
-		!isProjectorCode(code) ||
-		(mode !== 'controller' && mode !== 'projector')
-	) return null
-
-	return { code, mode }
+	const projector = projectorPresenceMetadataSchema.safeParse(meta?.[PROJECTOR_META_KEY])
+	return projector.success ? projector.data : null
 }
 
 /** Generates a zero-padded six-digit code with the browser's cryptographic random source. */
