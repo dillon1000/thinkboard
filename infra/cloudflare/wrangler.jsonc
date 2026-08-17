@@ -182,13 +182,15 @@
 			],
 			"kv_namespaces": [
 				{
-					"binding": "INTEGRATIONS"
+					"binding": "INTEGRATIONS",
+					"id": "e9844e2f3cde49dc87dec64aeed18feb"
 				}
 			],
 			"d1_databases": [
 				{
 					"binding": "DB",
 					"database_name": "agentboard-preview",
+					"database_id": "f46bb9c3-5c96-4a42-91a0-9213af1710da",
 					"migrations_dir": "./migrations"
 				}
 			],
