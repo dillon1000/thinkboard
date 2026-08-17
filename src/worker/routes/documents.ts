@@ -426,7 +426,9 @@ function documentError(
 	error: string,
 	limit?: number
 ) {
-	return Response.json({ code, error, ...(limit === undefined ? {} : { limit }) }, { status })
+	const body: { code: DocumentErrorCode; error: string; limit?: number } = { code, error }
+	if (limit !== undefined) body.limit = limit
+	return Response.json(body, { status })
 }
 
 export function getOriginalPDFKey(boardID: string, documentID: string) {

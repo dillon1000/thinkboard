@@ -58,9 +58,11 @@ export async function updateStudyConversation(
 	conversationID: string,
 	title?: string
 ): Promise<StudyConversation | null> {
+	const values: { title?: string; updatedAt: Date } = { updatedAt: new Date() }
+	if (title) values.title = title
 	const [row] = await database
 		.update(studyConversation)
-		.set({ ...(title ? { title } : {}), updatedAt: new Date() })
+		.set(values)
 		.where(
 			and(
 				eq(studyConversation.id, conversationID),

@@ -2,6 +2,7 @@ import {
 	apiRoutes,
 	type FlashcardAnswerAttemptRequest,
 	type FlashcardAnswerAttemptResult,
+	type FlashcardAnswerCompletion,
 	type FlashcardAnswerCompletionResult,
 	type FlashcardFinalVerdict,
 	type FlashcardReviewRating,
@@ -81,22 +82,23 @@ export function FlashcardAnswerPanel({
 		setIsSaving(true)
 		setError(null)
 		try {
+			const completion: FlashcardAnswerCompletion = { finalVerdict }
+			if (result.isDue) completion.rating = rating
 			const completed = await apiRequest<FlashcardAnswerCompletionResult>(
 				apiRoutes.studyAnswerAttemptComplete(result.attempt.id),
 				{
-					body: JSON.stringify({
-						finalVerdict,
-						...(result.isDue ? { rating } : {}),
-					}),
+					body: JSON.stringify(completion),
 					method: 'POST',
 				}
 			)
-			posthog?.capture('flashcard_review_completed', {
+			const captureProperties = {
 				final_verdict: finalVerdict,
-				...(result.isDue ? { rating } : {}),
 				is_due: result.isDue,
 				source_kind: source.kind,
-			})
+			}
+			posthog?.capture('flashcard_review_completed', result.isDue
+				? { ...captureProperties, rating }
+				: captureProperties)
 			await onCompleted?.(completed)
 			setAnswer('')
 			setResult(null)
