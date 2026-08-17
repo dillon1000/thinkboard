@@ -70,13 +70,14 @@ import {
 	type FileUIPart,
 	type UIMessage,
 } from 'ai'
-import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, CSSProperties, FormEvent } from 'react'
+import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Streamdown, type Components } from 'streamdown'
 import { Editor } from 'tldraw'
 import { z } from 'zod'
 import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
+import { cssVariables } from '../../../lib/styleTypes'
 import { ReasoningTrail } from './ReasoningTrail'
 import {
 	captureCanvasRecords,
@@ -125,7 +126,6 @@ import {
 	getProposalPreview,
 	proposalShortLabel,
 } from '../lib/studyProposalSummary'
-import type { FlashcardShape } from '../shapes/studyShapeUtils'
 import { LockInPanel } from '../../lock-in/LockInPanel'
 import { useLockIn } from '../../lock-in/LockInProvider'
 import { openCraftDocumentPreview } from '../../craft/craftPreviewEvent'
@@ -138,6 +138,11 @@ interface StudyPanelProps {
 
 const MAX_ATTACHMENT_BYTES = 4 * 1_024 * 1_024
 const ALLOWED_IMAGE_TYPES = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp'])
+const registeredFlashcardPropsSchema = z.object({
+	alternateAnswers: z.array(z.string()),
+	back: z.string(),
+	front: z.string(),
+})
 
 export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [conversations, setConversations] = useState<StudyConversation[] | null>(null)
@@ -230,12 +235,13 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		const syncFlashcards = () => {
 			const cards = editor.getCurrentPageShapesSorted().flatMap((shape) => {
 				if (shape.type !== FLASHCARD_SHAPE_TYPE) return []
-				const flashcard = shape as FlashcardShape
+				const flashcard = registeredFlashcardPropsSchema.safeParse(shape.props)
+				if (!flashcard.success) return []
 				return [{
-					shapeID: flashcard.id,
-					front: flashcard.props.front,
-					back: flashcard.props.back,
-					alternateAnswers: flashcard.props.alternateAnswers,
+					shapeID: shape.id,
+					front: flashcard.data.front,
+					back: flashcard.data.back,
+					alternateAnswers: flashcard.data.alternateAnswers,
 				}]
 			})
 			const signature = JSON.stringify(cards)
@@ -1203,7 +1209,7 @@ function ContextMeter({ messages, modelMode }: { messages: StudyUIMessage[]; mod
 		? '<1%'
 		: `${Math.round(percentage)}%`
 	const accessibleLabel = `${formatTokenCount(contextTokens)} of ${formatTokenCount(contextWindowTokens)} context tokens used, ${percentageLabel}`
-	const style = { '--context-fill': `${percentage}%` } as CSSProperties
+	const style = cssVariables({ '--context-fill': `${percentage}%` })
 
 	return (
 		<div aria-label={accessibleLabel} className="ContextMeter" role="img" title={accessibleLabel}>

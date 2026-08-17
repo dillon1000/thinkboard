@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
-import React, { useMemo, type JSX } from 'react'
+import React, { useMemo } from 'react'
 import { cn } from '../lib/utils'
+import { cssVariables } from '../lib/styleTypes'
 
 export type TextShimmerProps = {
 	children: string
@@ -17,7 +18,7 @@ function TextShimmerComponent({
 	duration = 2,
 	spread = 2,
 }: TextShimmerProps) {
-	const MotionComponent = motion.create(Component as keyof JSX.IntrinsicElements)
+	const MotionComponent = motion.create(Component)
 	const dynamicSpread = useMemo(() => children.length * spread, [children, spread])
 
 	return (
@@ -25,7 +26,7 @@ function TextShimmerComponent({
 			animate={{ backgroundPosition: '0% center' }}
 			className={cn('TextShimmer', className)}
 			initial={{ backgroundPosition: '100% center' }}
-			style={{ '--shimmer-spread': `${dynamicSpread}px` } as React.CSSProperties}
+			style={cssVariables({ '--shimmer-spread': `${dynamicSpread}px` })}
 			transition={{ repeat: Infinity, duration, ease: 'linear' }}
 		>
 			{children}

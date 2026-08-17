@@ -53,19 +53,23 @@ const colorDefinitions = {
 	},
 } satisfies Record<CanvasCustomColor, CanvasColorDefinition>
 
-const lightColors = Object.fromEntries(
-	Object.entries(colorDefinitions).map(([name, definition]) => [
-		name,
-		createColor(definition.lightSolid, definition.lightSurface),
-	])
-) as Record<keyof typeof colorDefinitions, TLDefaultColor>
+const lightColors = {
+	'agent-blue': createColor(colorDefinitions['agent-blue'].lightSolid, colorDefinitions['agent-blue'].lightSurface),
+	'agent-purple': createColor(colorDefinitions['agent-purple'].lightSolid, colorDefinitions['agent-purple'].lightSurface),
+	'agent-teal': createColor(colorDefinitions['agent-teal'].lightSolid, colorDefinitions['agent-teal'].lightSurface),
+	'agent-amber': createColor(colorDefinitions['agent-amber'].lightSolid, colorDefinitions['agent-amber'].lightSurface),
+	'agent-coral': createColor(colorDefinitions['agent-coral'].lightSolid, colorDefinitions['agent-coral'].lightSurface),
+	'agent-pink': createColor(colorDefinitions['agent-pink'].lightSolid, colorDefinitions['agent-pink'].lightSurface),
+} satisfies Record<keyof typeof colorDefinitions, TLDefaultColor>
 
-const darkColors = Object.fromEntries(
-	Object.entries(colorDefinitions).map(([name, definition]) => [
-		name,
-		createColor(definition.darkSolid, definition.darkSurface),
-	])
-) as Record<keyof typeof colorDefinitions, TLDefaultColor>
+const darkColors = {
+	'agent-blue': createColor(colorDefinitions['agent-blue'].darkSolid, colorDefinitions['agent-blue'].darkSurface),
+	'agent-purple': createColor(colorDefinitions['agent-purple'].darkSolid, colorDefinitions['agent-purple'].darkSurface),
+	'agent-teal': createColor(colorDefinitions['agent-teal'].darkSolid, colorDefinitions['agent-teal'].darkSurface),
+	'agent-amber': createColor(colorDefinitions['agent-amber'].darkSolid, colorDefinitions['agent-amber'].darkSurface),
+	'agent-coral': createColor(colorDefinitions['agent-coral'].darkSolid, colorDefinitions['agent-coral'].darkSurface),
+	'agent-pink': createColor(colorDefinitions['agent-pink'].darkSolid, colorDefinitions['agent-pink'].darkSurface),
+} satisfies Record<keyof typeof colorDefinitions, TLDefaultColor>
 
 const canvasTheme: TLTheme = {
 	...DEFAULT_THEME,

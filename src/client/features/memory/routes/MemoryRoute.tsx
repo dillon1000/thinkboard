@@ -1,7 +1,9 @@
 import {
 	DEFAULT_AGENT_PROFILE,
+	agentMemoryKindSchema,
 	agentMemorySchema,
 	agentProfileSchema,
+	agentPromptSourcesSchema,
 	apiRoutes,
 	type AgentMemory,
 	type AgentMemoryKind,
@@ -359,7 +361,7 @@ export function Component() {
 									title="Prompt sources"
 								>
 									<div className="PromptSourceList">
-										{(Object.keys(promptSourceCopy) as Array<keyof AgentPromptSources>).map((source) => {
+									{agentPromptSourcesSchema.keyof().options.map((source) => {
 											const copy = promptSourceCopy[source]
 											return (
 												<label key={source}>
@@ -443,12 +445,12 @@ export function Component() {
 												<select
 													onChange={(event) => setNewMemory((current) => ({
 														...current,
-														kind: event.target.value as AgentMemoryKind,
+																kind: agentMemoryKindSchema.parse(event.target.value),
 													}))}
 													value={newMemory.kind}
 												>
-													{(Object.entries(memoryKindLabels) as Array<[AgentMemoryKind, string]>).map(([value, label]) => (
-														<option key={value} value={value}>{label}</option>
+											{agentMemoryKindSchema.options.map((value) => (
+												<option key={value} value={value}>{memoryKindLabels[value]}</option>
 													))}
 												</select>
 											</label>

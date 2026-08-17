@@ -725,9 +725,11 @@ function LectureComponent({ shape }: { shape: LectureShape }) {
 
 	useEffect(() => {
 		const seek = (event: Event) => {
-			const detail = (event as CustomEvent<{ lectureID: string; startSecond: number }>).detail
-			if (detail?.lectureID !== shape.props.lectureID || !audioRef.current) return
-			audioRef.current.currentTime = detail.startSecond
+			if (!(event instanceof CustomEvent)) return
+			const detail = z.object({ lectureID: z.string(), startSecond: z.number() })
+				.safeParse(event.detail)
+			if (!detail.success || detail.data.lectureID !== shape.props.lectureID || !audioRef.current) return
+			audioRef.current.currentTime = detail.data.startSecond
 			void audioRef.current.play().catch(() => undefined)
 		}
 		window.addEventListener('agentboard:lecture-seek', seek)

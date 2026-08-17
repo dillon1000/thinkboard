@@ -19,12 +19,13 @@ import {
 	IconSettings,
 	IconSun,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { z } from 'zod'
 import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
+import { cssVariables } from '../../../lib/styleTypes'
 import { authClient } from '../../../lib/authClient'
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/browser/localStorage'
 import {
@@ -365,7 +366,7 @@ export function Component() {
 								) : null}
 								{boards.length ? <div className="BoardList">
 									{boards.map((board, index) => (
-										<article className="BoardRow" key={board.id} style={{ '--row-index': Math.min(index, 12) } as CSSProperties}>
+										<article className="BoardRow" key={board.id} style={cssVariables({ '--row-index': Math.min(index, 12) })}>
 											<Link className="BoardRow-main" to={appRoutes.board(board.id)}>
 												<span className="BoardRow-icon"><IconLayoutBoard aria-hidden="true" size={17} stroke={1.6} /></span>
 												<span className="BoardRow-copy"><strong>{board.title}</strong><BoardMeta board={board} courses={courses} /></span>
@@ -397,7 +398,7 @@ export function Component() {
 								{isArchiveOpen ? (
 									<div className="BoardList">
 										{archivedBoards.map((board, index) => (
-											<article className="BoardRow BoardRow--archived" key={board.id} style={{ '--row-index': Math.min(index, 12) } as CSSProperties}>
+											<article className="BoardRow BoardRow--archived" key={board.id} style={cssVariables({ '--row-index': Math.min(index, 12) })}>
 												<div className="BoardRow-main">
 													<span className="BoardRow-icon"><IconArchive aria-hidden="true" size={17} stroke={1.6} /></span>
 													<span className="BoardRow-copy"><strong>{board.title}</strong><small>Archived {formatRelativeDate(board.updatedAt)}</small></span>
@@ -443,7 +444,7 @@ function BoardMeta({ board, courses }: { board: Board; courses: Course[] }) {
 	return (
 		<small>
 			{course ? (
-				<span className="BoardRow-course" style={{ '--course-color': course.color } as CSSProperties}>
+				<span className="BoardRow-course" style={cssVariables({ '--course-color': course.color })}>
 					<i aria-hidden="true" /> {course.title} ·
 				</span>
 			) : null}{' '}

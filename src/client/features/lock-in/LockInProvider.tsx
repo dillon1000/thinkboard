@@ -14,7 +14,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import type { Editor, TLShapeId } from 'tldraw'
+import { isShapeId, type Editor, type TLShapeId } from 'tldraw'
 import { apiRequest } from '../../lib/api'
 import { captureLockInReviewImages } from './lib/lockInCapture'
 import {
@@ -115,13 +115,13 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 		if (!editor) return
 		return editor.store.listen((entry) => {
 			for (const record of Object.values(entry.changes.added)) {
-				if (record.typeName === 'shape') changedShapeIDsRef.current.add(record.id as TLShapeId)
+				if (record.typeName === 'shape' && isShapeId(record.id)) changedShapeIDsRef.current.add(record.id)
 			}
 			for (const [, record] of Object.values(entry.changes.updated)) {
-				if (record.typeName === 'shape') changedShapeIDsRef.current.add(record.id as TLShapeId)
+				if (record.typeName === 'shape' && isShapeId(record.id)) changedShapeIDsRef.current.add(record.id)
 			}
 			for (const record of Object.values(entry.changes.removed)) {
-				if (record.typeName === 'shape') changedShapeIDsRef.current.add(record.id as TLShapeId)
+				if (record.typeName === 'shape' && isShapeId(record.id)) changedShapeIDsRef.current.add(record.id)
 			}
 		}, { scope: 'document', source: 'user' })
 	}, [editor])

@@ -7,9 +7,10 @@ import {
 	IconTrash,
 	IconX,
 } from '@tabler/icons-react'
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
+import { cssVariables } from '../../../lib/styleTypes'
 import './coursePlanner.css'
 
 interface CoursePlannerProps {
@@ -188,7 +189,7 @@ function CourseCard({
 	}
 
 	return (
-		<article className="CourseCard" style={{ '--course-color': course.color } as CSSProperties}>
+		<article className="CourseCard" style={cssVariables({ '--course-color': course.color })}>
 			<header>
 				<span aria-hidden="true" />
 				<div>

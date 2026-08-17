@@ -1,4 +1,4 @@
-import type { Board, BoardRole } from '@agentboard/shared'
+import { boardRoleSchema, type Board, type BoardRole } from '@agentboard/shared'
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import type { Database } from './client'
 import { board, boardMember } from './schema'
@@ -25,7 +25,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 
 	return rows.map((row) => ({
 		...row,
-		role: row.role as BoardRole,
+		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	}))
@@ -53,7 +53,7 @@ export async function listArchivedBoards(database: Database, userID: string): Pr
 
 	return rows.map((row) => ({
 		...row,
-		role: row.role as BoardRole,
+		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	}))
@@ -94,7 +94,9 @@ export async function getBoardAccess(
 		)
 		.limit(1)
 
-	return membership ? { boardID: membership.boardID, role: membership.role as BoardRole } : null
+	return membership
+		? { boardID: membership.boardID, role: boardRoleSchema.parse(membership.role) }
+		: null
 }
 
 export async function getBoard(database: Database, boardID: string, userID: string): Promise<Board | null> {
@@ -115,7 +117,7 @@ export async function getBoard(database: Database, boardID: string, userID: stri
 	return row
 		? {
 				...row,
-				role: row.role as BoardRole,
+				role: boardRoleSchema.parse(row.role),
 				createdAt: row.createdAt.toISOString(),
 				updatedAt: row.updatedAt.toISOString(),
 			}

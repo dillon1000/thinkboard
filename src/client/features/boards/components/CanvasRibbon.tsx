@@ -43,7 +43,7 @@ import {
 	IconWriting,
 	IconX,
 } from '@tabler/icons-react'
-import { type CSSProperties, type ReactNode, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import {
 	DefaultActionsMenu,
 	DefaultMainMenu,
@@ -89,6 +89,7 @@ import { DockablePanel } from './DockablePanel'
 import { RibbonSection } from './RibbonSection'
 import { HandwritingCheckDialog } from '../../study/components/HandwritingCheckDialog'
 import { capturePDFTextSelection } from '../../study/lib/pdfTextSelection'
+import { cssVariables } from '../../../lib/styleTypes'
 import { LectureImportControl } from '../../study/components/LectureImportControl'
 import {
 	collectSpaceFlashcards,
@@ -229,7 +230,7 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 					<span aria-hidden="true" className="Ribbon-divider" />
 					<RibbonMenu
 						{...menuProps('colour')}
-						icon={<span className="Ribbon-swatch" style={{ '--swatch': colour ?? 'transparent' } as CSSProperties} />}
+						icon={<span className="Ribbon-swatch" style={cssVariables({ '--swatch': colour ?? 'transparent' })} />}
 					>
 						<CanvasColourControls />
 					</RibbonMenu>

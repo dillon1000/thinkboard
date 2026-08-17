@@ -14,11 +14,13 @@ export function subscribeToZenChatPrompt(onPrompt: (prompt: string) => void) {
 		pendingPrompt = null
 	}
 	const handlePrompt = (event: Event) => {
-		const prompt = (event as CustomEvent<string>).detail
-		if (!prompt) return
+		if (!(event instanceof CustomEvent)) return
+		const prompt = z.string().min(1).safeParse(event.detail)
+		if (!prompt.success) return
 		pendingPrompt = null
-		onPrompt(prompt)
+		onPrompt(prompt.data)
 	}
 	window.addEventListener(ZEN_CHAT_PROMPT_EVENT, handlePrompt)
 	return () => window.removeEventListener(ZEN_CHAT_PROMPT_EVENT, handlePrompt)
 }
+import { z } from 'zod'

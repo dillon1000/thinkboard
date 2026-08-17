@@ -1,11 +1,12 @@
-import type {
-	BoardRole,
-	Course,
-	InvitationRole,
-	SpaceInvitation,
-	SpaceInvitationCreated,
-	SpaceInvitationPreview,
-	SpaceMember,
+import {
+	boardRoleSchema,
+	invitationRoleSchema,
+	type Course,
+	type InvitationRole,
+	type SpaceInvitation,
+	type SpaceInvitationCreated,
+	type SpaceInvitationPreview,
+	type SpaceMember,
 } from '@agentboard/shared'
 import { and, desc, eq, gt, inArray, isNull, or } from 'drizzle-orm'
 import type { Database } from './client'
@@ -129,7 +130,7 @@ export async function listSpaceMembers(
 
 	return rows.map((row) => ({
 		...row,
-		role: row.role as BoardRole,
+		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 	}))
 }
@@ -259,7 +260,7 @@ export async function getSpaceInvitationPreview(
 		.limit(1)
 	return row ? {
 		...row,
-		role: row.role as InvitationRole,
+		role: invitationRoleSchema.parse(row.role),
 		expiresAt: row.expiresAt.toISOString(),
 	} : null
 }
@@ -361,6 +362,6 @@ function toSpaceInvitation(row: typeof boardInvitation.$inferSelect): SpaceInvit
 		email: row.targetEmail,
 		expiresAt: row.expiresAt.toISOString(),
 		id: row.id,
-		role: row.role as InvitationRole,
+		role: invitationRoleSchema.parse(row.role),
 	}
 }

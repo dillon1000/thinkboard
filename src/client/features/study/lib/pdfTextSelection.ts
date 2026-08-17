@@ -54,7 +54,7 @@ export function normalizePDFTextSelection(
 }
 
 function getPDFTextLayer(node: Node) {
-	const element = node.nodeType === 1 ? node as Element : node.parentElement
+	const element = node instanceof Element ? node : node.parentElement
 	return element?.closest<HTMLElement>('[data-pdf-text-layer="true"]') ?? null
 }
 

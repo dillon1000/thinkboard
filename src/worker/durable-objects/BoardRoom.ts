@@ -54,7 +54,7 @@ export class BoardRoom extends DurableObject<Env> {
 
 			// Resume any sessions that survived hibernation
 			for (const ws of this.ctx.getWebSockets()) {
-				const attachment = ws.deserializeAttachment() as SocketAttachment | null
+				const attachment = this.readSocketAttachment(ws)
 				if (!attachment?.sessionID) continue
 
 				if (attachment.snapshot) {
@@ -109,8 +109,13 @@ export class BoardRoom extends DurableObject<Env> {
 	// --- WebSocket Hibernation API handlers ---
 
 	private getSessionID(ws: WebSocket): string | null {
-		const attachment = ws.deserializeAttachment() as SocketAttachment | null
+		const attachment = this.readSocketAttachment(ws)
 		return attachment?.sessionID ?? null
+	}
+
+	private readSocketAttachment(ws: WebSocket): SocketAttachment | null {
+		// SAFETY: This Durable Object is the sole writer and always serializes SocketAttachment values.
+		return ws.deserializeAttachment() as SocketAttachment | null
 	}
 
 	override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
@@ -130,7 +135,7 @@ export class BoardRoom extends DurableObject<Env> {
 	}
 
 	private handleWebSocketEnd(ws: WebSocket, method: 'handleSocketClose' | 'handleSocketError') {
-		const attachment = ws.deserializeAttachment() as SocketAttachment | null
+		const attachment = this.readSocketAttachment(ws)
 		if (!attachment?.sessionID) return
 
 		this.sessionIDToWebSocket.delete(attachment.sessionID)
