@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-const canvasRecordSchema = z.record(z.string(), z.unknown())
+export const canvasRecordSchema = z.object({
+	id: z.string(),
+	typeName: z.enum(['binding', 'shape']),
+}).catchall(z.json())
 
 export const agentActionCreateSchema = z.object({
 	afterRecords: z.array(canvasRecordSchema).max(250),
@@ -29,8 +32,9 @@ export interface AgentActionSummary {
 
 export interface AgentActionUndoPayload {
 	action: AgentActionSummary
-	afterRecords: Array<Record<string, unknown>>
-	beforeRecords: Array<Record<string, unknown>>
+	afterRecords: CanvasRecordSnapshot[]
+	beforeRecords: CanvasRecordSnapshot[]
 }
 
+export type CanvasRecordSnapshot = z.infer<typeof canvasRecordSchema>
 export type AgentActionCreate = z.infer<typeof agentActionCreateSchema>
