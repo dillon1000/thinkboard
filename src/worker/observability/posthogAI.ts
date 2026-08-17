@@ -1,8 +1,38 @@
+import type { JsonRecord, JsonType } from 'posthog-js'
+import { z } from 'zod'
+
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 const MAX_CAPTURE_STRING_LENGTH = 20_000
 const MAX_CAPTURE_ARRAY_LENGTH = 100
 const MAX_CAPTURE_OBJECT_KEYS = 100
 const MAX_CAPTURE_DEPTH = 8
+
+const captureStringSchema = z.string()
+const captureScalarSchema = z.union([z.number(), z.boolean(), z.null()])
+const captureObjectSchema = z.looseObject({})
+const modelInputSchema = z.looseObject({
+	max_completion_tokens: z.number().optional(),
+	max_tokens: z.number().optional(),
+	messages: z.array(z.json()).optional(),
+	temperature: z.number().optional(),
+	text: z.union([z.string(), z.array(z.string())]).optional(),
+})
+const modelOutputSchema = z.looseObject({
+	response: z.json().optional(),
+	result: z.json().optional(),
+	text: z.json().optional(),
+	usage: z.looseObject({
+		completion_tokens: z.number().optional(),
+		input_tokens: z.number().optional(),
+		output_tokens: z.number().optional(),
+		prompt_tokens: z.number().optional(),
+	}).optional(),
+})
+const gatewayOptionsSchema = z.looseObject({
+	gateway: z.looseObject({
+		metadata: z.record(z.string(), z.union([z.boolean(), z.number(), z.string()])).optional(),
+	}).optional(),
+})
 
 interface PostHogAIEnv {
 	POSTHOG_AI_PRIVACY_MODE?: string
@@ -11,7 +41,7 @@ interface PostHogAIEnv {
 }
 
 export interface AIRunner {
-	run(model: string, input: unknown, options?: unknown): Promise<unknown>
+	run<Input, Options>(model: string, input: Input, options?: Options): Promise<JsonType>
 }
 
 type AIProperty = boolean | number | string
@@ -30,14 +60,19 @@ interface AIObservation {
 	traceID: string
 }
 
-interface AIGenerationCapture extends Omit<AIObservation, 'defer'> {
-	error?: unknown
-	input: unknown
+interface CapturedError extends JsonRecord {
+	message: string
+	name: string
+}
+
+interface AIGenerationCapture<Input, Output, Failure> extends Omit<AIObservation, 'defer'> {
+	error?: Failure
+	input: Input
 	inputTokens?: number
 	latencySeconds: number
 	maxTokens?: number
 	model: string
-	output?: unknown
+	output?: Output
 	outputTokens?: number
 	stopReason?: string
 	stream?: boolean
@@ -101,9 +136,9 @@ export function observeAIRunner(
  * Sends one PostHog AI event through the public capture endpoint. A missing project token disables
  * capture. Network and ingestion errors are logged and do not change the AI request outcome.
  */
-export async function capturePostHogAIEvent(
+export async function capturePostHogAIEvent<Input, Output, Failure>(
 	env: PostHogAIEnv,
-	capture: AIGenerationCapture,
+	capture: AIGenerationCapture<Input, Output, Failure>,
 	fetcher: Fetcher = fetch
 ): Promise<void> {
 	const projectToken = env.POSTHOG_PROJECT_TOKEN?.trim()
@@ -111,9 +146,9 @@ export async function capturePostHogAIEvent(
 
 	const event = capture.kind === 'embedding' ? '$ai_embedding' : '$ai_generation'
 	const privacyMode = env.POSTHOG_AI_PRIVACY_MODE?.trim().toLowerCase() === 'true'
-	const properties: Record<string, unknown> = {
+	const properties: JsonRecord = {
 		distinct_id: capture.distinctID,
-		$ai_error: capture.error ? readError(capture.error) : undefined,
+		$ai_error: capture.error === undefined ? undefined : readError(capture.error),
 		$ai_input_tokens: capture.inputTokens,
 		$ai_is_error: Boolean(capture.error),
 		$ai_latency: capture.latencySeconds,
@@ -167,97 +202,98 @@ function scheduleCapture(defer: Defer, capture: Promise<void>) {
 	defer(handled)
 }
 
-function inferEventKind(input: unknown): AIEventKind {
-	if (!input || typeof input !== 'object') return 'generation'
-	const text = Reflect.get(input, 'text')
-	const messages = Reflect.get(input, 'messages')
-	return (typeof text === 'string' || Array.isArray(text)) && !Array.isArray(messages)
+function inferEventKind<Input>(input: Input): AIEventKind {
+	const parsed = modelInputSchema.safeParse(input)
+	if (!parsed.success) return 'generation'
+	return parsed.data.text !== undefined && parsed.data.messages === undefined
 		? 'embedding'
 		: 'generation'
 }
 
-function readModelInput(input: unknown) {
-	if (!input || typeof input !== 'object') return input
-	const messages = Reflect.get(input, 'messages')
-	if (Array.isArray(messages)) return messages
-	const text = Reflect.get(input, 'text')
-	return typeof text === 'string' || Array.isArray(text) ? text : input
+function readModelInput<Input>(input: Input): JsonType {
+	const parsed = modelInputSchema.safeParse(input)
+	if (!parsed.success) return sanitizeCaptureValue(input)
+	if (parsed.data.messages !== undefined) return sanitizeCaptureValue(parsed.data.messages)
+	if (parsed.data.text !== undefined) return sanitizeCaptureValue(parsed.data.text)
+	return sanitizeCaptureValue(input)
 }
 
-function readModelOutput(output: unknown) {
-	if (!output || typeof output !== 'object') return output
-	for (const key of ['response', 'result', 'text']) {
-		const value = Reflect.get(output, key)
+function readModelOutput<Output>(output: Output): JsonType {
+	const parsed = modelOutputSchema.safeParse(output)
+	if (!parsed.success) return sanitizeCaptureValue(output)
+	if (parsed.data.response !== undefined) return sanitizeCaptureValue(parsed.data.response)
+	if (parsed.data.result !== undefined) return sanitizeCaptureValue(parsed.data.result)
+	if (parsed.data.text !== undefined) return sanitizeCaptureValue(parsed.data.text)
+	return sanitizeCaptureValue(output)
+}
+
+function readUsageNumber<Output>(
+	output: Output,
+	keys: readonly ('completion_tokens' | 'input_tokens' | 'output_tokens' | 'prompt_tokens')[]
+) {
+	const parsed = modelOutputSchema.safeParse(output)
+	if (!parsed.success || !parsed.data.usage) return undefined
+	for (const key of keys) {
+		const value = parsed.data.usage[key]
 		if (value !== undefined) return value
 	}
-	return output
+	return undefined
 }
 
-function readUsageNumber(output: unknown, keys: readonly string[]) {
-	if (!output || typeof output !== 'object') return undefined
-	const usage = Reflect.get(output, 'usage')
-	if (!usage || typeof usage !== 'object') return undefined
+function readInputNumber<Input>(
+	input: Input,
+	keys: readonly ('max_completion_tokens' | 'max_tokens' | 'temperature')[]
+) {
+	const parsed = modelInputSchema.safeParse(input)
+	if (!parsed.success) return undefined
 	for (const key of keys) {
-		const value = Reflect.get(usage, key)
-		if (typeof value === 'number') return value
+		const value = parsed.data[key]
+		if (value !== undefined) return value
 	}
 	return undefined
 }
 
-function readInputNumber(input: unknown, keys: readonly string[]) {
-	if (!input || typeof input !== 'object') return undefined
-	for (const key of keys) {
-		const value = Reflect.get(input, key)
-		if (typeof value === 'number') return value
-	}
-	return undefined
+function readGatewayMetadata<Options>(options: Options): Record<string, AIProperty> {
+	const parsed = gatewayOptionsSchema.safeParse(options)
+	return parsed.success ? parsed.data.gateway?.metadata ?? {} : {}
 }
 
-function readGatewayMetadata(options: unknown): Record<string, AIProperty> {
-	if (!options || typeof options !== 'object') return {}
-	const gateway = Reflect.get(options, 'gateway')
-	if (!gateway || typeof gateway !== 'object') return {}
-	const metadata = Reflect.get(gateway, 'metadata')
-	if (!metadata || typeof metadata !== 'object') return {}
-	return Object.fromEntries(
-		Object.entries(metadata).filter(
-			(entry): entry is [string, AIProperty] =>
-				typeof entry[1] === 'boolean'
-				|| typeof entry[1] === 'number'
-				|| typeof entry[1] === 'string'
-		)
-	)
-}
-
-function sanitizeCaptureValue(value: unknown, depth = 0): unknown {
+/**
+ * Converts model data to bounded JSON for PostHog. The limits prevent large images, prompts, and
+ * deeply nested provider payloads from increasing event size or capture cost without bound.
+ */
+function sanitizeCaptureValue<Value>(value: Value, depth = 0): JsonType {
 	if (depth >= MAX_CAPTURE_DEPTH) return '[nested value omitted]'
-	if (typeof value === 'string') {
-		if (value.startsWith('data:')) return '[data URL omitted]'
-		return value.length > MAX_CAPTURE_STRING_LENGTH
-			? `${value.slice(0, MAX_CAPTURE_STRING_LENGTH)}…`
-			: value
+	const stringValue = captureStringSchema.safeParse(value)
+	if (stringValue.success) {
+		if (stringValue.data.startsWith('data:')) return '[data URL omitted]'
+		return stringValue.data.length > MAX_CAPTURE_STRING_LENGTH
+			? `${stringValue.data.slice(0, MAX_CAPTURE_STRING_LENGTH)}…`
+			: stringValue.data
 	}
-	if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value
+	const scalar = captureScalarSchema.safeParse(value)
+	if (scalar.success) return scalar.data
 	if (Array.isArray(value)) {
 		return value
 			.slice(0, MAX_CAPTURE_ARRAY_LENGTH)
 			.map((item) => sanitizeCaptureValue(item, depth + 1))
 	}
-	if (!value || typeof value !== 'object') return String(value)
+	const object = captureObjectSchema.safeParse(value)
+	if (!object.success) return String(value)
 	return Object.fromEntries(
-		Object.entries(value)
+		Object.entries(object.data)
 			.slice(0, MAX_CAPTURE_OBJECT_KEYS)
 			.map(([key, item]) => [key, sanitizeCaptureValue(item, depth + 1)])
 	)
 }
 
-function removeEmptyProperties<T extends Record<string, unknown>>(properties: T) {
+function removeEmptyProperties(properties: JsonRecord): JsonRecord {
 	return Object.fromEntries(
 		Object.entries(properties).filter(([, value]) => value !== null && value !== undefined)
 	)
 }
 
-function readError(error: unknown) {
+function readError<Failure>(error: Failure): CapturedError {
 	return {
 		message: error instanceof Error ? error.message.slice(0, 1_000) : String(error).slice(0, 1_000),
 		name: error instanceof Error ? error.name : 'UnknownError',

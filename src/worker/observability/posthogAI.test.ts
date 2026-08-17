@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import {
 	capturePostHogAIEvent,
 	observeAIRunner,
@@ -14,6 +15,12 @@ const observation = {
 	spanName: 'flashcard-answer',
 	traceID: 'trace-1',
 }
+
+const captureBodySchema = z.object({
+	api_key: z.string().optional(),
+	event: z.string().optional(),
+	properties: z.record(z.string(), z.json()),
+})
 
 describe('capturePostHogAIEvent', () => {
 	it('does nothing when the project token is missing', async () => {
@@ -52,11 +59,7 @@ describe('capturePostHogAIEvent', () => {
 		expect(fetcher).toHaveBeenCalledOnce()
 		expect(fetcher.mock.calls[0][0]).toBe('https://eu.i.posthog.com/i/v0/e/')
 		const request = fetcher.mock.calls[0][1]
-		const body = JSON.parse(String(request?.body)) as {
-			api_key: string
-			event: string
-			properties: Record<string, unknown>
-		}
+		const body = captureBodySchema.parse(JSON.parse(String(request?.body)))
 		expect(body).toMatchObject({
 			api_key: 'phc_test',
 			event: '$ai_generation',
@@ -87,10 +90,7 @@ describe('capturePostHogAIEvent', () => {
 			model: 'embedding-model',
 		}, fetcher)
 
-		const body = JSON.parse(String(fetcher.mock.calls[0][1]?.body)) as {
-			event: string
-			properties: Record<string, unknown>
-		}
+		const body = captureBodySchema.parse(JSON.parse(String(fetcher.mock.calls[0][1]?.body)))
 		expect(body.event).toBe('$ai_embedding')
 		expect(body.properties).not.toHaveProperty('$ai_input')
 		expect(body.properties).not.toHaveProperty('$ai_output_choices')
@@ -125,9 +125,7 @@ describe('observeAIRunner', () => {
 		})).resolves.toBe(result)
 		await Promise.all(deferred)
 
-		const body = JSON.parse(String(fetcher.mock.calls[0][1]?.body)) as {
-			properties: Record<string, unknown>
-		}
+		const body = captureBodySchema.parse(JSON.parse(String(fetcher.mock.calls[0][1]?.body)))
 		expect(body.properties).toMatchObject({
 			$ai_input_tokens: 8,
 			$ai_max_tokens: 20,
@@ -155,9 +153,7 @@ describe('observeAIRunner', () => {
 
 		await expect(observed.run('model', { messages: [] })).rejects.toBe(failure)
 		await Promise.all(deferred)
-		const body = JSON.parse(String(fetcher.mock.calls[0][1]?.body)) as {
-			properties: Record<string, unknown>
-		}
+		const body = captureBodySchema.parse(JSON.parse(String(fetcher.mock.calls[0][1]?.body)))
 		expect(body.properties).toMatchObject({
 			$ai_error: { message: 'Model unavailable', name: 'Error' },
 			$ai_is_error: true,
