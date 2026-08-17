@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	apiRoutes,
@@ -138,9 +137,9 @@ function parseCanvasRecords(records: Array<Record<string, unknown>>): TLRecord[]
 
 function isCanvasRecord(record: unknown): record is TLRecord {
 	if (!record || !hasObjectType(record)) return false
-	const typeName = readProperty(record, 'typeName')
+	const typeName = Reflect.get(record, 'typeName')
 	return (typeName === 'shape' || typeName === 'binding') &&
-		isString(readProperty(record, 'id'))
+		isString(Reflect.get(record, 'id'))
 }
 
 function serializeRecord(record: TLRecord | undefined) {

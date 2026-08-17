@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { PDF_PAGE_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor, TLShape } from 'tldraw'
 
@@ -23,8 +22,8 @@ export function findPDFCitationShape(
 	for (const shape of shapes) {
 		if (
 			shape.type === PDF_PAGE_SHAPE_TYPE &&
-			readProperty(shape.props, 'documentId') === target.documentID &&
-			readProperty(shape.props, 'pageNumber') === target.pageNumber
+			Reflect.get(shape.props, 'documentId') === target.documentID &&
+			Reflect.get(shape.props, 'pageNumber') === target.pageNumber
 		) return shape
 	}
 	return null

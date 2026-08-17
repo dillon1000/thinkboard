@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { isString } from '@agentboard/shared'
 import { FLASHCARD_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor } from 'tldraw'
@@ -66,9 +65,9 @@ export function collectSpaceFlashcards(editor: Editor): ExportFlashcard[] {
 		for (const shapeID of editor.getPageShapeIds(page)) {
 			const shape = editor.getShape(shapeID)
 			if (shape?.type !== FLASHCARD_SHAPE_TYPE) continue
-			const front = readProperty(shape.props, 'front')
-			const back = readProperty(shape.props, 'back')
-			const alternateAnswers = readProperty(shape.props, 'alternateAnswers')
+			const front = Reflect.get(shape.props, 'front')
+			const back = Reflect.get(shape.props, 'back')
+			const alternateAnswers = Reflect.get(shape.props, 'alternateAnswers')
 			if (!isString(front) || !isString(back)) continue
 			cards.push({
 				alternateAnswers: Array.isArray(alternateAnswers)

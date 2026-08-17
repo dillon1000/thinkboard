@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 interface PromiseResolvers<T> {
 	promise: Promise<T>
 	reject: (reason?: unknown) => void
@@ -39,7 +38,7 @@ function combineAbortSignals(signals: readonly AbortSignal[]) {
 			registeredSignal.removeEventListener('abort', listener)
 		}
 		listeners.clear()
-		controller.abort(readProperty(signal, 'reason'))
+		controller.abort(Reflect.get(signal, 'reason'))
 	}
 
 	for (const signal of signals) {

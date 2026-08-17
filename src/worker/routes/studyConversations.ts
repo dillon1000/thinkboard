@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import { getBoardAccess } from '../db/boards'
 import { createDatabase } from '../db/client'
@@ -135,7 +134,7 @@ async function authorize(request: IRequest, env: Env): Promise<ConversationAutho
 async function readOptionalTitle(request: Request) {
 	const body: unknown = await request.json().catch(() => ({}))
 	if (!body || !hasObjectType(body)) return null
-	const value = readProperty(body, 'title')
+	const value = Reflect.get(body, 'title')
 	if (value === undefined) return undefined
 	if (!isString(value)) return null
 	const title = value.trim().replace(/\s+/g, ' ')
@@ -145,7 +144,7 @@ async function readOptionalTitle(request: Request) {
 async function readTitleSource(request: Request): Promise<string | null> {
 	const body: unknown = await request.json().catch(() => ({}))
 	if (!body || !hasObjectType(body)) return null
-	const value = readProperty(body, 'message')
+	const value = Reflect.get(body, 'message')
 	if (!isString(value)) return null
 	const message = value.trim().replace(/\s+/g, ' ')
 	return message ? message.slice(0, MAX_TITLE_SOURCE_LENGTH) : null

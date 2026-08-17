@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	LECTURE_SHAPE_TYPE,
@@ -120,13 +119,13 @@ function LectureImportDialog({
 			)
 			const body: unknown = await response.json().catch(() => null)
 			if (!response.ok) {
-				const message = body && hasObjectType(body) && isString(readProperty(body, 'error'))
-					? String(readProperty(body, 'error'))
+				const message = body && hasObjectType(body) && isString(Reflect.get(body, 'error'))
+					? String(Reflect.get(body, 'error'))
 					: 'Unable to upload this lecture'
 				throw new Error(message)
 			}
 			const lecture = body && hasObjectType(body)
-				? readProperty(body, 'lecture') as LectureSummary | undefined
+				? Reflect.get(body, 'lecture') as LectureSummary | undefined
 				: undefined
 			if (!lecture) throw new Error('The lecture upload returned no record')
 			setLectures((current) => [lecture, ...current])
