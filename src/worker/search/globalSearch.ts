@@ -153,7 +153,7 @@ async function searchArtifactText(
 }
 
 export function parseGlobalSearchMatches(
-	value: VectorizeMatches,
+	value: { matches: readonly object[] },
 	boardTitles: ReadonlyMap<string, string>
 ): GlobalSearchResult[] {
 	return value.matches.flatMap((match): GlobalSearchResult[] => {

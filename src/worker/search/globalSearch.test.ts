@@ -3,7 +3,7 @@ import { parseGlobalSearchMatches } from './globalSearch'
 
 describe('global search result access', () => {
 	it('returns only results whose board is in the authorized title map', () => {
-		const matches: VectorizeMatches = {
+		const matches = {
 			count: 2,
 			matches: [
 				{
@@ -17,7 +17,7 @@ describe('global search result access', () => {
 						title: 'Entropy',
 					},
 					score: 0.92,
-				} as VectorizeMatch,
+				},
 				{
 					id: 'blocked',
 					metadata: {
@@ -28,7 +28,7 @@ describe('global search result access', () => {
 						pageNumber: 1,
 					},
 					score: 0.99,
-				} as VectorizeMatch,
+				},
 			],
 		}
 
@@ -45,7 +45,7 @@ describe('global search result access', () => {
 	})
 
 	it('returns lecture timestamps only for an authorized board', () => {
-		const matches: VectorizeMatches = {
+		const matches = {
 			count: 1,
 			matches: [{
 				id: 'lecture',
@@ -58,7 +58,7 @@ describe('global search result access', () => {
 					startSecond: 92,
 				},
 				score: 0.88,
-			} as VectorizeMatch],
+			}],
 		}
 
 		expect(parseGlobalSearchMatches(matches, new Map([['board-1', 'Physics']]))).toEqual([{
