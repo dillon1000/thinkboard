@@ -190,11 +190,12 @@ describe('Craft block editing', () => {
 				}],
 			}],
 		}))
-		const env = {
+		// SAFETY: This fixture supplies the integration binding read by linked-document retrieval.
+		const env = Object.assign(Object.create(null), {
 			INTEGRATIONS: {
 				get: vi.fn().mockResolvedValue(connection),
 			},
-		} as unknown as Env
+		}) as Env
 
 		expect(await retrieveLinkedCraftDocuments(
 			env,

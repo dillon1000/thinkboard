@@ -6,6 +6,11 @@ import {
 	setDocumentStatus,
 } from './documents'
 
+function databaseFixture<Fixture extends object>(fixture: Fixture) {
+	// SAFETY: Each fixture implements the complete fluent database path exercised by its test.
+	return Object.assign(Object.create(null), fixture) as Database
+}
+
 function createDocumentStatusDatabase(
 	updateResults: Array<'resolve' | 'reject'>,
 	storedStatus: { failureReason: string | null; status: string }
@@ -15,7 +20,7 @@ function createDocumentStatusDatabase(
 		if (result === 'reject') throw new Error('D1 write response failed')
 	})
 	const limit = vi.fn().mockResolvedValue([storedStatus])
-	const database = {
+	const database = databaseFixture({
 		select: vi.fn(() => ({
 			from: vi.fn(() => ({
 				where: vi.fn(() => ({ limit })),
@@ -24,7 +29,7 @@ function createDocumentStatusDatabase(
 		update: vi.fn(() => ({
 			set: vi.fn(() => ({ where: updateWhere })),
 		})),
-	} as unknown as Database
+	})
 	return { database, limit, updateWhere }
 }
 
@@ -69,14 +74,14 @@ describe('replaceDocumentChunks', () => {
 	it('keeps each insert within the D1 bound-parameter limit', async () => {
 		const insertedBatches: unknown[][] = []
 		const where = vi.fn().mockResolvedValue(undefined)
-		const database = {
+		const database = databaseFixture({
 			delete: vi.fn(() => ({ where })),
 			insert: vi.fn(() => ({
 				values: vi.fn(async (values: unknown[]) => {
 					insertedBatches.push(values)
 				}),
 			})),
-		} as unknown as Database
+		})
 		const chunks = Array.from({ length: 100 }, (_, index) => ({
 			pageNumber: Math.floor(index / 4) + 1,
 			vectorID: `document-id:${index}`,
@@ -93,13 +98,13 @@ describe('replaceDocumentChunks', () => {
 describe('getPageTextForDocuments', () => {
 	it('batches a full PDF selection within the D1 bound-parameter limit', async () => {
 		const where = vi.fn().mockResolvedValue([])
-		const database = {
+		const database = databaseFixture({
 			select: vi.fn(() => ({
 				from: vi.fn(() => ({
 					innerJoin: vi.fn(() => ({ where })),
 				})),
 			})),
-		} as unknown as Database
+		})
 		const references = Array.from({ length: 200 }, (_, index) => ({
 			documentID: 'document-id',
 			pageNumber: index + 1,

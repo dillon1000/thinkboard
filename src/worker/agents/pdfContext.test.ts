@@ -13,13 +13,14 @@ describe('hydratePDFSelectionContext', () => {
 				documentID: 'document-1',
 				pageNumber: 12,
 			}])
-		const database = {
+		// SAFETY: The fixture implements both select chains used by this hydration path.
+		const database = Object.assign(Object.create(null), {
 			select: vi.fn(() => ({
 				from: vi.fn(() => ({
 					where: vi.fn(() => ({ limit })),
 				})),
 			})),
-		} as unknown as Database
+		}) as Database
 
 		const result = await hydratePDFSelectionContext(database, 'board-1', {
 			boardID: 'board-1',

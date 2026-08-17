@@ -1,5 +1,5 @@
 import { CRAFT_DOCUMENT_SHAPE_TYPE, type CraftDocumentLink } from '@agentboard/shared'
-import type { Editor } from 'tldraw'
+import { Editor } from 'tldraw'
 import { describe, expect, it, vi } from 'vitest'
 import {
 	addCraftDocumentShape,
@@ -14,17 +14,22 @@ const DOCUMENT: CraftDocumentLink = {
 	title: 'Study notes',
 }
 
+function editorFixture<Fixture extends object>(fixture: Fixture) {
+	// SAFETY: Each fixture supplies every Editor method exercised by its Craft shape operation.
+	return Object.assign(Object.create(Editor.prototype), fixture) as Editor
+}
+
 describe('Craft document canvas shapes', () => {
 	it('adds and selects a linked document in the visible board area', () => {
 		const createShape = vi.fn()
 		const select = vi.fn()
-		const editor = {
+		const editor = editorFixture({
 			createShape,
 			getCurrentPageShapes: () => [],
 			getViewportPageBounds: () => ({ h: 800, w: 1_200, x: 100, y: 200 }),
 			markHistoryStoppingPoint: vi.fn(),
 			select,
-		} as unknown as Editor
+		})
 
 		const shapeID = addCraftDocumentShape(editor, DOCUMENT)
 
@@ -57,11 +62,11 @@ describe('Craft document canvas shapes', () => {
 			},
 			type: CRAFT_DOCUMENT_SHAPE_TYPE,
 		}
-		const editor = {
+		const editor = editorFixture({
 			createShape,
 			getCurrentPageShapes: () => [existing],
 			select,
-		} as unknown as Editor
+		})
 
 		expect(addCraftDocumentShape(editor, DOCUMENT)).toBe(existing.id)
 		expect(createShape).not.toHaveBeenCalled()
@@ -70,7 +75,7 @@ describe('Craft document canvas shapes', () => {
 
 	it('removes the canvas shape for a deleted board link', () => {
 		const deleteShapes = vi.fn()
-		const editor = {
+		const editor = editorFixture({
 			deleteShapes,
 			getCurrentPageShapes: () => [{
 				id: 'shape:craft',
@@ -81,7 +86,7 @@ describe('Craft document canvas shapes', () => {
 				props: { linkID: 'other-link' },
 				type: CRAFT_DOCUMENT_SHAPE_TYPE,
 			}],
-		} as unknown as Editor
+		})
 
 		removeCraftDocumentShapes(editor, DOCUMENT.id)
 

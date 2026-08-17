@@ -1,7 +1,7 @@
-import type { DocumentSummary } from '@agentboard/shared'
 import type { PDFPageProxy } from 'pdfjs-dist'
-import type { Editor } from 'tldraw'
+import { Editor } from 'tldraw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import {
 	canvasToBlob,
 	findMatchingPDFDocument,
@@ -15,6 +15,11 @@ import {
 } from './pdfImport'
 
 type PDFTextContent = Awaited<ReturnType<PDFPageProxy['getTextContent']>>
+
+function editorFixture<Fixture extends object>(fixture: Fixture) {
+	// SAFETY: Each fixture supplies every Editor method exercised by its test path.
+	return Object.assign(Object.create(Editor.prototype), fixture) as Editor
+}
 
 afterEach(() => {
 	vi.unstubAllGlobals()
@@ -56,7 +61,7 @@ describe('canvasToBlob', () => {
 			type?: string,
 			_quality?: number
 		) => callback(new Blob(['page'], { type })))
-		const canvas = { toBlob } as unknown as HTMLCanvasElement
+		const canvas = { toBlob }
 
 		const image = await canvasToBlob(canvas)
 
@@ -107,7 +112,7 @@ describe('placePDFPages', () => {
 		const createShapes = vi.fn()
 		const setSelectedShapes = vi.fn()
 		const zoomToSelection = vi.fn()
-		const editor = {
+		const editor = editorFixture({
 			createShape: vi.fn(),
 			createShapes,
 			deleteShapes: vi.fn(),
@@ -119,18 +124,18 @@ describe('placePDFPages', () => {
 			run: (callback: () => void) => callback(),
 			setSelectedShapes,
 			zoomToSelection,
-		} as unknown as Editor
+		})
 		const document = {
 			id: 'document-1',
 			title: 'Large notes.pdf',
-		} as DocumentSummary
+		}
 
 		placePDFPages(editor, document, [
 			{ height: 792, pageNumber: 1, width: 612 },
 			{ height: 792, pageNumber: 2, width: 612 },
 		])
 
-		const createdPages = createShapes.mock.calls[0]?.[0] as Array<{ id: string }>
+		const createdPages = z.array(z.object({ id: z.string() })).parse(createShapes.mock.calls[0]?.[0])
 		expect(setSelectedShapes).toHaveBeenCalledWith([createdPages[0]?.id])
 		expect(zoomToSelection).toHaveBeenCalledWith({ animation: { duration: 300 } })
 	})
@@ -147,14 +152,14 @@ describe('locatePDFDocument', () => {
 			props: { documentId: 'document-1' },
 			type: 'pdf-page',
 		}
-		const editor = {
+		const editor = editorFixture({
 			getPageShapeIds: () => new Set([shape.id]),
 			getPages: () => [page],
 			getShape: () => shape,
 			setCurrentPage,
 			setSelectedShapes,
 			zoomToSelection,
-		} as unknown as Editor
+		})
 
 		expect(locatePDFDocument(editor, 'document-1')).toBe(true)
 		expect(setCurrentPage).toHaveBeenCalledWith(page.id)
@@ -167,9 +172,10 @@ describe('findMatchingPDFDocument', () => {
 	it('finds an existing import that can be rendered again in place', () => {
 		const document = {
 			byteSize: 42_000,
+			id: 'document-1',
 			pageCount: 18,
 			title: 'notes.pdf',
-		} as Parameters<typeof findMatchingPDFDocument>[0][number]
+		}
 
 		expect(findMatchingPDFDocument(
 			[document],
@@ -181,9 +187,10 @@ describe('findMatchingPDFDocument', () => {
 	it('does not match a different file with the same name', () => {
 		const document = {
 			byteSize: 42_000,
+			id: 'document-1',
 			pageCount: 18,
 			title: 'notes.pdf',
-		} as Parameters<typeof findMatchingPDFDocument>[0][number]
+		}
 
 		expect(findMatchingPDFDocument(
 			[document],
