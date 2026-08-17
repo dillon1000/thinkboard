@@ -103,36 +103,25 @@ export const craftWhiteboardSaveInputSchema = z.object({
 			message: 'A whiteboard save must add, update, or delete an element.',
 		})
 	}
+	const seen = new Map<string, string>()
 	for (const [path, values] of [
 		['elementsToAdd', elementsToAdd.map(({ id }) => id)],
 		['elementsToUpdate', elementsToUpdate.map(({ id }) => id)],
 		['elementIDsToDelete', elementIDsToDelete],
 	] as const) {
-		const uniqueValues = new Set<string>()
 		for (const [index, value] of values.entries()) {
-			if (uniqueValues.has(value)) {
+			const previousPath = seen.get(value)
+			if (previousPath) {
 				context.addIssue({
 					code: 'custom',
-					message: 'Whiteboard element IDs must be unique.',
+					message: previousPath === path
+						? 'Whiteboard element IDs must be unique.'
+						: 'An element cannot be added, updated, and deleted in one save.',
 					path: [path, index],
 				})
 			}
-			uniqueValues.add(value)
+			seen.set(value, path)
 		}
-	}
-	const mutationIDs = [
-		...elementsToAdd.map(({ id }) => id),
-		...elementsToUpdate.map(({ id }) => id),
-		...elementIDsToDelete,
-	]
-	const duplicateMutationID = mutationIDs.find((id, index) =>
-		mutationIDs.indexOf(id) !== index
-	)
-	if (duplicateMutationID) {
-		context.addIssue({
-			code: 'custom',
-			message: 'An element cannot be added, updated, and deleted in one save.',
-		})
 	}
 })
 
