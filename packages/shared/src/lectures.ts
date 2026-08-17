@@ -11,17 +11,19 @@ export const lectureSegmentSchema = z.object({
 	message: 'The segment end must follow its start',
 })
 
-export interface LectureSummary {
-	byteSize: number
-	createdAt: string
-	durationSeconds: number | null
-	failureReason: string | null
-	id: string
-	mediaType: string
-	status: LectureStatus
-	title: string
-	updatedAt: string
-}
+export const lectureSummarySchema = z.object({
+	byteSize: z.number().int().nonnegative(),
+	createdAt: z.string(),
+	durationSeconds: z.number().nonnegative().nullable(),
+	failureReason: z.string().nullable(),
+	id: z.string().min(1),
+	mediaType: z.string().min(1),
+	status: lectureStatusSchema,
+	title: z.string().min(1),
+	updatedAt: z.string(),
+})
+
+export type LectureSummary = z.infer<typeof lectureSummarySchema>
 
 export interface Lecture extends LectureSummary {
 	segments: LectureSegment[]

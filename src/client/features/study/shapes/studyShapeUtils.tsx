@@ -54,6 +54,7 @@ import {
 	type TLShape,
 	useEditor,
 } from 'tldraw'
+import { z } from 'zod'
 import { FlashcardAnswerPanel } from '../components/FlashcardAnswerPanel'
 import { PDFPageInteractiveLayer } from '../components/PDFPageInteractiveLayer'
 import { readBoardFlashcardDirectReveal } from '../lib/boardFlashcardPreferences'
@@ -1039,10 +1040,10 @@ function StudySources({ overlay = false, shape }: { overlay?: boolean; shape: TL
 }
 
 function readStudySources(shape: TLShape): PDFSourceReference[] {
-	const agentboard = Reflect.get(shape.meta, 'agentboard')
-	if (!agentboard || typeof agentboard !== 'object') return []
-	const parsed = pdfSourceReferenceSchema.array().safeParse(Reflect.get(agentboard, 'sources'))
-	return parsed.success ? parsed.data : []
+	const parsed = z.object({
+		agentboard: z.object({ sources: pdfSourceReferenceSchema.array() }),
+	}).safeParse(shape.meta)
+	return parsed.success ? parsed.data.agentboard.sources : []
 }
 
 function getBoxIndicator(width: number, height: number) {

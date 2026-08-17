@@ -55,6 +55,7 @@ export {
 	MAX_AUDIO_BYTES,
 	lectureSegmentSchema,
 	lectureStatusSchema,
+	lectureSummarySchema,
 } from './lectures'
 export type {
 	Lecture,

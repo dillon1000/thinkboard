@@ -1,8 +1,14 @@
 import { FLASHCARD_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor } from 'tldraw'
+import { z } from 'zod'
 
 const PDF_PORTRAIT_SIZE = [595.28, 841.89] as const
 const PDF_MARGIN = 24
+const exportFlashcardPropsSchema = z.object({
+	alternateAnswers: z.array(z.string()).catch([]),
+	back: z.string(),
+	front: z.string(),
+})
 
 export interface ExportFlashcard {
 	alternateAnswers: string[]
@@ -64,16 +70,12 @@ export function collectSpaceFlashcards(editor: Editor): ExportFlashcard[] {
 		for (const shapeID of editor.getPageShapeIds(page)) {
 			const shape = editor.getShape(shapeID)
 			if (shape?.type !== FLASHCARD_SHAPE_TYPE) continue
-			const front = Reflect.get(shape.props, 'front')
-			const back = Reflect.get(shape.props, 'back')
-			const alternateAnswers = Reflect.get(shape.props, 'alternateAnswers')
-			if (typeof front !== 'string' || typeof back !== 'string') continue
+			const parsed = exportFlashcardPropsSchema.safeParse(shape.props)
+			if (!parsed.success) continue
 			cards.push({
-				alternateAnswers: Array.isArray(alternateAnswers)
-					? alternateAnswers.filter((answer): answer is string => typeof answer === 'string')
-					: [],
-				back,
-				front,
+				alternateAnswers: parsed.data.alternateAnswers,
+				back: parsed.data.back,
+				front: parsed.data.front,
 				pageName: page.name,
 			})
 		}

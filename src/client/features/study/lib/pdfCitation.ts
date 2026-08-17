@@ -1,5 +1,11 @@
 import { PDF_PAGE_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor, TLShape } from 'tldraw'
+import { z } from 'zod'
+
+const pdfCitationShapePropsSchema = z.object({
+	documentId: z.string(),
+	pageNumber: z.number().int(),
+})
 
 export interface PDFCitationTarget {
 	documentID: string
@@ -20,10 +26,12 @@ export function findPDFCitationShape(
 	target: PDFCitationTarget
 ) {
 	for (const shape of shapes) {
+		const props = pdfCitationShapePropsSchema.safeParse(shape.props)
 		if (
 			shape.type === PDF_PAGE_SHAPE_TYPE &&
-			Reflect.get(shape.props, 'documentId') === target.documentID &&
-			Reflect.get(shape.props, 'pageNumber') === target.pageNumber
+			props.success &&
+			props.data.documentId === target.documentID &&
+			props.data.pageNumber === target.pageNumber
 		) return shape
 	}
 	return null
