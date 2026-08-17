@@ -233,6 +233,6 @@ function formatDate(value: string) {
 	return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(value))
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'The PDF library is unavailable right now.'
 }

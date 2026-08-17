@@ -129,6 +129,6 @@ export function CraftConnectionCard() {
 	)
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'Craft could not connect.'
 }

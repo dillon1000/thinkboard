@@ -13,7 +13,7 @@ export function RouteErrorBoundary() {
 	)
 }
 
-function getErrorMessage(error: unknown): string {
+function getErrorMessage<ErrorValue>(error: ErrorValue): string {
 	if (isRouteErrorResponse(error)) {
 		return `${error.status} ${error.statusText}`.trim()
 	}

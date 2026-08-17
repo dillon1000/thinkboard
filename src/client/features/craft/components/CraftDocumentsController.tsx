@@ -80,7 +80,7 @@ export function CraftDocumentsController({
 		).then((whiteboard) => {
 			setNotice(`Imported “${whiteboard.title}” as editable shapes.`)
 			window.setTimeout(() => setNotice(null), 2_800)
-		}).catch((error: unknown) => {
+		}).catch((error) => {
 			setNotice(error instanceof Error ? error.message : 'Unable to import this Craft whiteboard.')
 		})
 	}, [boardID, editor])

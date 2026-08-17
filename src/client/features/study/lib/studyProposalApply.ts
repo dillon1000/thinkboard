@@ -81,10 +81,10 @@ interface ApplyProposalOptions {
 	select?: boolean
 }
 
-export function applyProposal(
+export function applyProposal<Input>(
 	editor: Editor,
 	toolName: string,
-	input: unknown,
+	input: Input,
 	{ anchor, documentClock, select = true }: ApplyProposalOptions = {}
 ): ProposalEffect {
 	function place<T extends { x: number; y: number }>(proposal: T): T {
@@ -485,14 +485,14 @@ export async function persistProposalEffect(boardID: string, effect: ProposalEff
 	await Promise.all(writes.map((write) => write.catch(() => undefined)))
 }
 
-export async function recordProposedMistake(boardID: string, input: unknown) {
+export async function recordProposedMistake<Input>(boardID: string, input: Input) {
 	await apiRequest(apiRoutes.boardMistakes(boardID), {
 		body: JSON.stringify(mistakeProposalSchema.parse(input)),
 		method: 'POST',
 	})
 }
 
-export async function saveProposedMemory(boardID: string, input: unknown) {
+export async function saveProposedMemory<Input>(boardID: string, input: Input) {
 	await apiRequest(apiRoutes.boardMemories(boardID), {
 		body: JSON.stringify(agentMemoryProposalSchema.parse(input)),
 		method: 'POST',
@@ -500,5 +500,5 @@ export async function saveProposedMemory(boardID: string, input: unknown) {
 }
 
 export function isStudyToolName(value: string): value is StudyToolName {
-	return (STUDY_TOOL_NAMES as readonly string[]).includes(value)
+	return STUDY_TOOL_NAMES.some((toolName) => toolName === value)
 }

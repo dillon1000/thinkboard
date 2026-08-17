@@ -126,7 +126,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 		// An inline request produces one artifact; later tool calls in the same turn are ignored.
 	}, [chat.messages])
 
-	function stageProposal(toolName: StudyToolName, proposal: unknown) {
+	function stageProposal<Proposal>(toolName: StudyToolName, proposal: Proposal) {
 		try {
 			if (toolName === 'recordMistake') {
 				setPreview({ input: proposal, toolName })
@@ -266,6 +266,6 @@ function setShapeOpacity(editor: Editor, shapeIDs: readonly TLShapeId[], opacity
 	if (updates.length) editor.updateShapes(updates)
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'Something went wrong'
 }

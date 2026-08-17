@@ -101,7 +101,7 @@ export async function processOfficeConversion(message: OfficeConversionMessage, 
 			sourceFormat: documentRow.sourceFormat,
 		}))
 	} finally {
-		await sandbox.destroy().catch((error: unknown) => {
+		await sandbox.destroy().catch((error) => {
 			console.error(JSON.stringify({
 				documentID: documentRow.id,
 				error: getErrorMessage(error),
@@ -172,6 +172,6 @@ function readPositiveEnvNumber(value: string | undefined, fallback: number) {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'Unknown sandbox cleanup failure'
 }
