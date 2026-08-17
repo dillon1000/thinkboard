@@ -104,8 +104,10 @@ export {
 } from './craft'
 export type {
 	CraftConnectionStatus,
+	CraftDocumentAppendInput,
 	CraftDocumentAppendOutput,
 	CraftDocumentBlockUpdate,
+	CraftDocumentBlocksUpdateInput,
 	CraftDocumentBlocksUpdateOutput,
 	CraftDocumentCandidate,
 	CraftDocumentLink,

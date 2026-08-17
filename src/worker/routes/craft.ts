@@ -6,11 +6,14 @@ import {
 	craftDocumentLinkInputSchema,
 	craftWhiteboardSaveInputSchema,
 	type CraftConnectionStatus,
+	type CraftDocumentAppendInput,
 	type CraftDocumentAppendOutput,
+	type CraftDocumentBlocksUpdateInput,
 	type CraftDocumentBlocksUpdateOutput,
 	type CraftWhiteboardSaveOutput,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import {
 	createCraftDocumentLink,
@@ -321,7 +324,7 @@ export async function appendCraftDocumentForUser(
 	database: Database,
 	boardID: string,
 	userID: string,
-	input: unknown
+	input: CraftDocumentAppendInput
 ): Promise<CraftDocumentAppendOutput> {
 	const parsed = craftDocumentAppendInputSchema.parse(input)
 	const row = await getCraftDocumentLinkRow(database, boardID, parsed.linkID)
@@ -344,7 +347,7 @@ export async function updateCraftDocumentBlocksForUser(
 	database: Database,
 	boardID: string,
 	userID: string,
-	input: unknown
+	input: CraftDocumentBlocksUpdateInput
 ): Promise<CraftDocumentBlocksUpdateOutput> {
 	const parsed = craftDocumentBlocksUpdateInputSchema.parse(input)
 	const row = await getCraftDocumentLinkRow(database, boardID, parsed.linkID)
@@ -358,8 +361,11 @@ export async function updateCraftDocumentBlocksForUser(
 	return { title: row.title, updated: parsed.blocks.length }
 }
 
-function craftErrorResponse(error: unknown, status = 502) {
-	const message = error instanceof Error ? error.message : 'Craft is unavailable right now.'
+function craftErrorResponse<ErrorValue>(error: ErrorValue, status = 502) {
+	const parsed = z.union([z.instanceof(Error), z.string()]).safeParse(error)
+	const message = parsed.success
+		? parsed.data instanceof Error ? parsed.data.message : parsed.data
+		: 'Craft is unavailable right now.'
 	return Response.json({ error: message }, { status })
 }
 
@@ -409,7 +415,7 @@ async function readBoundedJSON(
 		}
 		text += decoder.decode()
 		try {
-			return { value: JSON.parse(text) as unknown }
+			return { value: z.json().parse(JSON.parse(text)) }
 		} catch {
 			return { value: null }
 		}

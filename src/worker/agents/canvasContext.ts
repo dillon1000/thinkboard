@@ -3,7 +3,7 @@ import type {
 	CanvasShape,
 	CanvasShapeRelationship,
 } from '@agentboard/shared'
-import type { ModelMessage, UserModelMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 
 const MAX_CANVAS_CONTEXT_TEXT_LENGTH = 430_000
 const MAX_SELECTED_PDF_TEXT_LENGTH = 400_000
@@ -31,10 +31,11 @@ export function attachCanvasContext(
 	const focusedMessages = hasSelection
 		? removeHistoricalImages(messages, userMessageIndex)
 		: messages
-	const userMessage = focusedMessages[userMessageIndex] as UserModelMessage
-	const content = typeof userMessage.content === 'string'
-		? [{ type: 'text' as const, text: userMessage.content }]
-		: userMessage.content
+	const userMessage = focusedMessages[userMessageIndex]
+	if (userMessage?.role !== 'user') return messages
+	const content = Array.isArray(userMessage.content)
+		? userMessage.content
+		: [{ type: 'text' as const, text: userMessage.content }]
 	const canvasContextText = formatCanvasContextForModel(canvasContext)
 
 	const nextMessages = [...focusedMessages]
@@ -64,7 +65,7 @@ function removeHistoricalImages(messages: ModelMessage[], currentUserMessageInde
 		if (
 			message.role !== 'user' ||
 			messageIndex === currentUserMessageIndex ||
-			typeof message.content === 'string'
+			!Array.isArray(message.content)
 		) return message
 
 		return {

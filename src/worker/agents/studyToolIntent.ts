@@ -22,8 +22,7 @@ export function getRequestedStudyTool(
 	const latestMessage = messages.at(-1)
 	if (latestMessage?.role !== 'user') return undefined
 	const text = latestMessage.parts
-		.filter((part) => part.type === 'text' && typeof part.text === 'string')
-			.map((part) => part.text)
+		.flatMap((part) => part.type === 'text' && part.text ? [part.text] : [])
 			.join('\n')
 
 	if (/\b(?:make|create|generate|build)\b[\s\S]{0,100}\b(?:cited\s+)?study\s+pack\b/i.test(text)) {

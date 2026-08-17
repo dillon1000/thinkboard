@@ -69,6 +69,9 @@ export const craftDocumentBlocksUpdateInputSchema = z.object({
 	}
 })
 
+export type CraftDocumentAppendInput = z.infer<typeof craftDocumentAppendInputSchema>
+export type CraftDocumentBlocksUpdateInput = z.infer<typeof craftDocumentBlocksUpdateInputSchema>
+
 const craftWhiteboardElementSchema = z.object({
 	id: z.string().trim().min(1).max(256),
 	type: z.string().trim().min(1).max(64),

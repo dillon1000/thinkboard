@@ -11,6 +11,7 @@ import {
 import { createDatabase } from '../db/client'
 import { requireSession } from '../auth/session'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 
 const MAX_TITLE_LENGTH = 120
 
@@ -99,10 +100,9 @@ export async function handleBoardRestore(request: IRequest, env: Env) {
 }
 
 async function readTitle(request: Request) {
-	const body: unknown = await request.json().catch(() => null)
-	if (!body || typeof body !== 'object') return null
-	const title = Reflect.get(body, 'title')
-	if (typeof title !== 'string') return null
-	const normalized = title.trim().replace(/\s+/g, ' ')
+	const body = await request.json().catch(() => null)
+	const parsed = z.object({ title: z.string() }).safeParse(body)
+	if (!parsed.success) return null
+	const normalized = parsed.data.title.trim().replace(/\s+/g, ' ')
 	return normalized ? normalized.slice(0, MAX_TITLE_LENGTH) : null
 }
