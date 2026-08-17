@@ -129,5 +129,101 @@
 			"bucket_name": "agentboard-assets",
 			"preview_bucket_name": "agentboard-assets-preview"
 		}
-	]
+	],
+	"env": {
+		"preview": {
+			"name": "agentboard-preview",
+			"routes": [
+				{
+					"pattern": "ts-staging.dillonr.ing",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"AI_MODEL": "openai/gpt-5.6-luna",
+				"LOCK_IN_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+				"FLASHCARD_GRADING_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
+				"CONVERSATION_TITLE_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+				"AI_GATEWAY_ID": "default",
+				"EMBEDDING_MODEL": "@cf/baai/bge-large-en-v1.5",
+				"OCR_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+				"PDF_DAILY_PAGE_QUOTA": "1000",
+				"PDF_STORED_BYTES_QUOTA": "2147483648",
+				"SANDBOX_TRANSPORT": "rpc",
+				"POSTHOG_HOST": "https://us.i.posthog.com",
+				"BETTER_AUTH_URL": "https://ts-staging.dillonr.ing",
+				"OAUTH_PROVIDER_ID": "campus-sso",
+				"OAUTH_PROVIDER_NAME": "Passport",
+				"SPOTIFY_CLIENT_ID": "5e6ae65e68db477da5bcb53474fd9ee3"
+			},
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "BOARD_ROOM",
+						"class_name": "BoardRoom"
+					},
+					{
+						"name": "StudyAgent",
+						"class_name": "StudyAgent"
+					},
+					{
+						"name": "Sandbox",
+						"class_name": "Sandbox"
+					}
+				]
+			},
+			"containers": [
+				{
+					"class_name": "Sandbox",
+					"image": "./Dockerfile.office",
+					"instance_type": "standard-1",
+					"max_instances": 2
+				}
+			],
+			"kv_namespaces": [
+				{
+					"binding": "INTEGRATIONS"
+				}
+			],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "agentboard-preview",
+					"migrations_dir": "./migrations"
+				}
+			],
+			"ai": {
+				"binding": "AI"
+			},
+			"vectorize": [
+				{
+					"binding": "DOCUMENT_VECTORS",
+					"index_name": "agentboard-documents-1024-preview"
+				}
+			],
+			"queues": {
+				"producers": [
+					{
+						"binding": "DOCUMENT_PIPELINE",
+						"queue": "agentboard-preview-document-pipeline"
+					}
+				],
+				"consumers": [
+					{
+						"queue": "agentboard-preview-document-pipeline",
+						"max_batch_size": 1,
+						"max_batch_timeout": 5,
+						"max_retries": 3,
+						"dead_letter_queue": "agentboard-preview-document-pipeline-dlq"
+					}
+				]
+			},
+			"r2_buckets": [
+				{
+					"binding": "TLDRAW_BUCKET",
+					"bucket_name": "agentboard-assets-preview"
+				}
+			]
+		}
+	}
 }
