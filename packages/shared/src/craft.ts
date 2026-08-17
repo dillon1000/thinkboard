@@ -73,6 +73,18 @@ const craftWhiteboardElementSchema = z.object({
 	id: z.string().trim().min(1).max(256),
 	type: z.string().trim().min(1).max(64),
 }).catchall(z.json())
+const craftWhiteboardRecordSchema = z.record(z.string(), z.json())
+const craftJSONObjectSchema = z.looseObject({})
+const craftJSONPrimitiveSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+	z.null(),
+	z.undefined(),
+])
+
+export type CraftWhiteboardRecord = z.infer<typeof craftWhiteboardRecordSchema>
+export type CraftJSONValue = z.infer<ReturnType<typeof z.json>>
 
 export const craftWhiteboardSaveInputSchema = z.object({
 	elementsToAdd: z.array(craftWhiteboardElementSchema).max(MAX_CRAFT_WHITEBOARD_ELEMENTS),
@@ -169,8 +181,8 @@ export type CraftWhiteboardElement =
 	z.infer<typeof craftWhiteboardElementSchema>
 
 export interface CraftWhiteboardImport {
-	appState: Record<string, unknown>
-	assets: Record<string, unknown>
+	appState: CraftWhiteboardRecord
+	assets: CraftWhiteboardRecord
 	connectionOwnerID?: string
 	documentID: string
 	elements: CraftWhiteboardElement[]
@@ -218,9 +230,7 @@ export function parseCraftDocumentCitationHref(href: string | undefined) {
  * Creates a stable revision for Craft's untyped Excalidraw payload. Both the browser and Worker
  * use this value so a save can stop when Craft changed after the last successful sync.
  */
-export async function createCraftWhiteboardRevision(
-	value: unknown
-) {
+export async function createCraftWhiteboardRevision<Value>(value: Value) {
 	const bytes = new TextEncoder().encode(stableJSONStringify(value))
 	const digest = await crypto.subtle.digest('SHA-256', bytes)
 	return [...new Uint8Array(digest)]
@@ -228,12 +238,13 @@ export async function createCraftWhiteboardRevision(
 		.join('')
 }
 
-function stableJSONStringify(value: unknown): string {
-	if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
+function stableJSONStringify<Value>(value: Value): string {
+	const primitive = craftJSONPrimitiveSchema.safeParse(value)
+	if (primitive.success) return JSON.stringify(primitive.data) ?? 'null'
 	if (Array.isArray(value)) {
 		return `[${value.map((item) => stableJSONStringify(item)).join(',')}]`
 	}
-	const record = value as Record<string, unknown>
+	const record = craftJSONObjectSchema.parse(value)
 	return `{${Object.keys(record)
 		.sort()
 		.map((key) => `${JSON.stringify(key)}:${stableJSONStringify(record[key])}`)
