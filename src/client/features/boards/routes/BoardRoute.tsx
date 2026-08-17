@@ -3,7 +3,8 @@ import {
 	FLASHCARD_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
-	type Board,
+	boardSchema,
+	publicConfigSchema,
 	type BoardRole,
 	type PublicConfig,
 } from '@agentboard/shared'
@@ -62,7 +63,7 @@ export function Component() {
 
 	useEffect(() => {
 		if (!resolvedBoardID) return
-		void apiRequest<{ board: Board }>(apiRoutes.board(resolvedBoardID))
+		void apiRequest(apiRoutes.board(resolvedBoardID), undefined, z.object({ board: boardSchema }))
 			.then((response) => {
 				setRole(response.board.role)
 				setTitle(response.board.title)
@@ -71,7 +72,7 @@ export function Component() {
 	}, [resolvedBoardID])
 
 	useEffect(() => {
-		void apiRequest<PublicConfig>(apiRoutes.config)
+		void apiRequest(apiRoutes.config, undefined, publicConfigSchema)
 			.then(setPublicConfig)
 			.catch((error) => {
 				setConfigError(error instanceof Error ? error.message : 'Unable to load canvas configuration')

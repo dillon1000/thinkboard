@@ -2,6 +2,8 @@ import {
 	CRAFT_WHITEBOARD_CONFLICT_MESSAGE,
 	MAX_CRAFT_WHITEBOARD_ELEMENTS,
 	craftAPIRoutes,
+	craftWhiteboardImportSchema,
+	craftWhiteboardSaveOutputSchema,
 	createCraftWhiteboardRevision,
 	type CraftWhiteboardElement,
 	type CraftWhiteboardImport,
@@ -117,8 +119,10 @@ export async function importCraftWhiteboard(
 		return existing
 	}
 
-	const source = await apiRequest<CraftWhiteboardImport>(
-		craftAPIRoutes.boardWhiteboard(boardID, documentID, whiteboardBlockID)
+	const source = await apiRequest(
+		craftAPIRoutes.boardWhiteboard(boardID, documentID, whiteboardBlockID),
+		undefined,
+		craftWhiteboardImportSchema
 	)
 	editor.markHistoryStoppingPoint('import Craft whiteboard')
 	const content = await putNativeCraftWhiteboardContent(editor, source)
@@ -219,7 +223,7 @@ export async function saveCraftWhiteboard(
 	const revision = expectedRevision ?? metadata.remoteRevision
 	if (!revision) throw new Error(CRAFT_WHITEBOARD_CONFLICT_MESSAGE)
 
-	const output = await apiRequest<CraftWhiteboardSaveOutput>(
+	const output = await apiRequest(
 		craftAPIRoutes.boardWhiteboard(
 			boardID,
 			metadata.documentID,
@@ -231,7 +235,8 @@ export async function saveCraftWhiteboard(
 				expectedRevision: revision,
 			}),
 			method: 'PUT',
-		}
+		},
+		craftWhiteboardSaveOutputSchema
 	)
 	updateCraftWhiteboardMetadata(editor, frameID, {
 		...metadata,
@@ -300,13 +305,14 @@ export async function syncCraftWhiteboard(
 	if (!frame || frame.type !== 'frame' || !metadata) {
 		throw new Error('The imported Craft whiteboard is no longer available.')
 	}
-	const source = await apiRequest<CraftWhiteboardImport>(
+	const source = await apiRequest(
 		craftAPIRoutes.boardWhiteboard(
 			boardID,
 			metadata.documentID,
 			metadata.whiteboardBlockID
 		),
-		{ cache: 'no-store' }
+		{ cache: 'no-store' },
+		craftWhiteboardImportSchema
 	)
 	if (resolution === 'craft') {
 		await replaceCraftWhiteboardFrame(editor, frame, metadata, source)

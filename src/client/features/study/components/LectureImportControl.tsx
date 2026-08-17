@@ -91,8 +91,10 @@ function LectureImportDialog({
 
 	async function loadLectures() {
 		try {
-			const response = await apiRequest<{ lectures: LectureSummary[] }>(
-				apiRoutes.boardLectures(boardID)
+			const response = await apiRequest(
+				apiRoutes.boardLectures(boardID),
+				undefined,
+				z.object({ lectures: z.array(lectureSummarySchema) })
 			)
 			setLectures(response.lectures)
 			setError(null)

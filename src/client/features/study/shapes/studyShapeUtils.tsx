@@ -9,6 +9,7 @@ import {
 	PDF_PAGE_SHAPE_TYPE,
 	TEACH_BACK_SHAPE_TYPE,
 	LECTURE_SHAPE_TYPE,
+	activeRecallGradeResponseSchema,
 	apiRoutes,
 	conceptMapShapeProps,
 	flashcardShapeMigrations,
@@ -26,7 +27,7 @@ import {
 	pdfSourceReferenceSchema,
 	teachBackShapeProps,
 	lectureShapeProps,
-	type ActiveRecallGradeResponse,
+	lectureSchema,
 	type Lecture,
 	type PDFPageShapeProps,
 	type PDFSourceReference,
@@ -698,8 +699,10 @@ function LectureComponent({ shape }: { shape: LectureShape }) {
 		let stopped = false
 		const load = async () => {
 			try {
-				const response = await apiRequest<{ lecture: Lecture }>(
-					apiRoutes.boardLecture(chrome.boardID, shape.props.lectureID)
+				const response = await apiRequest(
+					apiRoutes.boardLecture(chrome.boardID, shape.props.lectureID),
+					undefined,
+					z.object({ lecture: lectureSchema })
 				)
 				if (stopped) return
 				setLecture(response.lecture)
@@ -819,7 +822,7 @@ function TeachBackComponent({ shape }: { shape: TeachBackShape }) {
 						selection: [],
 					}
 			if (kind === 'ink') editor.setSelectedShapes(previousSelection)
-			const result = await apiRequest<ActiveRecallGradeResponse>(
+			const result = await apiRequest(
 				apiRoutes.boardActiveRecallGrade(chrome.boardID),
 				{
 					body: JSON.stringify({
@@ -830,7 +833,8 @@ function TeachBackComponent({ shape }: { shape: TeachBackShape }) {
 						topic: shape.props.topic,
 					}),
 					method: 'POST',
-				}
+				},
+				activeRecallGradeResponseSchema
 			)
 			update({
 				feedback: `${result.summary}\n\nNext: ${result.nextStep}`,

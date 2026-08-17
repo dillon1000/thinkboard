@@ -1,6 +1,7 @@
 import {
 	apiRoutes,
 	appRoutes,
+	studyTodayDashboardSchema,
 	type FlashcardAnswerAttempt,
 	type ExamPlan,
 	type StudyTodayDashboard,
@@ -35,7 +36,7 @@ export function Component() {
 
 	async function loadDashboard() {
 		try {
-			setDashboard(await apiRequest<StudyTodayDashboard>(apiRoutes.studyToday))
+			setDashboard(await apiRequest(apiRoutes.studyToday, undefined, studyTodayDashboardSchema))
 			setError(null)
 		} catch (loadError) {
 			setError(loadError instanceof Error ? loadError.message : 'Unable to load today’s session')

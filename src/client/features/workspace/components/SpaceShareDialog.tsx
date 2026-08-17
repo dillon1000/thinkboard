@@ -1,10 +1,13 @@
 import {
 	apiRoutes,
 	appRoutes,
+	boardRoleSchema,
+	spaceInvitationCreatedSchema,
+	spaceInvitationSchema,
+	spaceMemberSchema,
 	type BoardRole,
 	type InvitationRole,
 	type SpaceInvitation,
-	type SpaceInvitationCreated,
 	type SpaceMember,
 } from '@agentboard/shared'
 import {
@@ -16,6 +19,7 @@ import {
 	IconX,
 } from '@tabler/icons-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import './spaceShareDialog.css'
 
@@ -48,14 +52,18 @@ export function SpaceShareDialog({ boardID, onClose }: SpaceShareDialogProps) {
 	async function loadAccess() {
 		setIsLoading(true)
 		try {
-			const access = await apiRequest<{ members: SpaceMember[]; role: BoardRole }>(
-				apiRoutes.boardMembers(boardID)
+			const access = await apiRequest(
+				apiRoutes.boardMembers(boardID),
+				undefined,
+				z.object({ members: z.array(spaceMemberSchema), role: boardRoleSchema })
 			)
 			setMembers(access.members)
 			setRole(access.role)
 			if (access.role === 'owner') {
-				const response = await apiRequest<{ invitations: SpaceInvitation[] }>(
-					apiRoutes.boardInvitations(boardID)
+				const response = await apiRequest(
+					apiRoutes.boardInvitations(boardID),
+					undefined,
+					z.object({ invitations: z.array(spaceInvitationSchema) })
 				)
 				setInvitations(response.invitations)
 			}
@@ -72,12 +80,13 @@ export function SpaceShareDialog({ boardID, onClose }: SpaceShareDialogProps) {
 		setIsCreating(true)
 		setError(null)
 		try {
-			const response = await apiRequest<{ invitation: SpaceInvitationCreated }>(
+			const response = await apiRequest(
 				apiRoutes.boardInvitations(boardID),
 				{
 					method: 'POST',
 					body: JSON.stringify({ email: email.trim() || null, role: inviteRole }),
-				}
+				},
+				z.object({ invitation: spaceInvitationCreatedSchema })
 			)
 			const link = `${window.location.origin}${appRoutes.invitation(response.invitation.token)}`
 			setInvitations((current) => [response.invitation, ...current])

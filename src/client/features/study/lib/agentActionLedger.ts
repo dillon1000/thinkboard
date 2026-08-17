@@ -1,12 +1,13 @@
 import {
 	apiRoutes,
+	agentActionSummarySchema,
+	agentActionUndoPayloadSchema,
 	canvasRecordSchema,
 	type AgentActionCreate,
-	type AgentActionSummary,
-	type AgentActionUndoPayload,
 	type CanvasRecordSnapshot,
 } from '@agentboard/shared'
 import { Editor, type TLRecord } from 'tldraw'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 
 interface AgentActionMetadata {
@@ -53,10 +54,10 @@ export function createAgentAction(
 }
 
 export async function persistAgentAction(boardID: string, action: AgentActionCreate) {
-	return apiRequest<{ action: AgentActionSummary }>(apiRoutes.boardAgentActions(boardID), {
+	return apiRequest(apiRoutes.boardAgentActions(boardID), {
 		body: JSON.stringify(action),
 		method: 'POST',
-	})
+	}, z.object({ action: agentActionSummarySchema }))
 }
 
 export function rollbackUnpersistedAgentAction(editor: Editor, action: AgentActionCreate) {
@@ -67,7 +68,11 @@ export function rollbackUnpersistedAgentAction(editor: Editor, action: AgentActi
 }
 
 export async function listAgentActions(boardID: string) {
-	return apiRequest<{ actions: AgentActionSummary[] }>(apiRoutes.boardAgentActions(boardID))
+	return apiRequest(
+		apiRoutes.boardAgentActions(boardID),
+		undefined,
+		z.object({ actions: z.array(agentActionSummarySchema) })
+	)
 }
 
 /**
@@ -79,9 +84,10 @@ export async function undoAgentAction(
 	boardID: string,
 	actionID: string
 ) {
-	const payload = await apiRequest<AgentActionUndoPayload>(
+	const payload = await apiRequest(
 		apiRoutes.boardAgentActionUndo(boardID, actionID),
-		{ method: 'POST' }
+		{ method: 'POST' },
+		agentActionUndoPayloadSchema
 	)
 	let completed = false
 	try {

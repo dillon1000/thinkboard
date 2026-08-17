@@ -1,5 +1,5 @@
 import type { PublicConfig } from '@agentboard/shared'
-import { apiRoutes, appRoutes } from '@agentboard/shared'
+import { apiRoutes, appRoutes, publicConfigSchema } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
 import {
 	IconArrowRight,
@@ -25,7 +25,7 @@ export function Component() {
 	const posthog = usePostHog()
 
 	useEffect(() => {
-		void apiRequest<PublicConfig>(apiRoutes.config)
+		void apiRequest(apiRoutes.config, undefined, publicConfigSchema)
 			.then(setConfig)
 			.catch(() => setConfigError(true))
 	}, [])

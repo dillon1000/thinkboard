@@ -69,5 +69,41 @@ export interface SpaceMember {
 	userID: string
 }
 
+export const courseSchema: z.ZodType<Course> = z.object({
+	color: z.string(),
+	createdAt: z.string(),
+	editable: z.boolean(),
+	examDate: z.string().nullable(),
+	id: z.string(),
+	title: z.string(),
+	updatedAt: z.string(),
+})
+
+export const spaceInvitationSchema = z.object({
+	createdAt: z.string(),
+	email: z.string().nullable(),
+	expiresAt: z.string(),
+	id: z.string(),
+	role: invitationRoleSchema,
+})
+
+export const spaceInvitationCreatedSchema: z.ZodType<SpaceInvitationCreated> =
+	spaceInvitationSchema.extend({ token: z.string() })
+
+export const spaceInvitationPreviewSchema: z.ZodType<SpaceInvitationPreview> = z.object({
+	boardTitle: z.string(),
+	email: z.string().nullable(),
+	expiresAt: z.string(),
+	role: invitationRoleSchema,
+})
+
+export const spaceMemberSchema: z.ZodType<SpaceMember> = z.object({
+	createdAt: z.string(),
+	email: z.string(),
+	name: z.string(),
+	role: boardRoleSchema,
+	userID: z.string(),
+})
+
 export type BoardRole = z.infer<typeof boardRoleSchema>
 export type InvitationRole = z.infer<typeof invitationRoleSchema>

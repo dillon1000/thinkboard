@@ -1,5 +1,7 @@
 import {
 	apiRoutes,
+	flashcardAnswerAttemptResultSchema,
+	flashcardAnswerCompletionResultSchema,
 	type FlashcardAnswerAttemptRequest,
 	type FlashcardAnswerAttemptResult,
 	type FlashcardAnswerCompletion,
@@ -46,14 +48,15 @@ export function FlashcardAnswerPanel({
 		setIsChecking(true)
 		setError(null)
 		try {
-			const checked = await apiRequest<FlashcardAnswerAttemptResult>(
+			const checked = await apiRequest(
 				apiRoutes.studyAnswerAttempts,
 				{
 					body: JSON.stringify(action === 'answer'
 						? { action, answer, source }
 						: { action, source }),
 					method: 'POST',
-				}
+				},
+				flashcardAnswerAttemptResultSchema
 			)
 			const initialVerdict = checked.attempt.finalVerdict
 			posthog?.capture('flashcard_answer_checked', {
@@ -84,12 +87,13 @@ export function FlashcardAnswerPanel({
 		try {
 			const completion: FlashcardAnswerCompletion = { finalVerdict }
 			if (result.isDue) completion.rating = rating
-			const completed = await apiRequest<FlashcardAnswerCompletionResult>(
+			const completed = await apiRequest(
 				apiRoutes.studyAnswerAttemptComplete(result.attempt.id),
 				{
 					body: JSON.stringify(completion),
 					method: 'POST',
-				}
+				},
+				flashcardAnswerCompletionResultSchema
 			)
 			const captureProperties = {
 				final_verdict: finalVerdict,

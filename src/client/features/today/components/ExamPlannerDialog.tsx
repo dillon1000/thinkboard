@@ -1,5 +1,9 @@
 import {
 	apiRoutes,
+	boardSchema,
+	courseSchema,
+	documentSummarySchema,
+	examPlanSchema,
 	type Board,
 	type Course,
 	type DocumentSummary,
@@ -7,6 +11,7 @@ import {
 } from '@agentboard/shared'
 import { IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 
 interface ExamPlannerDialogProps {
@@ -39,8 +44,8 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 	async function loadSources() {
 		try {
 			const [boardResponse, courseResponse] = await Promise.all([
-				apiRequest<{ boards: Board[] }>(apiRoutes.boards),
-				apiRequest<{ courses: Course[] }>(apiRoutes.courses),
+				apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
+				apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
 			])
 			setBoards(boardResponse.boards)
 			setCourses(courseResponse.courses)
@@ -71,8 +76,10 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 		if (!examDate && course?.examDate) setExamDate(course.examDate)
 		if (documents[selectedBoard.id]) return
 		try {
-			const response = await apiRequest<{ documents: DocumentSummary[] }>(
-				apiRoutes.boardDocuments(selectedBoard.id)
+			const response = await apiRequest(
+				apiRoutes.boardDocuments(selectedBoard.id),
+				undefined,
+				z.object({ documents: z.array(documentSummarySchema) })
 			)
 			setDocuments((current) => ({ ...current, [selectedBoard.id]: response.documents }))
 		} catch (loadError) {
@@ -92,7 +99,7 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 		setIsSaving(true)
 		setError(null)
 		try {
-			const response = await apiRequest<{ exam: ExamPlan }>(apiRoutes.examPlans, {
+			const response = await apiRequest(apiRoutes.examPlans, {
 				body: JSON.stringify({
 					boardIDs,
 					documentIDs,
@@ -101,7 +108,7 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 					title,
 				}),
 				method: 'POST',
-			})
+			}, z.object({ exam: examPlanSchema }))
 			onCreated(response.exam)
 		} catch (saveError) {
 			setError(saveError instanceof Error ? saveError.message : 'Unable to create exam plan')

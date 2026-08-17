@@ -1,4 +1,4 @@
-import { apiRoutes, type Board, type Course } from '@agentboard/shared'
+import { apiRoutes, courseSchema, type Board, type Course } from '@agentboard/shared'
 import {
 	IconBook2,
 	IconCheck,
@@ -8,6 +8,7 @@ import {
 	IconX,
 } from '@tabler/icons-react'
 import { useState, type CSSProperties, type FormEvent } from 'react'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import './coursePlanner.css'
 
@@ -37,14 +38,14 @@ export function CoursePlanner({
 		if (!title.trim()) return
 		setIsSaving(true)
 		try {
-			const response = await apiRequest<{ course: Course }>(apiRoutes.courses, {
+			const response = await apiRequest(apiRoutes.courses, {
 				method: 'POST',
 				body: JSON.stringify({
 					color,
 					examDate: examDate || null,
 					title,
 				}),
-			})
+			}, z.object({ course: courseSchema }))
 			onCoursesChange([response.course, ...courses])
 			setTitle('')
 			setExamDate('')
@@ -148,10 +149,10 @@ function CourseCard({
 	async function updateCourse(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		try {
-			const response = await apiRequest<{ course: Course }>(apiRoutes.course(course.id), {
+			const response = await apiRequest(apiRoutes.course(course.id), {
 				method: 'PATCH',
 				body: JSON.stringify({ color, examDate: examDate || null, title }),
-			})
+			}, z.object({ course: courseSchema }))
 			onCoursesChange(courses.map((item) => item.id === course.id ? response.course : item))
 			setIsEditing(false)
 		} catch (error) {

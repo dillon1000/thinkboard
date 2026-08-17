@@ -1,6 +1,7 @@
 import {
 	apiRoutes,
 	appRoutes,
+	globalSearchResultSchema,
 	type GlobalSearchResult,
 } from '@agentboard/shared'
 import {
@@ -26,6 +27,7 @@ import {
 	type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import {
 	filterGlobalSearchResults,
@@ -83,7 +85,11 @@ export function GlobalSearch() {
 		setActiveIndex(0)
 		setError(null)
 		const timer = window.setTimeout(() => {
-			void apiRequest<{ results: GlobalSearchResult[] }>(apiRoutes.globalSearch(query))
+			void apiRequest(
+				apiRoutes.globalSearch(query),
+				undefined,
+				z.object({ results: z.array(globalSearchResultSchema) })
+			)
 				.then((response) => {
 					if (requestID.current !== currentRequestID) return
 					setResults(response.results)

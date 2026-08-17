@@ -1,5 +1,6 @@
 import {
 	apiRoutes,
+	activeRecallGradeResponseSchema,
 	type ActiveRecallGradeResponse,
 	type ActiveRecallRegion,
 } from '@agentboard/shared'
@@ -74,7 +75,7 @@ export function HandwritingCheckDialog({
 			if (!canvasContext.selectionImage) {
 				throw new Error('Select the handwritten steps that you want to check')
 			}
-			const grade = await apiRequest<ActiveRecallGradeResponse>(
+			const grade = await apiRequest(
 				apiRoutes.boardActiveRecallGrade(boardID),
 				{
 					body: JSON.stringify({
@@ -85,7 +86,8 @@ export function HandwritingCheckDialog({
 						topic: 'Check this worked solution step by step',
 					}),
 					method: 'POST',
-				}
+				},
+				activeRecallGradeResponseSchema
 			)
 			setResult(grade)
 		} catch (checkError) {

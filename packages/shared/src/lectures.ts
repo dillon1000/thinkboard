@@ -30,5 +30,10 @@ export interface Lecture extends LectureSummary {
 	transcript: string
 }
 
+export const lectureSchema: z.ZodType<Lecture> = lectureSummarySchema.extend({
+	segments: z.array(lectureSegmentSchema),
+	transcript: z.string(),
+})
+
 export type LectureSegment = z.infer<typeof lectureSegmentSchema>
 export type LectureStatus = z.infer<typeof lectureStatusSchema>

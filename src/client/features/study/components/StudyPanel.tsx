@@ -7,6 +7,7 @@ import {
 	getStudyContextLectureSources,
 	parseCraftDocumentCitationHref,
 	studyReasoningEffortSchema,
+	studyConversationSchema,
 	type ConceptMapProposal,
 	type AgentMemoryProposal,
 	type CanvasPlanInput,
@@ -65,6 +66,7 @@ import {
 	getToolName,
 	isToolUIPart,
 	lastAssistantMessageIsCompleteWithToolCalls,
+	validateUIMessages,
 	type FileUIPart,
 	type UIMessage,
 } from 'ai'
@@ -165,7 +167,11 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 
 	useEffect(() => {
 		let cancelled = false
-		void apiRequest<{ conversations: StudyConversation[] }>(apiRoutes.studyConversations(boardID))
+		void apiRequest(
+			apiRoutes.studyConversations(boardID),
+			undefined,
+			z.object({ conversations: z.array(studyConversationSchema) })
+		)
 			.then((response) => {
 				if (cancelled) return
 				setConversations(response.conversations)
@@ -257,9 +263,10 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		setIsCreatingConversation(true)
 		setConversationError(null)
 		try {
-			const response = await apiRequest<{ conversation: StudyConversation }>(
+			const response = await apiRequest(
 				apiRoutes.studyConversations(boardID),
-				{ method: 'POST' }
+				{ method: 'POST' },
+				z.object({ conversation: studyConversationSchema })
 			)
 			setConversations((current) => [response.conversation, ...(current ?? [])])
 			setCurrentConversationID(response.conversation.id)
@@ -305,13 +312,15 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		setConversations((current) => [optimistic, ...(current ?? []).filter(({ id }) => id !== optimistic.id)])
 
 		const request = shouldSetTitle
-			? apiRequest<{ conversation: StudyConversation }>(
+			? apiRequest(
 				apiRoutes.studyConversationTitle(boardID, conversationID),
-				{ body: JSON.stringify({ message }), method: 'POST' }
+				{ body: JSON.stringify({ message }), method: 'POST' },
+				z.object({ conversation: studyConversationSchema })
 			)
-			: apiRequest<{ conversation: StudyConversation }>(
+			: apiRequest(
 				apiRoutes.studyConversation(boardID, conversationID),
-				{ body: JSON.stringify({}), method: 'PATCH' }
+				{ body: JSON.stringify({}), method: 'PATCH' },
+				z.object({ conversation: studyConversationSchema })
 			)
 
 		void request.then((response) => {
@@ -438,10 +447,13 @@ function StudyConversationSession({
 
 	useEffect(() => {
 		let cancelled = false
-		void apiRequest<{ messages: StudyUIMessage[] }>(
-			apiRoutes.studyConversationMessages(boardID, conversation.id)
-		).then(({ messages }) => {
-			if (!cancelled) setInitialMessages(messages)
+		void apiRequest(
+			apiRoutes.studyConversationMessages(boardID, conversation.id),
+			undefined,
+			z.object({ messages: z.array(z.json()) })
+		).then(async ({ messages }) => {
+			const validated = await validateUIMessages<StudyUIMessage>({ messages })
+			if (!cancelled) setInitialMessages(validated)
 		}).catch((error) => {
 			if (!cancelled) setLoadError(getErrorMessage(error))
 		})

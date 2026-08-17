@@ -2,6 +2,7 @@ import {
 	SPOTIFY_SCOPES,
 	apiRoutes,
 	appRoutes,
+	publicConfigSchema,
 	type PublicConfig,
 } from '@agentboard/shared'
 import {
@@ -57,7 +58,7 @@ export function Component() {
 		setIsLoading(true)
 		try {
 			const [publicConfig, accountsResult] = await Promise.all([
-				apiRequest<PublicConfig>(apiRoutes.config),
+				apiRequest(apiRoutes.config, undefined, publicConfigSchema),
 				authClient.listAccounts(),
 			])
 			if (accountsResult.error) {

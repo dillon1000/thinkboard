@@ -1,5 +1,5 @@
 import type { Board, Course, DueFlashcard } from '@agentboard/shared'
-import { apiRoutes, appRoutes } from '@agentboard/shared'
+import { apiRoutes, appRoutes, boardSchema, courseSchema, dueFlashcardSchema } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
 import {
 	IconArchive,
@@ -22,6 +22,7 @@ import {
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Streamdown } from 'streamdown'
+import { z } from 'zod'
 import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
@@ -91,9 +92,9 @@ export function Component() {
 		setIsLoading(true)
 		try {
 			const [activeResponse, archivedResponse, courseResponse] = await Promise.all([
-				apiRequest<{ boards: Board[] }>(apiRoutes.boards),
-				apiRequest<{ boards: Board[] }>(apiRoutes.archivedBoards),
-				apiRequest<{ courses: Course[] }>(apiRoutes.courses),
+				apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
+				apiRequest(apiRoutes.archivedBoards, undefined, z.object({ boards: z.array(boardSchema) })),
+				apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
 			])
 			setBoards(activeResponse.boards)
 			setArchivedBoards(archivedResponse.boards)
@@ -107,7 +108,11 @@ export function Component() {
 
 	async function loadDueReviews() {
 		try {
-			const response = await apiRequest<{ reviews: DueFlashcard[] }>(apiRoutes.studyReviews)
+			const response = await apiRequest(
+				apiRoutes.studyReviews,
+				undefined,
+				z.object({ reviews: z.array(dueFlashcardSchema) })
+			)
 			setDueReviews(response.reviews)
 		} catch (loadError) {
 			setError(loadError instanceof Error ? loadError.message : 'Unable to load today’s reviews')
@@ -136,10 +141,10 @@ export function Component() {
 		setIsCreating(true)
 		setError(null)
 		try {
-			const response = await apiRequest<{ board: Board }>(apiRoutes.boards, {
+			const response = await apiRequest(apiRoutes.boards, {
 				method: 'POST',
 				body: JSON.stringify({ title }),
-			})
+			}, z.object({ board: boardSchema }))
 			posthog?.capture('board_created')
 			navigate(appRoutes.board(response.board.id))
 		} catch (createError) {
@@ -159,10 +164,10 @@ export function Component() {
 		const title = window.prompt('Rename space', board.title)?.trim()
 		if (!title || title === board.title) return
 		try {
-			await apiRequest<{ ok: true }>(apiRoutes.board(board.id), {
+			await apiRequest(apiRoutes.board(board.id), {
 				method: 'PATCH',
 				body: JSON.stringify({ title }),
-			})
+			}, z.object({ ok: z.literal(true) }))
 			setBoards((current) => current.map((item) => item.id === board.id ? { ...item, title } : item))
 		} catch (renameError) {
 			setError(renameError instanceof Error ? renameError.message : 'Unable to rename space')
@@ -186,9 +191,9 @@ export function Component() {
 	async function handleRestore(board: Board) {
 		setError(null)
 		try {
-			const response = await apiRequest<{ board: Board }>(apiRoutes.boardRestore(board.id), {
+			const response = await apiRequest(apiRoutes.boardRestore(board.id), {
 				method: 'POST',
-			})
+			}, z.object({ board: boardSchema }))
 			posthog?.capture('board_restored')
 			setArchivedBoards((current) => current.filter(({ id }) => id !== board.id))
 			setBoards((current) => [response.board, ...current])
