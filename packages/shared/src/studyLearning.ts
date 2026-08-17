@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { examPlanSchema, type ExamPlan } from './exams'
+import { examPlanSchema } from './exams'
 
 export const studyModeSchema = z.enum(['direct', 'socratic'])
 export const flashcardReviewRatingSchema = z.enum(['again', 'hard', 'good', 'easy'])
@@ -129,101 +129,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
 	},
 }
 
-export interface DueFlashcard {
-	alternateAnswers: string[]
-	back: string
-	boardID: string
-	boardTitle: string
-	dueAt: string
-	front: string
-	reviewCount: number
-	reviewID: string
-	shapeID: string
-}
-
-export interface FlashcardAnswerAttempt {
-	alternateAnswers: string[]
-	boardID: string
-	boardTitle: string
-	completedAt: string | null
-	createdAt: string
-	feedback: string | null
-	finalVerdict: FlashcardFinalVerdict | null
-	front: string
-	gradingMethod: FlashcardGradingMethod
-	id: string
-	matchedAnswer: string | null
-	model: string | null
-	originalVerdict: FlashcardAnswerVerdict
-	primaryAnswer: string
-	rating: FlashcardReviewRating | null
-	reviewID: string | null
-	shapeID: string
-	submittedAnswer: string | null
-}
-
-export interface FlashcardAnswerAttemptResult {
-	attempt: FlashcardAnswerAttempt
-	isDue: boolean
-}
-
-export interface FlashcardAnswerCompletionResult {
-	attempt: FlashcardAnswerAttempt
-	schedule: {
-		easeFactor: number
-		intervalDays: number
-		nextReviewAt: string
-		repetition: number
-	} | null
-}
-
-export interface StudyMistake {
-	boardID: string
-	concept: string
-	createdAt: string
-	description: string
-	id: string
-	patternKey: string
-	shapeIDs: string[]
-	title: string
-}
-
-export interface StudyTodayPattern {
-	boardID: string
-	concept: string
-	count: number
-	description: string
-	lastSeenAt: string
-	patternKey: string
-	title: string
-}
-
-export interface StudyTodayTrendDay {
-	day: string
-	remembered: number
-	reviewed: number
-}
-
-export interface StudyTodayDashboard {
-	answerAttempts: FlashcardAnswerAttempt[]
-	dueReviews: DueFlashcard[]
-	exams: ExamPlan[]
-	patterns: StudyTodayPattern[]
-	streakDays: number
-	trend: StudyTodayTrendDay[]
-}
-
-export interface AgentMemory {
-	content: string
-	count: number
-	kind: AgentMemoryKind
-	lastSavedAt: string
-	memoryKey: string
-	title: string
-	topic: string
-}
-
-export const dueFlashcardSchema: z.ZodType<DueFlashcard> = z.object({
+export const dueFlashcardSchema = z.object({
 	alternateAnswers: z.array(z.string()),
 	back: z.string(),
 	boardID: z.string(),
@@ -235,7 +141,7 @@ export const dueFlashcardSchema: z.ZodType<DueFlashcard> = z.object({
 	shapeID: z.string(),
 })
 
-export const flashcardAnswerAttemptSchema: z.ZodType<FlashcardAnswerAttempt> = z.object({
+export const flashcardAnswerAttemptSchema = z.object({
 	alternateAnswers: z.array(z.string()),
 	boardID: z.string(),
 	boardTitle: z.string(),
@@ -256,23 +162,22 @@ export const flashcardAnswerAttemptSchema: z.ZodType<FlashcardAnswerAttempt> = z
 	submittedAnswer: z.string().nullable(),
 })
 
-export const flashcardAnswerAttemptResultSchema: z.ZodType<FlashcardAnswerAttemptResult> = z.object({
+export const flashcardAnswerAttemptResultSchema = z.object({
 	attempt: flashcardAnswerAttemptSchema,
 	isDue: z.boolean(),
 })
 
-export const flashcardAnswerCompletionResultSchema: z.ZodType<FlashcardAnswerCompletionResult> =
-	z.object({
-		attempt: flashcardAnswerAttemptSchema,
-		schedule: z.object({
-			easeFactor: z.number(),
-			intervalDays: z.number(),
-			nextReviewAt: z.string(),
-			repetition: z.number(),
-		}).nullable(),
-	})
+export const flashcardAnswerCompletionResultSchema = z.object({
+	attempt: flashcardAnswerAttemptSchema,
+	schedule: z.object({
+		easeFactor: z.number(),
+		intervalDays: z.number(),
+		nextReviewAt: z.string(),
+		repetition: z.number(),
+	}).nullable(),
+})
 
-export const studyMistakeSchema: z.ZodType<StudyMistake> = z.object({
+export const studyMistakeSchema = z.object({
 	boardID: z.string(),
 	concept: z.string(),
 	createdAt: z.string(),
@@ -283,7 +188,7 @@ export const studyMistakeSchema: z.ZodType<StudyMistake> = z.object({
 	title: z.string(),
 })
 
-export const studyTodayPatternSchema: z.ZodType<StudyTodayPattern> = z.object({
+export const studyTodayPatternSchema = z.object({
 	boardID: z.string(),
 	concept: z.string(),
 	count: z.number().int().nonnegative(),
@@ -293,13 +198,13 @@ export const studyTodayPatternSchema: z.ZodType<StudyTodayPattern> = z.object({
 	title: z.string(),
 })
 
-export const studyTodayTrendDaySchema: z.ZodType<StudyTodayTrendDay> = z.object({
+export const studyTodayTrendDaySchema = z.object({
 	day: z.string(),
 	remembered: z.number().int().nonnegative(),
 	reviewed: z.number().int().nonnegative(),
 })
 
-export const agentMemorySchema: z.ZodType<AgentMemory> = z.object({
+export const agentMemorySchema = z.object({
 	content: z.string(),
 	count: z.number().int().nonnegative(),
 	kind: agentMemoryKindSchema,
@@ -309,7 +214,7 @@ export const agentMemorySchema: z.ZodType<AgentMemory> = z.object({
 	topic: z.string(),
 })
 
-export const studyTodayDashboardSchema: z.ZodType<StudyTodayDashboard> = z.object({
+export const studyTodayDashboardSchema = z.object({
 	answerAttempts: z.array(flashcardAnswerAttemptSchema),
 	dueReviews: z.array(dueFlashcardSchema),
 	exams: z.array(examPlanSchema),
@@ -319,6 +224,7 @@ export const studyTodayDashboardSchema: z.ZodType<StudyTodayDashboard> = z.objec
 })
 
 export type AgentMemoryKind = z.infer<typeof agentMemoryKindSchema>
+export type AgentMemory = z.infer<typeof agentMemorySchema>
 export type AgentMemoryProposal = z.infer<typeof agentMemoryProposalSchema>
 export type AgentPersonality = z.infer<typeof agentPersonalitySchema>
 export type AgentProfile = z.infer<typeof agentProfileSchema>
@@ -329,6 +235,14 @@ export type FlashcardAnswerCompletion = z.infer<typeof flashcardAnswerCompletion
 export type FlashcardAnswerVerdict = z.infer<typeof flashcardAnswerVerdictSchema>
 export type FlashcardFinalVerdict = z.infer<typeof flashcardFinalVerdictSchema>
 export type FlashcardGradingMethod = z.infer<typeof flashcardGradingMethodSchema>
+export type DueFlashcard = z.infer<typeof dueFlashcardSchema>
+export type FlashcardAnswerAttempt = z.infer<typeof flashcardAnswerAttemptSchema>
+export type FlashcardAnswerAttemptResult = z.infer<typeof flashcardAnswerAttemptResultSchema>
+export type FlashcardAnswerCompletionResult = z.infer<typeof flashcardAnswerCompletionResultSchema>
 export type ManualAgentMemory = z.infer<typeof manualAgentMemorySchema>
 export type MistakeProposal = z.infer<typeof mistakeProposalSchema>
+export type StudyMistake = z.infer<typeof studyMistakeSchema>
 export type StudyMode = z.infer<typeof studyModeSchema>
+export type StudyTodayDashboard = z.infer<typeof studyTodayDashboardSchema>
+export type StudyTodayPattern = z.infer<typeof studyTodayPatternSchema>
+export type StudyTodayTrendDay = z.infer<typeof studyTodayTrendDaySchema>

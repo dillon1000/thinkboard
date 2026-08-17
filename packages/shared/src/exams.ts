@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { practiceSetProposalSchema, type PracticeSetProposal } from './studyShapes'
+import { practiceSetProposalSchema } from './studyShapes'
 
 export const studyArtifactKindSchema = z.enum([
 	'concept-map',
@@ -54,57 +54,14 @@ export const examPlanInputSchema = z.object({
 	}
 })
 
-export interface ExamDeckStatus {
-	boardID: string
-	boardTitle: string
-	dueCards: number
-	totalCards: number
-}
-
-export interface ExamPattern {
-	boardID: string
-	concept: string
-	count: number
-	description: string
-	patternKey: string
-	title: string
-}
-
-export interface ExamStudyTask {
-	boardID: string | null
-	date: string
-	kind: 'mistake' | 'practice' | 'review'
-	label: string
-}
-
-export interface ExamPlan {
-	boardIDs: string[]
-	createdAt: string
-	decks: ExamDeckStatus[]
-	documentIDs: string[]
-	examDate: string
-	id: string
-	patterns: ExamPattern[]
-	practiceReady: boolean
-	primaryBoardID: string
-	tasks: ExamStudyTask[]
-	title: string
-	updatedAt: string
-}
-
-export interface ExamPracticeSet {
-	boardID: string
-	proposal: PracticeSetProposal
-}
-
-export const examDeckStatusSchema: z.ZodType<ExamDeckStatus> = z.object({
+export const examDeckStatusSchema = z.object({
 	boardID: z.string(),
 	boardTitle: z.string(),
 	dueCards: z.number().int().nonnegative(),
 	totalCards: z.number().int().nonnegative(),
 })
 
-export const examPatternSchema: z.ZodType<ExamPattern> = z.object({
+export const examPatternSchema = z.object({
 	boardID: z.string(),
 	concept: z.string(),
 	count: z.number().int().nonnegative(),
@@ -113,14 +70,14 @@ export const examPatternSchema: z.ZodType<ExamPattern> = z.object({
 	title: z.string(),
 })
 
-export const examStudyTaskSchema: z.ZodType<ExamStudyTask> = z.object({
+export const examStudyTaskSchema = z.object({
 	boardID: z.string().nullable(),
 	date: z.string(),
 	kind: z.enum(['mistake', 'practice', 'review']),
 	label: z.string(),
 })
 
-export const examPlanSchema: z.ZodType<ExamPlan> = z.object({
+export const examPlanSchema = z.object({
 	boardIDs: z.array(z.string()),
 	createdAt: z.string(),
 	decks: z.array(examDeckStatusSchema),
@@ -135,11 +92,16 @@ export const examPlanSchema: z.ZodType<ExamPlan> = z.object({
 	updatedAt: z.string(),
 })
 
-export const examPracticeSetSchema: z.ZodType<ExamPracticeSet> = z.object({
+export const examPracticeSetSchema = z.object({
 	boardID: z.string(),
 	proposal: practiceSetProposalSchema,
 })
 
 export type ExamPlanInput = z.infer<typeof examPlanInputSchema>
+export type ExamDeckStatus = z.infer<typeof examDeckStatusSchema>
+export type ExamPattern = z.infer<typeof examPatternSchema>
+export type ExamStudyTask = z.infer<typeof examStudyTaskSchema>
+export type ExamPlan = z.infer<typeof examPlanSchema>
+export type ExamPracticeSet = z.infer<typeof examPracticeSetSchema>
 export type StudyArtifactInput = z.infer<typeof studyArtifactInputSchema>
 export type StudyArtifactKind = z.infer<typeof studyArtifactKindSchema>
