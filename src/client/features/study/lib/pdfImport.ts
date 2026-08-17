@@ -428,7 +428,7 @@ export function locatePDFDocument(editor: Editor, documentID: string) {
 }
 
 export function findMatchingPDFDocument(
-	documents: readonly DocumentSummary[],
+	documents: readonly Pick<DocumentSummary, 'byteSize' | 'id' | 'pageCount' | 'title'>[],
 	file: Pick<File, 'name' | 'size'>,
 	pageCount: number
 ) {
@@ -441,7 +441,7 @@ export function findMatchingPDFDocument(
 
 export function placePDFPages(
 	editor: Editor,
-	document: DocumentSummary,
+	document: Pick<DocumentSummary, 'id' | 'title'>,
 	pages: readonly ImportedPDFPage[]
 ) {
 	const renderVersion = Date.now()
@@ -579,13 +579,13 @@ function rectanglesIntersect(
 	return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
 
-export async function canvasToBlob(canvas: HTMLCanvasElement) {
+export async function canvasToBlob(canvas: Pick<HTMLCanvasElement, 'toBlob'>) {
 	const image = await encodeCanvas(canvas, 'image/webp', WEBP_QUALITY)
 	if (image.size <= MAX_PDF_PAGE_IMAGE_BYTES) return image
 	return encodeCanvas(canvas, 'image/webp', WEBP_FALLBACK_QUALITY)
 }
 
-function encodeCanvas(canvas: HTMLCanvasElement, type: string, quality?: number) {
+function encodeCanvas(canvas: Pick<HTMLCanvasElement, 'toBlob'>, type: string, quality?: number) {
 	return new Promise<Blob>((resolve, reject) => {
 		canvas.toBlob(
 			(blob) => blob ? resolve(blob) : reject(new Error('Unable to render a PDF page image.')),
