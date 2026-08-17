@@ -58,15 +58,14 @@ export async function captureCanvasContext(
 ): Promise<CanvasContext> {
 	const pdfTextSelection = capturePDFTextSelection()
 	if (!editor) {
-		const context: CanvasContext = {
+		return {
 			boardID,
 			documentClock: await getDocumentClock(boardID),
 			relatedShapes: [],
 			relationships: [],
 			selection: [],
+			...(pdfTextSelection && { pdfTextSelection }),
 		}
-		if (pdfTextSelection) context.pdfTextSelection = pdfTextSelection
-		return context
 	}
 
 	const viewportBounds = editor.getViewportPageBounds()
@@ -88,7 +87,7 @@ export async function captureCanvasContext(
 			: renderSelectionImage(editor, selectedShapes.map(({ id }) => id)),
 	])
 
-	const context: CanvasContext = {
+	return {
 		boardID,
 		documentClock,
 		pageID: editor.getCurrentPageId(),
@@ -104,10 +103,9 @@ export async function captureCanvasContext(
 		relatedShapes: relatedShapes.map((shape) => extractShape(editor, shape)),
 		relationships,
 		selectionImage,
+		...(pdfPageRegions.length > 0 && { pdfPageRegions }),
+		...(pdfTextSelection && { pdfTextSelection }),
 	}
-	if (pdfPageRegions.length) context.pdfPageRegions = pdfPageRegions
-	if (pdfTextSelection) context.pdfTextSelection = pdfTextSelection
-	return context
 }
 
 export function isSinglePDFFrameSelection(
@@ -173,9 +171,10 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 		: undefined
 	const style = extractShapeStyle(shape)
 
-	const extracted: CanvasShape = {
+	return {
 		id: shape.id,
 		type: shape.type,
+		...(isShapeId(shape.parentId) && { parentShapeID: shape.parentId }),
 		childShapeIDs: editor.getSortedChildIdsForParent(shape.id).slice(0, MAX_RELATED_SHAPES),
 		index: shape.index,
 		isLocked: shape.isLocked,
@@ -185,14 +184,9 @@ function extractShape(editor: Editor, shape: TLShape): CanvasShape {
 		w: bounds?.w ?? 0,
 		h: bounds?.h ?? 0,
 		rotation: editor.getShapePageTransform(shape)?.rotation() ?? shape.rotation,
+		...(style && { style }),
+		...((plainText || html) && { text: { plainText, ...(html && { html }) } }),
 	}
-	if (isShapeId(shape.parentId)) extracted.parentShapeID = shape.parentId
-	if (style) extracted.style = style
-	if (plainText || html) {
-		extracted.text = { plainText }
-		if (html) extracted.text.html = html
-	}
-	return extracted
 }
 
 function extractShapeStyle(shape: TLShape) {
@@ -240,17 +234,16 @@ function extractRelationships(editor: Editor, shapes: readonly TLShape[]) {
 		.slice(0, MAX_RELATIONSHIPS)
 		.map((binding): CanvasShapeRelationship => {
 			const props = bindingPropsSchema.safeParse(binding.props)
-			const relationship: CanvasShapeRelationship = {
+			return {
 				bindingID: binding.id,
 				type: binding.type,
 				connectorShapeID: binding.fromId,
 				targetShapeID: binding.toId,
+				...(props.success && props.data.terminal && { terminal: props.data.terminal }),
+				...(props.success && props.data.normalizedAnchor && {
+					anchor: props.data.normalizedAnchor,
+				}),
 			}
-			if (props.success && props.data.terminal) relationship.terminal = props.data.terminal
-			if (props.success && props.data.normalizedAnchor) {
-				relationship.anchor = props.data.normalizedAnchor
-			}
-			return relationship
 		})
 }
 

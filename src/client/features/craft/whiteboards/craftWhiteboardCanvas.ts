@@ -75,18 +75,7 @@ interface CraftWhiteboardFrameMetadata {
 	whiteboardBlockID: string
 }
 
-interface CraftShapeByType {
-	arrow: TLArrowShape
-	draw: TLDrawShape
-	embed: TLEmbedShape
-	frame: TLFrameShape
-	geo: TLGeoShape
-	image: TLImageShape
-	line: TLLineShape
-	note: TLNoteShape
-	text: TLTextShape
-	video: TLVideoShape
-}
+type CraftShapeByType = { arrow: TLArrowShape; draw: TLDrawShape; embed: TLEmbedShape; frame: TLFrameShape; geo: TLGeoShape; image: TLImageShape; line: TLLineShape; note: TLNoteShape; text: TLTextShape; video: TLVideoShape }
 
 export interface ImportedCraftWhiteboard extends CraftWhiteboardFrameMetadata {
 	frameID: TLShapeId
@@ -584,16 +573,12 @@ function serializeShape(
 	return mergeCraftElementIdentity(editor, shape, generated, metadata)
 }
 
-/**
- * Restores tldraw's concrete built-in shape type after checking its registry discriminator. The
- * generic TLShape union does not retain that mapping for application-augmented shape registries.
- */
 function getCraftShape<Type extends keyof CraftShapeByType>(
 	shape: TLShape,
 	type: Type
 ): CraftShapeByType[Type] {
 	if (shape.type !== type) throw new Error(`Expected a ${type} shape.`)
-	// SAFETY: The runtime discriminator above matches the built-in tldraw shape registry mapping.
+	// SAFETY: The runtime discriminator matches the requested built-in tldraw shape.
 	return shape as CraftShapeByType[Type]
 }
 
