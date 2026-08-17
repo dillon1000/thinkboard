@@ -9,6 +9,7 @@ import {
 	MATH_SHAPE_TYPE,
 	apiRoutes,
 	agentMemoryProposalSchema,
+	canvasPlanInputSchema,
 	conceptMapProposalSchema,
 	equationProposalSchema,
 	flashcardProposalSchema,
@@ -96,7 +97,11 @@ export function applyProposal(
 	}
 
 	if (toolName === 'composeCanvas') {
-		return applyCanvasPlan(editor, input, { anchor, documentClock, select })
+		return applyCanvasPlan(editor, canvasPlanInputSchema.parse(input), {
+			anchor,
+			documentClock,
+			select,
+		})
 	}
 
 	if (toolName === 'addReviewNote') {

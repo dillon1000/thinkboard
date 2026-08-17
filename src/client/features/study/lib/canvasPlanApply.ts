@@ -3,6 +3,7 @@ import {
 	type CanvasConnector,
 	type CanvasObjectReference,
 	type CanvasPlan,
+	type CanvasPlanInput,
 	type CanvasPlanElement,
 	type CanvasShapeStyle,
 	type CanvasSize,
@@ -11,12 +12,12 @@ import {
 import {
 	Box,
 	createShapeId,
+	getIndexAbove,
+	isShapeId,
 	toRichText,
 	type Editor,
-	type IndexKey,
 	type TLArrowShape,
 	type TLBaseShape,
-	type TLDefaultColorStyle,
 	type TLFrameShape,
 	type TLGeoShape,
 	type TLLineShape,
@@ -48,8 +49,6 @@ export interface CanvasPlanEffect {
 
 const NOTE_SIZE = 200
 const MATH_SHAPE_TYPE = 'agentboard-math' as const
-const POINT_INDEX_CHARACTERS = '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-
 type CanvasMathShape = TLBaseShape<typeof MATH_SHAPE_TYPE, {
 	w: number
 	h: number
@@ -58,13 +57,30 @@ type CanvasMathShape = TLBaseShape<typeof MATH_SHAPE_TYPE, {
 	schemaVersion: number
 }>
 
+interface CanvasShapeCreateBase {
+	id: TLShapeId
+	x: number
+	y: number
+	rotation: number
+	isLocked: boolean
+	opacity?: number
+	meta: ReturnType<typeof createPlanMetadata>
+}
+
+interface CanvasShapeUpdateBase {
+	id: TLShapeId
+	rotation?: number
+	isLocked?: boolean
+	opacity?: number
+}
+
 /**
  * Applies one validated plan as one undoable editor operation. A failed mutation returns the
  * editor to its history mark, including deletions and changes to existing shapes.
  */
 export function applyCanvasPlan(
 	editor: Editor,
-	input: unknown,
+	input: CanvasPlanInput,
 	{ anchor, documentClock, select }: ApplyCanvasPlanOptions = {}
 ): CanvasPlanEffect {
 	const plan = normalizeCanvasPlanInput(input)
@@ -168,15 +184,15 @@ function createElementShape(
 ): TLShapePartial {
 	if (!box) throw new Error(`Missing layout for canvas element: ${element.id}`)
 	const id = getPlanShapeID(planShapeIDs, element.id)
-	const base = {
+	const base: CanvasShapeCreateBase = {
 		id,
 		x: box.x,
 		y: box.y,
 		rotation: degreesToRadians(element.rotation),
 		isLocked: element.locked,
-		...(element.style?.opacity !== undefined ? { opacity: element.style.opacity } : {}),
 		meta: createPlanMetadata(plan, element.id),
 	}
+	if (element.style?.opacity !== undefined) base.opacity = element.style.opacity
 
 	if (element.kind === 'geo') {
 		const shape: TLShapePartial<TLGeoShape> = {
@@ -199,8 +215,8 @@ function createElementShape(
 			props: {
 				w: box.w,
 				richText: toRichText(element.text),
-				autoSize: element.autoSize && element.size?.width !== 'fill' &&
-					typeof element.size?.width !== 'number',
+				autoSize: element.autoSize &&
+					(element.size?.width === undefined || element.size.width === 'auto'),
 				...textStyleProps(element.style),
 			},
 		}
@@ -233,17 +249,16 @@ function createElementShape(
 		return shape
 	}
 	if (element.kind === 'frame') {
+		const props: Partial<TLFrameShape['props']> = {
+			w: box.w,
+			h: box.h,
+			name: element.name,
+		}
+		if (element.style?.color) props.color = element.style.color
 		const shape: TLShapePartial<TLFrameShape> = {
 			...base,
 			type: 'frame',
-			props: {
-				w: box.w,
-				h: box.h,
-				name: element.name,
-				...(element.style?.color
-					? { color: element.style.color as TLDefaultColorStyle }
-					: {}),
-			},
+			props,
 		}
 		return shape
 	}
@@ -315,9 +330,6 @@ function createConnector(
 		x: start.x,
 		y: start.y,
 		meta: createPlanMetadata(plan, connector.id),
-		...(connector.style?.opacity !== undefined
-			? { opacity: connector.style.opacity }
-			: {}),
 		props: {
 			start: { x: 0, y: 0 },
 			end: { x: end.x - start.x, y: end.y - start.y },
@@ -329,6 +341,7 @@ function createConnector(
 			...arrowStyleProps(connector.style),
 		},
 	}
+	if (connector.style?.opacity !== undefined) shape.opacity = connector.style.opacity
 	editor.createShape(shape)
 
 	if (from.shapeIDs.length === 1) {
@@ -485,76 +498,77 @@ function applyShapeEdit(
 	edit: CanvasPlan['edits'][number],
 	_finalBoxes: ReadonlyMap<string, CanvasLayoutBox>
 ) {
-	const common = {
+	const common: CanvasShapeUpdateBase = {
 		id: shape.id,
-		...(edit.rotation !== undefined ? { rotation: degreesToRadians(edit.rotation) } : {}),
-		...(edit.locked !== undefined ? { isLocked: edit.locked } : {}),
-		...(edit.style?.opacity !== undefined ? { opacity: edit.style.opacity } : {}),
 	}
+	if (edit.rotation !== undefined) common.rotation = degreesToRadians(edit.rotation)
+	if (edit.locked !== undefined) common.isLocked = edit.locked
+	if (edit.style?.opacity !== undefined) common.opacity = edit.style.opacity
 	if (shape.type === 'geo') {
-		const current = shape as TLGeoShape
-		const size = resolveEditedSize(editor, current, edit.size)
+		const size = resolveEditedSize(editor, shape, edit.size)
+		const props = geoStyleProps(edit.style)
+		if (size) {
+			props.w = size.w
+			props.h = size.h
+		}
+		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLGeoShape>({
 			...common,
 			type: 'geo',
-			props: {
-				...(size ? { w: size.w, h: size.h } : {}),
-				...(edit.text !== undefined ? { richText: toRichText(edit.text) } : {}),
-				...geoStyleProps(edit.style),
-			},
+			props,
 		})
 		return
 	}
 	if (shape.type === 'text') {
-		const current = shape as TLTextShape
-		const size = resolveEditedSize(editor, current, edit.size)
+		const size = resolveEditedSize(editor, shape, edit.size)
+		const props = textStyleProps(edit.style)
+		if (size) {
+			props.w = size.w
+			props.autoSize = false
+		}
+		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLTextShape>({
 			...common,
 			type: 'text',
-			props: {
-				...(size ? { w: size.w, autoSize: false } : {}),
-				...(edit.text !== undefined ? { richText: toRichText(edit.text) } : {}),
-				...textStyleProps(edit.style),
-			},
+			props,
 		})
 		return
 	}
 	if (shape.type === 'note') {
-		const current = shape as TLNoteShape
-		const size = resolveEditedSize(editor, current, edit.size)
+		const size = resolveEditedSize(editor, shape, edit.size)
+		const props = noteStyleProps(edit.style)
+		if (size) props.scale = Math.max(size.w, size.h) / NOTE_SIZE
+		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLNoteShape>({
 			...common,
 			type: 'note',
-			props: {
-				...(size ? { scale: Math.max(size.w, size.h) / NOTE_SIZE } : {}),
-				...(edit.text !== undefined ? { richText: toRichText(edit.text) } : {}),
-				...noteStyleProps(edit.style),
-			},
+			props,
 		})
 		return
 	}
 	if (shape.type === 'frame') {
-		const current = shape as TLFrameShape
-		const size = resolveEditedSize(editor, current, edit.size)
+		const size = resolveEditedSize(editor, shape, edit.size)
+		const props: Partial<TLFrameShape['props']> = {}
+		if (size) {
+			props.w = size.w
+			props.h = size.h
+		}
+		if (edit.text !== undefined) props.name = edit.text
+		if (edit.style?.color) props.color = edit.style.color
 		editor.updateShape<TLFrameShape>({
 			...common,
 			type: 'frame',
-			props: {
-				...(size ? { w: size.w, h: size.h } : {}),
-				...(edit.text !== undefined ? { name: edit.text } : {}),
-				...(edit.style?.color ? { color: edit.style.color as TLDefaultColorStyle } : {}),
-			},
+			props,
 		})
 		return
 	}
 	if (shape.type === 'arrow') {
+		const props = arrowStyleProps(edit.style)
+		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLArrowShape>({
 			...common,
 			type: 'arrow',
-			props: {
-				...(edit.text !== undefined ? { richText: toRichText(edit.text) } : {}),
-				...arrowStyleProps(edit.style),
-			},
+			props,
 		})
 		return
 	}
@@ -567,15 +581,17 @@ function applyShapeEdit(
 		return
 	}
 	if (shape.type === MATH_SHAPE_TYPE) {
-		const current = shape as CanvasMathShape
-		const size = resolveEditedSize(editor, current, edit.size)
+		const size = resolveEditedSize(editor, shape, edit.size)
+		const props: Partial<CanvasMathShape['props']> = {}
+		if (size) {
+			props.w = size.w
+			props.h = size.h
+		}
+		if (edit.latex !== undefined) props.latex = normalizeEquationLatex(edit.latex)
 		editor.updateShape<CanvasMathShape>({
 			...common,
 			type: MATH_SHAPE_TYPE,
-			props: {
-				...(size ? { w: size.w, h: size.h } : {}),
-				...(edit.latex !== undefined ? { latex: normalizeEquationLatex(edit.latex) } : {}),
-			},
+			props,
 		})
 		return
 	}
@@ -618,7 +634,8 @@ function validatePlanTargets(
 			...(relativeTo ? [relativeTo] : []),
 		]),
 	]) {
-		if (reference.type === 'shape' && !editor.getShape(reference.id as TLShapeId)) {
+		if (reference.type === 'shape' &&
+			(!isShapeId(reference.id) || !editor.getShape(reference.id))) {
 			throw new Error(`Canvas plan references a missing shape: ${reference.id}`)
 		}
 	}
@@ -675,7 +692,8 @@ function resolveEditorReference(
 			: undefined
 	}
 	if (reference.type === 'shape') {
-		const id = reference.id as TLShapeId
+		if (!isShapeId(reference.id)) return undefined
+		const id = reference.id
 		const shape = editor.getShape(id)
 		const bounds = shape ? editor.getShapePageBounds(shape) : undefined
 		return bounds
@@ -715,7 +733,8 @@ function resolveReferenceShapeIDs(
 		return id && editor.getShape(id) ? [id] : []
 	}
 	if (reference.type === 'shape') {
-		const id = reference.id as TLShapeId
+		if (!isShapeId(reference.id)) return []
+		const id = reference.id
 		return editor.getShape(id) ? [id] : []
 	}
 	if (reference.type === 'selection') return [...editor.getSelectedShapeIds()]
@@ -767,8 +786,8 @@ function resolveEditedSize(
 	if (!size) return undefined
 	const bounds = editor.getShapePageBounds(shape)
 	if (!bounds) return undefined
-	const requestedWidth = typeof size.width === 'number' ? size.width : bounds.w
-	const requestedHeight = typeof size.height === 'number' ? size.height : bounds.h
+	const requestedWidth = size.width === 'auto' || size.width === 'fill' ? bounds.w : size.width
+	const requestedHeight = size.height === 'auto' || size.height === 'fill' ? bounds.h : size.height
 	let w = Math.max(size.minWidth ?? 1, Math.min(size.maxWidth ?? 10_000, requestedWidth))
 	let h = Math.max(size.minHeight ?? 1, Math.min(size.maxHeight ?? 10_000, requestedHeight))
 	if (size.aspectRatio) {
@@ -779,55 +798,55 @@ function resolveEditedSize(
 }
 
 function geoStyleProps(style: CanvasShapeStyle | undefined): Partial<TLGeoShape['props']> {
-	return {
-		...(style?.color ? { color: style.color as TLDefaultColorStyle } : {}),
-		...(style?.labelColor ? { labelColor: style.labelColor as TLDefaultColorStyle } : {}),
-		...(style?.fill ? { fill: style.fill } : {}),
-		...(style?.dash ? { dash: style.dash } : {}),
-		...(style?.size ? { size: style.size } : {}),
-		...(style?.font ? { font: style.font } : {}),
-		...(style?.textAlign ? { align: style.textAlign } : {}),
-		...(style?.verticalAlign ? { verticalAlign: style.verticalAlign } : {}),
-	}
+	const props: Partial<TLGeoShape['props']> = {}
+	if (style?.color) props.color = style.color
+	if (style?.labelColor) props.labelColor = style.labelColor
+	if (style?.fill) props.fill = style.fill
+	if (style?.dash) props.dash = style.dash
+	if (style?.size) props.size = style.size
+	if (style?.font) props.font = style.font
+	if (style?.textAlign) props.align = style.textAlign
+	if (style?.verticalAlign) props.verticalAlign = style.verticalAlign
+	return props
 }
 
 function textStyleProps(style: CanvasShapeStyle | undefined): Partial<TLTextShape['props']> {
-	return {
-		...(style?.color ? { color: style.color as TLDefaultColorStyle } : {}),
-		...(style?.size ? { size: style.size } : {}),
-		...(style?.font ? { font: style.font } : {}),
-		...(style?.textAlign ? { textAlign: style.textAlign } : {}),
-	}
+	const props: Partial<TLTextShape['props']> = {}
+	if (style?.color) props.color = style.color
+	if (style?.size) props.size = style.size
+	if (style?.font) props.font = style.font
+	if (style?.textAlign) props.textAlign = style.textAlign
+	return props
 }
 
 function noteStyleProps(style: CanvasShapeStyle | undefined): Partial<TLNoteShape['props']> {
-	return {
-		...(style?.color ? { color: style.color as TLDefaultColorStyle } : {}),
-		...(style?.labelColor ? { labelColor: style.labelColor as TLDefaultColorStyle } : {}),
-		...(style?.size ? { size: style.size } : {}),
-		...(style?.font ? { font: style.font } : {}),
-		...(style?.textAlign ? { align: style.textAlign } : {}),
-		...(style?.verticalAlign ? { verticalAlign: style.verticalAlign } : {}),
-	}
+	const props: Partial<TLNoteShape['props']> = {}
+	if (style?.color) props.color = style.color
+	if (style?.labelColor) props.labelColor = style.labelColor
+	if (style?.size) props.size = style.size
+	if (style?.font) props.font = style.font
+	if (style?.textAlign) props.align = style.textAlign
+	if (style?.verticalAlign) props.verticalAlign = style.verticalAlign
+	return props
 }
 
 function lineStyleProps(style: CanvasShapeStyle | undefined): Partial<TLLineShape['props']> {
-	return {
-		...(style?.color ? { color: style.color as TLDefaultColorStyle } : {}),
-		...(style?.dash ? { dash: style.dash } : {}),
-		...(style?.size ? { size: style.size } : {}),
-	}
+	const props: Partial<TLLineShape['props']> = {}
+	if (style?.color) props.color = style.color
+	if (style?.dash) props.dash = style.dash
+	if (style?.size) props.size = style.size
+	return props
 }
 
 function arrowStyleProps(style: CanvasShapeStyle | undefined): Partial<TLArrowShape['props']> {
-	return {
-		...(style?.color ? { color: style.color as TLDefaultColorStyle } : {}),
-		...(style?.labelColor ? { labelColor: style.labelColor as TLDefaultColorStyle } : {}),
-		...(style?.fill ? { fill: style.fill } : {}),
-		...(style?.dash ? { dash: style.dash } : {}),
-		...(style?.size ? { size: style.size } : {}),
-		...(style?.font ? { font: style.font } : {}),
-	}
+	const props: Partial<TLArrowShape['props']> = {}
+	if (style?.color) props.color = style.color
+	if (style?.labelColor) props.labelColor = style.labelColor
+	if (style?.fill) props.fill = style.fill
+	if (style?.dash) props.dash = style.dash
+	if (style?.size) props.size = style.size
+	if (style?.font) props.font = style.font
+	return props
 }
 
 function attachmentPoint(
@@ -872,9 +891,9 @@ function getPointBounds(points: Array<{ x: number; y: number }>) {
 }
 
 function pointIndex(index: number) {
-	const suffix = POINT_INDEX_CHARACTERS[index]
-	if (!suffix) throw new Error('Line has too many points')
-	return `a${suffix}` as IndexKey
+	let pointID = getIndexAbove()
+	for (let current = 0; current < index; current += 1) pointID = getIndexAbove(pointID)
+	return pointID
 }
 
 function createPlanMetadata(plan: CanvasPlan, elementID: string) {

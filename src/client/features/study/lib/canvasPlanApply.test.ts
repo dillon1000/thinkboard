@@ -1,4 +1,6 @@
+import { canvasPlanInputSchema } from '@agentboard/shared'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import {
 	type Editor,
 	type TLShape,
@@ -10,7 +12,7 @@ import { applyCanvasPlan } from './canvasPlanApply'
 describe('applyCanvasPlan', () => {
 	it('creates native shapes and bound connectors without duplicating a retried plan', () => {
 		const harness = createEditorHarness()
-		const plan = {
+		const plan = canvasPlanInputSchema.parse({
 			version: 1,
 			planID: 'native-map',
 			elements: [
@@ -43,7 +45,7 @@ describe('applyCanvasPlan', () => {
 				to: { type: 'element', id: 'target' },
 				label: 'leads to',
 			}],
-		}
+		})
 
 		const first = applyCanvasPlan(harness.editor, plan)
 		const second = applyCanvasPlan(harness.editor, plan)
@@ -61,12 +63,15 @@ describe('applyCanvasPlan', () => {
 	it('rejects stale plans before it changes the editor', () => {
 		const harness = createEditorHarness()
 
-		expect(() => applyCanvasPlan(harness.editor, {
+		const stalePlan = canvasPlanInputSchema.parse({
 			version: 1,
 			planID: 'stale-plan',
 			baseDocumentClock: 10,
 			elements: [{ id: 'note', kind: 'note', text: 'Old context' }],
-		}, { documentClock: 11 })).toThrow('The space changed')
+		})
+		expect(() => applyCanvasPlan(harness.editor, stalePlan, {
+			documentClock: 11,
+		})).toThrow('The space changed')
 		expect(harness.shapes).toHaveLength(0)
 	})
 })
@@ -75,34 +80,48 @@ interface MockShape {
 	id: TLShapeId
 	index: string
 	isLocked: boolean
-	meta: Record<string, unknown>
+	meta: object
 	opacity: number
 	parentId: string
-	props: Record<string, unknown>
+	props: object
 	rotation: number
 	type: string
 	x: number
 	y: number
 }
 
+type MockBinding = Parameters<Editor['createBinding']>[0]
+
+interface CanvasPlanEditorFixture {
+	run(operation: () => void): void
+}
+
+const mockDimensionsSchema = z.object({
+	h: z.number().optional(),
+	scale: z.number().optional(),
+	w: z.number().optional(),
+})
+
 function createEditorHarness() {
 	const shapes: MockShape[] = []
-	const bindings: unknown[] = []
+	const bindings: MockBinding[] = []
 	let selected: TLShapeId[] = []
 
 	const getShape = (value: TLShapeId | TLShape) => {
-		const id = typeof value === 'string' ? value : value.id
+		const parsedShape = z.object({ id: z.string() }).safeParse(value)
+		const id = parsedShape.success ? parsedShape.data.id : z.string().parse(value)
 		return shapes.find((shape) => shape.id === id)
 	}
 	const getBounds = (value: TLShapeId | TLShape) => {
 		const shape = getShape(value)
 		if (!shape) return undefined
-		const scale = typeof shape.props.scale === 'number' ? shape.props.scale : 1
-		const w = typeof shape.props.w === 'number'
-			? shape.props.w
+		const dimensions = mockDimensionsSchema.parse(shape.props)
+		const scale = dimensions.scale ?? 1
+		const w = dimensions.w !== undefined
+			? dimensions.w
 			: shape.type === 'note' ? 200 * scale : 100
-		const h = typeof shape.props.h === 'number'
-			? shape.props.h
+		const h = dimensions.h !== undefined
+			? dimensions.h
 			: shape.type === 'note' ? 200 * scale : shape.type === 'text' ? 40 : 100
 		return { x: shape.x, y: shape.y, w, h }
 	}
@@ -118,7 +137,7 @@ function createEditorHarness() {
 			return
 		}
 		shapes.push({
-			id: partial.id as TLShapeId,
+			id: partial.id,
 			type: partial.type,
 			x: partial.x ?? 0,
 			y: partial.y ?? 0,
@@ -132,11 +151,11 @@ function createEditorHarness() {
 		})
 	}
 
-	const editor = {
+	const editorFixture = {
 		bailToMark: () => undefined,
 		bringForward: () => undefined,
 		bringToFront: () => undefined,
-		createBinding: (binding: unknown) => {
+		createBinding: (binding: MockBinding) => {
 			bindings.push(binding)
 		},
 		createShape: putShape,
@@ -169,7 +188,10 @@ function createEditorHarness() {
 			for (const partial of partials) putShape(partial)
 		},
 		zoomToBounds: () => undefined,
-	} as unknown as Editor
+	}
+	const editorCandidate: CanvasPlanEditorFixture = editorFixture
+	// SAFETY: The fixture implements every Editor method that applyCanvasPlan calls.
+	const editor = editorCandidate as Editor
 
 	return {
 		editor,
