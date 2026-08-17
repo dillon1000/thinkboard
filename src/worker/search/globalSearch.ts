@@ -3,6 +3,7 @@ import {
 	type GlobalSearchResult,
 } from '@agentboard/shared'
 import { and, eq, inArray, isNull, like, or } from 'drizzle-orm'
+import { z } from 'zod'
 import { getDocumentAIConfig } from '../config'
 import type { Database } from '../db/client'
 import { board, boardMember, studyArtifact } from '../db/schema'
@@ -10,6 +11,32 @@ import type { AIRunner } from '../observability/posthogAI'
 
 const MAX_RESULTS = 20
 const MAX_FILTER_SPACES = 100
+const vectorMatchSchema = z.object({
+	metadata: z.looseObject({}),
+	score: z.number().optional(),
+})
+const vectorMetadataBaseSchema = z.object({
+	boardId: z.string(),
+	chunkText: z.string(),
+})
+const lectureMetadataSchema = vectorMetadataBaseSchema.extend({
+	lectureId: z.string(),
+	lectureTitle: z.string(),
+	resultKind: z.literal('lecture'),
+	startSecond: z.number(),
+})
+const shapeMetadataSchema = vectorMetadataBaseSchema.extend({
+	artifactKind: studyArtifactKindSchema,
+	resultKind: z.literal('shape'),
+	shapeId: z.string(),
+	title: z.string(),
+})
+const documentMetadataSchema = vectorMetadataBaseSchema.extend({
+	documentId: z.string(),
+	documentTitle: z.string(),
+	pageNumber: z.number(),
+})
+const embeddingResponseSchema = z.object({ data: z.array(z.array(z.number())) })
 
 /**
  * Searches all active spaces that the signed-in user can access. The Vectorize filter narrows
@@ -56,6 +83,7 @@ async function searchVectors(
 	boardTitles: ReadonlyMap<string, string>
 ) {
 	const config = getDocumentAIConfig(env)
+	// SAFETY: Env.AI implements this JSON-returning subset through Cloudflare's model overloads.
 	const response = await (env.AI as AIRunner).run(
 		config.embeddingModel,
 		{ text: [query.slice(0, 8_000)] },
@@ -123,72 +151,60 @@ export function parseGlobalSearchMatches(
 	boardTitles: ReadonlyMap<string, string>
 ): GlobalSearchResult[] {
 	return value.matches.flatMap((match): GlobalSearchResult[] => {
-		const metadata = match.metadata
-		if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return []
-		const boardID = readString(metadata, 'boardId')
-		const boardTitle = boardTitles.get(boardID)
-		const text = readString(metadata, 'chunkText')
-		if (!boardTitle || !text) return []
-		const score = typeof match.score === 'number' ? match.score : 0
-		if (readString(metadata, 'resultKind') === 'lecture') {
-			const lectureID = readString(metadata, 'lectureId')
-			const title = readString(metadata, 'lectureTitle')
-			const startSecond = Reflect.get(metadata, 'startSecond')
-			if (!lectureID || !title || typeof startSecond !== 'number') return []
+		const parsed = vectorMatchSchema.safeParse(match)
+		if (!parsed.success) return []
+		const score = parsed.data.score ?? 0
+		const lecture = lectureMetadataSchema.safeParse(parsed.data.metadata)
+		if (lecture.success) {
+			const boardTitle = boardTitles.get(lecture.data.boardId)
+			if (!boardTitle) return []
 			return [{
-				boardID,
+				boardID: lecture.data.boardId,
 				boardTitle,
 				kind: 'lecture-segment',
-				lectureID,
+				lectureID: lecture.data.lectureId,
 				score,
-				snippet: text.slice(0, 260),
-				startSecond,
-				title,
+				snippet: lecture.data.chunkText.slice(0, 260),
+				startSecond: lecture.data.startSecond,
+				title: lecture.data.lectureTitle,
 			}]
 		}
-		if (readString(metadata, 'resultKind') === 'shape') {
-			const kind = studyArtifactKindSchema.safeParse(readString(metadata, 'artifactKind'))
-			const shapeID = readString(metadata, 'shapeId')
-			const title = readString(metadata, 'title')
-			if (!kind.success || !shapeID || !title) return []
+		const shape = shapeMetadataSchema.safeParse(parsed.data.metadata)
+		if (shape.success) {
+			const boardTitle = boardTitles.get(shape.data.boardId)
+			if (!boardTitle) return []
 			return [{
-				artifactKind: kind.data,
-				boardID,
+				artifactKind: shape.data.artifactKind,
+				boardID: shape.data.boardId,
 				boardTitle,
 				kind: 'shape',
 				score,
-				shapeID,
-				snippet: text.slice(0, 260),
-				title,
+				shapeID: shape.data.shapeId,
+				snippet: shape.data.chunkText.slice(0, 260),
+				title: shape.data.title,
 			}]
 		}
-		const documentID = readString(metadata, 'documentId')
-		const title = readString(metadata, 'documentTitle')
-		const pageNumber = Reflect.get(metadata, 'pageNumber')
-		if (!documentID || !title || typeof pageNumber !== 'number') return []
+		const document = documentMetadataSchema.safeParse(parsed.data.metadata)
+		if (!document.success) return []
+		const boardTitle = boardTitles.get(document.data.boardId)
+		if (!boardTitle) return []
 		return [{
-			boardID,
+			boardID: document.data.boardId,
 			boardTitle,
-			documentID,
+			documentID: document.data.documentId,
 			kind: 'document-page',
-			pageNumber,
+			pageNumber: document.data.pageNumber,
 			score,
-			snippet: text.slice(0, 260),
-			title,
+			snippet: document.data.chunkText.slice(0, 260),
+			title: document.data.documentTitle,
 		}]
 	})
 }
 
-function readString(value: object, key: string) {
-	const field = Reflect.get(value, key)
-	return typeof field === 'string' ? field : ''
-}
-
-function readFirstEmbedding(value: unknown) {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
-	const first = Array.isArray(data) ? data[0] : null
-	if (!Array.isArray(first) || !first.every((entry) => typeof entry === 'number')) {
+function readFirstEmbedding<Value>(value: Value) {
+	const parsed = embeddingResponseSchema.safeParse(value)
+	const first = parsed.success ? parsed.data.data[0] : undefined
+	if (!first) {
 		throw new Error('Embedding response did not contain a vector')
 	}
 	return first
