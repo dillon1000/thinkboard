@@ -5,11 +5,6 @@ import { studyConversation } from './schema'
 
 const DEFAULT_CONVERSATION_TITLE = 'New conversation'
 
-interface StudyConversationUpdate {
-	title?: string
-	updatedAt: Date
-}
-
 export async function listStudyConversations(
 	database: Database,
 	boardID: string,
@@ -63,11 +58,9 @@ export async function updateStudyConversation(
 	conversationID: string,
 	title?: string
 ): Promise<StudyConversation | null> {
-	const values: StudyConversationUpdate = { updatedAt: new Date() }
-	if (title) values.title = title
 	const [row] = await database
 		.update(studyConversation)
-		.set(values)
+		.set({ updatedAt: new Date(), ...(title && { title }) })
 		.where(
 			and(
 				eq(studyConversation.id, conversationID),

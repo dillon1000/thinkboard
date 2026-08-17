@@ -110,17 +110,16 @@ export async function resolveAgentActionUndo(
 }
 
 function toSummary(row: typeof agentAction.$inferSelect): AgentActionSummary {
-	const summary: AgentActionSummary = {
+	return {
 		createdAt: row.createdAt.toISOString(),
 		id: row.id,
 		recordIDs: parseStringArray(row.recordIDs),
 		status: row.status,
 		toolName: row.toolName,
+		...(row.baseDocumentClock !== null && { baseDocumentClock: row.baseDocumentClock }),
+		...(row.planID && { planID: row.planID }),
+		...(row.undoneAt && { undoneAt: row.undoneAt.toISOString() }),
 	}
-	if (row.baseDocumentClock !== null) summary.baseDocumentClock = row.baseDocumentClock
-	if (row.planID) summary.planID = row.planID
-	if (row.undoneAt) summary.undoneAt = row.undoneAt.toISOString()
-	return summary
 }
 
 function parseRecords(value: string) {

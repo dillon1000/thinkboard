@@ -45,12 +45,6 @@ const AIErrorSchema = z.looseObject({
 })
 const flashcardReviewInputSchema = z.object({ rating: flashcardReviewRatingSchema })
 
-interface AIErrorLog {
-	code?: number | string
-	message: string
-	name: string
-}
-
 export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 	const authorized = await authorizeBoard(request, env)
 	if ('response' in authorized) return authorized.response
@@ -146,12 +140,11 @@ export async function handleFlashcardAnswerAttempt(
 
 function getAIErrorLog(error: Error) {
 	const parsed = AIErrorSchema.safeParse(error)
-	const log: AIErrorLog = {
+	return {
 		message: error.message.slice(0, 500),
 		name: error.name,
+		...(parsed.success && parsed.data.code !== undefined && { code: parsed.data.code }),
 	}
-	if (parsed.success && parsed.data.code !== undefined) log.code = parsed.data.code
-	return log
 }
 
 export async function handleFlashcardAnswerAttemptComplete(request: IRequest, env: Env) {
