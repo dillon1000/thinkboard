@@ -1,4 +1,3 @@
-import { isNumber } from '@agentboard/shared'
 import type {
 	CanvasLayout,
 	CanvasObjectReference,
@@ -163,8 +162,8 @@ export function resolveCanvasPlanLayout(
 export function measureCanvasPlanElement(
 	element: CanvasPlanElement
 ): Pick<CanvasLayoutBox, 'w' | 'h'> {
-	const requestedWidth = isNumber(element.size?.width) ? element.size.width : undefined
-	const requestedHeight = isNumber(element.size?.height) ? element.size.height : undefined
+	const requestedWidth = typeof element.size?.width === 'number' ? element.size.width : undefined
+	const requestedHeight = typeof element.size?.height === 'number' ? element.size.height : undefined
 	let intrinsic: Pick<CanvasLayoutBox, 'w' | 'h'>
 
 	if (element.kind === 'geo') {
@@ -197,7 +196,7 @@ export function measureCanvasPlanElement(
 }
 
 export function spacingValue(spacing: CanvasSpacing) {
-	return isNumber(spacing) ? spacing : CANVAS_SPACING[spacing]
+	return typeof spacing === 'number' ? spacing : CANVAS_SPACING[spacing]
 }
 
 export function resolveCanvasPlacement(
@@ -383,10 +382,10 @@ function fitFrameContainers(plan: CanvasPlan, boxes: Map<string, CanvasLayoutBox
 		const padding = spacingValue(frameElement.padding)
 		const requiredWidth = childBounds.w + padding * 2
 		const requiredHeight = childBounds.h + padding * 2
-		const width = isNumber(frameElement.size?.width)
+		const width = typeof frameElement.size?.width === 'number'
 			? Math.max(frameBox.w, requiredWidth)
 			: requiredWidth
-		const height = isNumber(frameElement.size?.height)
+		const height = typeof frameElement.size?.height === 'number'
 			? Math.max(frameBox.h, requiredHeight)
 			: requiredHeight
 		boxes.set(container.frame, {

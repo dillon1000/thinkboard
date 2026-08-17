@@ -1,4 +1,3 @@
-import { isNumber, isString } from '@agentboard/shared'
 import {
 	CONCEPT_MAP_SHAPE_TYPE,
 	FLASHCARD_SHAPE_TYPE,
@@ -169,17 +168,17 @@ function firstLine(value: string) {
 
 function readString(value: object, key: string) {
 	const field = Reflect.get(value, key)
-	return isString(field) ? field : ''
+	return typeof field === 'string' ? field : ''
 }
 
 function readNumber(value: object, key: string) {
 	const field = Reflect.get(value, key)
-	return isNumber(field) ? field : 0
+	return typeof field === 'number' ? field : 0
 }
 
 function readStringArray(value: object, key: string) {
 	const field = Reflect.get(value, key)
 	return Array.isArray(field)
-		? field.filter((entry): entry is string => isString(entry))
+		? field.filter((entry): entry is string => typeof entry === 'string')
 		: []
 }

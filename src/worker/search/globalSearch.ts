@@ -1,4 +1,3 @@
-import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	studyArtifactKindSchema,
 	type GlobalSearchResult,
@@ -125,17 +124,17 @@ export function parseGlobalSearchMatches(
 ): GlobalSearchResult[] {
 	return value.matches.flatMap((match): GlobalSearchResult[] => {
 		const metadata = match.metadata
-		if (!metadata || !hasObjectType(metadata) || Array.isArray(metadata)) return []
+		if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return []
 		const boardID = readString(metadata, 'boardId')
 		const boardTitle = boardTitles.get(boardID)
 		const text = readString(metadata, 'chunkText')
 		if (!boardTitle || !text) return []
-		const score = isNumber(match.score) ? match.score : 0
+		const score = typeof match.score === 'number' ? match.score : 0
 		if (readString(metadata, 'resultKind') === 'lecture') {
 			const lectureID = readString(metadata, 'lectureId')
 			const title = readString(metadata, 'lectureTitle')
 			const startSecond = Reflect.get(metadata, 'startSecond')
-			if (!lectureID || !title || !isNumber(startSecond)) return []
+			if (!lectureID || !title || typeof startSecond !== 'number') return []
 			return [{
 				boardID,
 				boardTitle,
@@ -166,7 +165,7 @@ export function parseGlobalSearchMatches(
 		const documentID = readString(metadata, 'documentId')
 		const title = readString(metadata, 'documentTitle')
 		const pageNumber = Reflect.get(metadata, 'pageNumber')
-		if (!documentID || !title || !isNumber(pageNumber)) return []
+		if (!documentID || !title || typeof pageNumber !== 'number') return []
 		return [{
 			boardID,
 			boardTitle,
@@ -182,14 +181,14 @@ export function parseGlobalSearchMatches(
 
 function readString(value: object, key: string) {
 	const field = Reflect.get(value, key)
-	return isString(field) ? field : ''
+	return typeof field === 'string' ? field : ''
 }
 
 function readFirstEmbedding(value: unknown) {
-	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
+	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
 	const data = Reflect.get(value, 'data')
 	const first = Array.isArray(data) ? data[0] : null
-	if (!Array.isArray(first) || !first.every((entry) => isNumber(entry))) {
+	if (!Array.isArray(first) || !first.every((entry) => typeof entry === 'number')) {
 		throw new Error('Embedding response did not contain a vector')
 	}
 	return first

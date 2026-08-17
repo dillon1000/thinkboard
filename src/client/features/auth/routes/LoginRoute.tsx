@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import type { PublicConfig } from '@agentboard/shared'
 import { apiRoutes, appRoutes } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
@@ -109,7 +108,7 @@ export function Component() {
 }
 
 function getReturnPath(state: unknown) {
-	if (!state || !hasObjectType(state)) return appRoutes.home
+	if (!state || typeof state !== 'object') return appRoutes.home
 	const from = Reflect.get(state, 'from')
-	return isString(from) && from.startsWith('/') ? from : appRoutes.home
+	return typeof from === 'string' && from.startsWith('/') ? from : appRoutes.home
 }

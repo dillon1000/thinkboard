@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	LECTURE_SHAPE_TYPE,
 	MAX_AUDIO_BYTES,
@@ -119,12 +118,12 @@ function LectureImportDialog({
 			)
 			const body: unknown = await response.json().catch(() => null)
 			if (!response.ok) {
-				const message = body && hasObjectType(body) && isString(Reflect.get(body, 'error'))
+				const message = body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
 					? String(Reflect.get(body, 'error'))
 					: 'Unable to upload this lecture'
 				throw new Error(message)
 			}
-			const lecture = body && hasObjectType(body)
+			const lecture = body && typeof body === 'object'
 				? Reflect.get(body, 'lecture') as LectureSummary | undefined
 				: undefined
 			if (!lecture) throw new Error('The lecture upload returned no record')

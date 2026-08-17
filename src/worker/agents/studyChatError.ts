@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import { APICallError } from '@ai-sdk/provider'
 import { RetryError } from 'ai'
 
@@ -59,11 +58,11 @@ function parseResponseBody(responseBody: string | undefined): unknown {
 }
 
 function readProviderMessage(value: unknown): string | null {
-	if (!value || !hasObjectType(value)) return null
+	if (!value || typeof value !== 'object') return null
 	const error = Reflect.get(value, 'error')
-	if (!error || !hasObjectType(error)) return null
+	if (!error || typeof error !== 'object') return null
 	const message = Reflect.get(error, 'message')
-	return isString(message) && message.trim() ? message : null
+	return typeof message === 'string' && message.trim() ? message : null
 }
 
 function truncate(message: string) {

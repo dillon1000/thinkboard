@@ -1,4 +1,3 @@
-import { hasObjectType } from './untrusted'
 import { T } from '@tldraw/validate'
 import { z } from 'zod'
 
@@ -230,7 +229,7 @@ export async function createCraftWhiteboardRevision(
 }
 
 function stableJSONStringify(value: unknown): string {
-	if (value === null || !hasObjectType(value)) return JSON.stringify(value) ?? 'null'
+	if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
 	if (Array.isArray(value)) {
 		return `[${value.map((item) => stableJSONStringify(item)).join(',')}]`
 	}

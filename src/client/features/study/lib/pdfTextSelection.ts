@@ -1,4 +1,3 @@
-import { isUndefined } from '@agentboard/shared'
 import type { CanvasPDFTextSelection } from '@agentboard/shared'
 
 const MAX_PDF_TEXT_SELECTION_LENGTH = 8_000
@@ -83,8 +82,8 @@ interface PDFHighlightRegistry {
 
 function getPDFHighlightRegistry() {
 	if (
-		isUndefined(CSS) ||
-		isUndefined(Highlight) ||
+		typeof CSS === 'undefined' ||
+		typeof Highlight === 'undefined' ||
 		!('highlights' in CSS)
 	) return null
 	return CSS.highlights as unknown as PDFHighlightRegistry

@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 export const CRAFT_DOCUMENT_PREVIEW_EVENT = 'agentboard:craft-document-preview'
 
 export function openCraftDocuments() {
@@ -16,8 +15,8 @@ export function openCraftDocumentPreview(linkID: string) {
 export function readCraftDocumentPreviewEvent(event: Event) {
 	if (!(event instanceof CustomEvent)) return undefined
 	const detail: unknown = event.detail
-	if (!detail || !hasObjectType(detail)) return undefined
+	if (!detail || typeof detail !== 'object') return undefined
 	const linkID = Reflect.get(detail, 'linkID')
 	if (linkID === null) return null
-	return isString(linkID) && linkID ? linkID : undefined
+	return typeof linkID === 'string' && linkID ? linkID : undefined
 }

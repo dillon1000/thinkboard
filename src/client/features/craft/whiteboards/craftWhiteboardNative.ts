@@ -1,4 +1,3 @@
-import { hasObjectType, isBoolean, isNumber, isString } from '@agentboard/shared'
 import type {
 	CraftWhiteboardElement,
 	CraftWhiteboardImport,
@@ -117,7 +116,7 @@ export function readCraftElementMetadata(meta: JsonObject): CraftElementMetadata
 	const sourceElements = record?.sourceElements
 	if (
 		!Array.isArray(elementIDs) ||
-		!elementIDs.every((value) => isString(value)) ||
+		!elementIDs.every((value) => typeof value === 'string') ||
 		!Array.isArray(sourceElements)
 	) return null
 
@@ -449,7 +448,7 @@ function applyCraftGroups(
 			if (shapeIDs.length < 2) continue
 			editor.groupShapes(shapeIDs)
 			const first = editor.getShape(shapeIDs[0])
-			if (!first || !isString(first.parentId) || !first.parentId.startsWith('shape:')) {
+			if (!first || typeof first.parentId !== 'string' || !first.parentId.startsWith('shape:')) {
 				continue
 			}
 			const group = editor.getShape(first.parentId as TLShapeId)
@@ -633,7 +632,7 @@ function getHighestGroupAncestor(editor: Editor, shapeID: TLShapeId) {
 		const shape = editor.getShape(currentID)
 		if (
 			!shape ||
-			!isString(shape.parentId) ||
+			typeof shape.parentId !== 'string' ||
 			!shape.parentId.startsWith('shape:')
 		) return currentID
 		const parent = editor.getShape(shape.parentId as TLShapeId)
@@ -666,8 +665,8 @@ function getElementURL(element: CraftWhiteboardElement) {
 function readScale(element: CraftWhiteboardElement): [number, number] {
 	const scale = element.scale
 	return Array.isArray(scale) &&
-		isNumber(scale[0]) &&
-		isNumber(scale[1])
+		typeof scale[0] === 'number' &&
+		typeof scale[1] === 'number'
 		? [scale[0], scale[1]]
 		: [1, 1]
 }
@@ -754,28 +753,28 @@ function mapFont(value: number | null): TLDefaultFontStyle {
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && hasObjectType(value) && !Array.isArray(value)
+	return value && typeof value === 'object' && !Array.isArray(value)
 		? value as Record<string, unknown>
 		: null
 }
 
 function readString(record: Record<string, unknown> | null, key: string) {
 	const value = record?.[key]
-	return isString(value) ? value : null
+	return typeof value === 'string' ? value : null
 }
 
 function readNumber(record: Record<string, unknown> | null, key: string) {
 	const value = record?.[key]
-	return isNumber(value) && Number.isFinite(value) ? value : null
+	return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function readBoolean(record: Record<string, unknown> | null, key: string) {
 	const value = record?.[key]
-	return isBoolean(value) ? value : null
+	return typeof value === 'boolean' ? value : null
 }
 
 function readStringArray(value: unknown) {
 	return Array.isArray(value)
-		? value.filter((entry): entry is string => isString(entry))
+		? value.filter((entry): entry is string => typeof entry === 'string')
 		: []
 }

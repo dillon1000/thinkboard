@@ -1,4 +1,3 @@
-import { isString } from '@agentboard/shared'
 import {
 	MAX_OFFICE_BYTES,
 	MAX_PDF_BYTES,
@@ -179,8 +178,8 @@ export async function handleDocumentPageUpload(request: IRequest, env: Env) {
 	if (
 		!(image instanceof File) ||
 		!ALLOWED_PAGE_IMAGE_TYPES.has(image.type) ||
-		!isString(extractedText) ||
-		!isString(rawTextLayout) ||
+		typeof extractedText !== 'string' ||
+		typeof rawTextLayout !== 'string' ||
 		!width ||
 		!height
 	) {
@@ -449,13 +448,13 @@ function safeKeyPart(value: string) {
 }
 
 function parsePositiveInteger(value: FormDataEntryValue | string | null | undefined) {
-	if (!isString(value) || !/^\d+$/.test(value)) return null
+	if (typeof value !== 'string' || !/^\d+$/.test(value)) return null
 	const parsed = Number(value)
 	return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
 function parseFiniteNumber(value: FormDataEntryValue | null | undefined) {
-	if (!isString(value)) return null
+	if (typeof value !== 'string') return null
 	const parsed = Number(value)
 	return Number.isFinite(parsed) && parsed > 0 && parsed <= 20_000 ? parsed : null
 }

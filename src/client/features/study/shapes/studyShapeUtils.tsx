@@ -1,4 +1,3 @@
-import { hasObjectType } from '@agentboard/shared'
 import {
 	CONCEPT_MAP_SHAPE_TYPE,
 	FLASHCARD_CANVAS_HEIGHT,
@@ -1041,7 +1040,7 @@ function StudySources({ overlay = false, shape }: { overlay?: boolean; shape: TL
 
 function readStudySources(shape: TLShape): PDFSourceReference[] {
 	const agentboard = Reflect.get(shape.meta, 'agentboard')
-	if (!agentboard || !hasObjectType(agentboard)) return []
+	if (!agentboard || typeof agentboard !== 'object') return []
 	const parsed = pdfSourceReferenceSchema.array().safeParse(Reflect.get(agentboard, 'sources'))
 	return parsed.success ? parsed.data : []
 }

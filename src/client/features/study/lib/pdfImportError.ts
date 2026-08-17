@@ -1,4 +1,3 @@
-import { isNumber, isString } from '@agentboard/shared'
 export interface PDFImportFailure {
 	details: string
 	summary: string
@@ -18,7 +17,7 @@ export function describePDFImportFailure(
 ): PDFImportFailure {
 	const summary = error instanceof Error && error.message
 		? error.message
-		: isString(error) && error
+		: typeof error === 'string' && error
 			? error
 			: 'The document could not be imported.'
 	const metadata = [
@@ -27,7 +26,7 @@ export function describePDFImportFailure(
 		`Page: ${context.location}`,
 		`Browser: ${context.browser}`,
 		...(context.fileName ? [`File: ${context.fileName}`] : []),
-		...(isNumber(context.fileSize) ? [`File size: ${context.fileSize} bytes`] : []),
+		...(typeof context.fileSize === 'number' ? [`File size: ${context.fileSize} bytes`] : []),
 	]
 	return {
 		details: `${metadata.join('\n')}\n\n${formatError(error)}`,
@@ -47,7 +46,7 @@ function formatError(error: unknown, label = 'Error'): string {
 			? lines.join('\n')
 			: `${lines.join('\n')}\n\n${formatError(cause, 'Cause')}`
 	}
-	if (isString(error)) return `${label}: ${error}`
+	if (typeof error === 'string') return `${label}: ${error}`
 	try {
 		return `${label}: ${JSON.stringify(error, null, 2)}`
 	} catch {

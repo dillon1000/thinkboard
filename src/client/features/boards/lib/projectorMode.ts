@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	getDefaultUserPresence,
 	TLINSTANCE_ID,
@@ -53,12 +52,12 @@ export function readProjectorPresenceMetadata(
 	meta: TLInstancePresence['meta'] | undefined
 ): ProjectorPresenceMetadata | null {
 	const projector = meta?.[PROJECTOR_META_KEY]
-	if (!projector || !hasObjectType(projector) || Array.isArray(projector)) return null
+	if (!projector || typeof projector !== 'object' || Array.isArray(projector)) return null
 
 	const code = projector.code
 	const mode = projector.mode
 	if (
-		!isString(code) ||
+		typeof code !== 'string' ||
 		!isProjectorCode(code) ||
 		(mode !== 'controller' && mode !== 'projector')
 	) return null

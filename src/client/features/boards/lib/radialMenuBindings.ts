@@ -1,4 +1,3 @@
-import { isUndefined } from '@agentboard/shared'
 export type RadialBindAction =
 	| 'ask-selection'
 	| 'blue-pen'
@@ -21,7 +20,7 @@ const DEFAULT_BINDINGS: RadialBindAction[] = ['blue-pen', 'next-track', 'ask-sel
 
 /** Reads the three user-defined radial shortcuts and rejects stale or malformed stored values. */
 export function readRadialMenuBindings(): RadialBindAction[] {
-	if (isUndefined(window)) return [...DEFAULT_BINDINGS]
+	if (typeof window === 'undefined') return [...DEFAULT_BINDINGS]
 	try {
 		const value: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null')
 		if (
