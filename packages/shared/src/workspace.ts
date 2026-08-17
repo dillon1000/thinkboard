@@ -32,44 +32,7 @@ export const spaceMemberRoleUpdateSchema = z.object({
 	role: invitationRoleSchema,
 })
 
-export interface Course {
-	color: string
-	createdAt: string
-	editable: boolean
-	examDate: string | null
-	id: string
-	title: string
-	updatedAt: string
-}
-
-export interface SpaceInvitation {
-	createdAt: string
-	email: string | null
-	expiresAt: string
-	id: string
-	role: InvitationRole
-}
-
-export interface SpaceInvitationCreated extends SpaceInvitation {
-	token: string
-}
-
-export interface SpaceInvitationPreview {
-	boardTitle: string
-	email: string | null
-	expiresAt: string
-	role: InvitationRole
-}
-
-export interface SpaceMember {
-	createdAt: string
-	email: string
-	name: string
-	role: BoardRole
-	userID: string
-}
-
-export const courseSchema: z.ZodType<Course> = z.object({
+export const courseSchema = z.object({
 	color: z.string(),
 	createdAt: z.string(),
 	editable: z.boolean(),
@@ -87,17 +50,16 @@ export const spaceInvitationSchema = z.object({
 	role: invitationRoleSchema,
 })
 
-export const spaceInvitationCreatedSchema: z.ZodType<SpaceInvitationCreated> =
-	spaceInvitationSchema.extend({ token: z.string() })
+export const spaceInvitationCreatedSchema = spaceInvitationSchema.extend({ token: z.string() })
 
-export const spaceInvitationPreviewSchema: z.ZodType<SpaceInvitationPreview> = z.object({
+export const spaceInvitationPreviewSchema = z.object({
 	boardTitle: z.string(),
 	email: z.string().nullable(),
 	expiresAt: z.string(),
 	role: invitationRoleSchema,
 })
 
-export const spaceMemberSchema: z.ZodType<SpaceMember> = z.object({
+export const spaceMemberSchema = z.object({
 	createdAt: z.string(),
 	email: z.string(),
 	name: z.string(),
@@ -106,4 +68,9 @@ export const spaceMemberSchema: z.ZodType<SpaceMember> = z.object({
 })
 
 export type BoardRole = z.infer<typeof boardRoleSchema>
+export type Course = z.infer<typeof courseSchema>
 export type InvitationRole = z.infer<typeof invitationRoleSchema>
+export type SpaceInvitation = z.infer<typeof spaceInvitationSchema>
+export type SpaceInvitationCreated = z.infer<typeof spaceInvitationCreatedSchema>
+export type SpaceInvitationPreview = z.infer<typeof spaceInvitationPreviewSchema>
+export type SpaceMember = z.infer<typeof spaceMemberSchema>

@@ -1,37 +1,7 @@
 import { z } from 'zod'
-import { boardRoleSchema, type BoardRole } from './workspace'
+import { boardRoleSchema } from './workspace'
 
-export interface Board {
-	courseID: string | null
-	id: string
-	title: string
-	role: BoardRole
-	createdAt: string
-	updatedAt: string
-}
-
-export interface PublicConfig {
-	oAuth: {
-		enabled: boolean
-		providerID: string
-		providerName: string
-	}
-	spotify: {
-		enabled: boolean
-	}
-	tldrawLicenseKey: string | null
-}
-
-export interface StudyConversation {
-	agentName: string
-	boardID: string
-	createdAt: string
-	id: string
-	title: string
-	updatedAt: string
-}
-
-export const boardSchema: z.ZodType<Board> = z.object({
+export const boardSchema = z.object({
 	courseID: z.string().nullable(),
 	id: z.string(),
 	title: z.string(),
@@ -40,7 +10,7 @@ export const boardSchema: z.ZodType<Board> = z.object({
 	updatedAt: z.string(),
 })
 
-export const publicConfigSchema: z.ZodType<PublicConfig> = z.object({
+export const publicConfigSchema = z.object({
 	oAuth: z.object({
 		enabled: z.boolean(),
 		providerID: z.string(),
@@ -50,7 +20,7 @@ export const publicConfigSchema: z.ZodType<PublicConfig> = z.object({
 	tldrawLicenseKey: z.string().nullable(),
 })
 
-export const studyConversationSchema: z.ZodType<StudyConversation> = z.object({
+export const studyConversationSchema = z.object({
 	agentName: z.string(),
 	boardID: z.string(),
 	createdAt: z.string(),
@@ -58,3 +28,7 @@ export const studyConversationSchema: z.ZodType<StudyConversation> = z.object({
 	title: z.string(),
 	updatedAt: z.string(),
 })
+
+export type Board = z.infer<typeof boardSchema>
+export type PublicConfig = z.infer<typeof publicConfigSchema>
+export type StudyConversation = z.infer<typeof studyConversationSchema>

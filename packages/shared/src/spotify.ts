@@ -26,33 +26,7 @@ export const spotifyAgentPlayOutputSchema = z.object({
 export type SpotifyAgentPlayInput = z.infer<typeof spotifyAgentPlayInputSchema>
 export type SpotifyAgentPlayOutput = z.infer<typeof spotifyAgentPlayOutputSchema>
 
-export interface SpotifyPlaybackItem {
-	albumImageURL: string | null
-	durationMS: number
-	externalURL: string | null
-	subtitle: string
-	title: string
-	type: 'episode' | 'track' | 'unknown'
-}
-
-export interface SpotifyPlayback {
-	device: {
-		isRestricted: boolean
-		name: string
-		type: string
-	}
-	isPlaying: boolean
-	item: SpotifyPlaybackItem | null
-	progressMS: number
-}
-
-export interface SpotifyPlayerResponse {
-	configured: boolean
-	connected: boolean
-	playback: SpotifyPlayback | null
-}
-
-export const spotifyPlaybackItemSchema: z.ZodType<SpotifyPlaybackItem> = z.object({
+export const spotifyPlaybackItemSchema = z.object({
 	albumImageURL: z.string().nullable(),
 	durationMS: z.number(),
 	externalURL: z.string().nullable(),
@@ -61,7 +35,7 @@ export const spotifyPlaybackItemSchema: z.ZodType<SpotifyPlaybackItem> = z.objec
 	type: z.enum(['episode', 'track', 'unknown']),
 })
 
-export const spotifyPlaybackSchema: z.ZodType<SpotifyPlayback> = z.object({
+export const spotifyPlaybackSchema = z.object({
 	device: z.object({
 		isRestricted: z.boolean(),
 		name: z.string(),
@@ -72,8 +46,12 @@ export const spotifyPlaybackSchema: z.ZodType<SpotifyPlayback> = z.object({
 	progressMS: z.number(),
 })
 
-export const spotifyPlayerResponseSchema: z.ZodType<SpotifyPlayerResponse> = z.object({
+export const spotifyPlayerResponseSchema = z.object({
 	configured: z.boolean(),
 	connected: z.boolean(),
 	playback: spotifyPlaybackSchema.nullable(),
 })
+
+export type SpotifyPlaybackItem = z.infer<typeof spotifyPlaybackItemSchema>
+export type SpotifyPlayback = z.infer<typeof spotifyPlaybackSchema>
+export type SpotifyPlayerResponse = z.infer<typeof spotifyPlayerResponseSchema>

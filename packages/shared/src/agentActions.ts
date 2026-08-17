@@ -19,24 +19,7 @@ export const agentActionUndoResultSchema = z.object({
 	completed: z.boolean(),
 })
 
-export interface AgentActionSummary {
-	baseDocumentClock?: number
-	createdAt: string
-	id: string
-	planID?: string
-	recordIDs: string[]
-	status: 'accepted' | 'undoing' | 'undone'
-	toolName: string
-	undoneAt?: string
-}
-
-export interface AgentActionUndoPayload {
-	action: AgentActionSummary
-	afterRecords: CanvasRecordSnapshot[]
-	beforeRecords: CanvasRecordSnapshot[]
-}
-
-export const agentActionSummarySchema: z.ZodType<AgentActionSummary> = z.object({
+export const agentActionSummarySchema = z.object({
 	baseDocumentClock: z.number().optional(),
 	createdAt: z.string(),
 	id: z.string(),
@@ -47,7 +30,7 @@ export const agentActionSummarySchema: z.ZodType<AgentActionSummary> = z.object(
 	undoneAt: z.string().optional(),
 })
 
-export const agentActionUndoPayloadSchema: z.ZodType<AgentActionUndoPayload> = z.object({
+export const agentActionUndoPayloadSchema = z.object({
 	action: agentActionSummarySchema,
 	afterRecords: z.array(canvasRecordSchema),
 	beforeRecords: z.array(canvasRecordSchema),
@@ -55,3 +38,5 @@ export const agentActionUndoPayloadSchema: z.ZodType<AgentActionUndoPayload> = z
 
 export type CanvasRecordSnapshot = z.infer<typeof canvasRecordSchema>
 export type AgentActionCreate = z.infer<typeof agentActionCreateSchema>
+export type AgentActionSummary = z.infer<typeof agentActionSummarySchema>
+export type AgentActionUndoPayload = z.infer<typeof agentActionUndoPayloadSchema>
