@@ -29,22 +29,9 @@ export type SupportedProposalName =
 	| 'writeEquation'
 
 export interface LeakedProposal {
-	input: SupportedProposalInput
+	input: z.infer<ReturnType<typeof z.json>>
 	toolName: SupportedProposalName
 }
-
-type SupportedProposalInput =
-	| z.output<typeof agentMemoryProposalSchema>
-	| z.output<typeof conceptMapProposalSchema>
-	| z.output<typeof canvasPlanSchema>
-	| z.output<typeof equationProposalSchema>
-	| z.output<typeof flashcardProposalSchema>
-	| z.output<typeof mistakeProposalSchema>
-	| z.output<typeof practiceSetProposalSchema>
-	| z.output<typeof studyPackProposalSchema>
-	| z.output<typeof quizProposalSchema>
-	| z.output<typeof reviewProposalSchema>
-	| z.output<typeof walkthroughProposalSchema>
 
 const JSONValueSchema = z.json()
 const JSONRecordSchema = z.record(z.string(), JSONValueSchema)
@@ -110,13 +97,13 @@ function parseProposalValue<Value>(value: Value): LeakedProposal | null {
 	const input = wrappedInput === undefined ? getFlatInput(value) : parsePossiblyEncodedJSON(wrappedInput)
 	if (toolName === 'composeCanvas') {
 		const plan = canvasPlanSchema.safeParse(input)
-		if (plan.success) return { input: plan.data, toolName }
+		if (plan.success) return { input, toolName }
 		const result = canvasPlanInputSchema.safeParse(input)
 		if (result.success) return { input: normalizeCanvasPlanInput(result.data), toolName }
 		return null
 	}
 	const result = proposalSchemas[toolName].safeParse(input)
-	return result.success ? { input: result.data, toolName } : null
+	return result.success ? { input, toolName } : null
 }
 
 function parseProviderToolCalls(text: string) {
