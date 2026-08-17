@@ -3,7 +3,7 @@ import { getOAuthConfiguration, getSpotifyConfiguration } from './createAuth'
 
 describe('generic OAuth configuration', () => {
 	it('stays disabled until all required provider values are present', () => {
-		const env = { OAUTH_CLIENT_ID: 'client-only' } as unknown as Env
+		const env = { OAUTH_CLIENT_ID: 'client-only' }
 		expect(getOAuthConfiguration(env)).toBeNull()
 	})
 
@@ -12,7 +12,7 @@ describe('generic OAuth configuration', () => {
 			OAUTH_CLIENT_ID: 'client-id',
 			OAUTH_CLIENT_SECRET: 'client-secret',
 			OAUTH_DISCOVERY_URL: 'https://login.example.edu/.well-known/openid-configuration',
-		} as unknown as Env
+		}
 
 		expect(getOAuthConfiguration(env)?.providerName).toBe('Passport')
 	})
@@ -25,7 +25,7 @@ describe('generic OAuth configuration', () => {
 			OAUTH_PROVIDER_ID: 'university',
 			OAUTH_PROVIDER_NAME: 'University login',
 			OAUTH_SCOPES: 'openid, email, profile',
-		} as unknown as Env
+		}
 
 		expect(getOAuthConfiguration(env)).toEqual({
 			clientID: 'client-id',
@@ -40,7 +40,7 @@ describe('generic OAuth configuration', () => {
 
 describe('Spotify configuration', () => {
 	it('stays disabled until both credentials are present', () => {
-		const env = { SPOTIFY_CLIENT_ID: 'client-only' } as unknown as Env
+		const env = { SPOTIFY_CLIENT_ID: 'client-only' }
 		expect(getSpotifyConfiguration(env)).toBeNull()
 	})
 
@@ -48,7 +48,7 @@ describe('Spotify configuration', () => {
 		const env = {
 			SPOTIFY_CLIENT_ID: 'spotify-client-id',
 			SPOTIFY_CLIENT_SECRET: 'spotify-client-secret',
-		} as unknown as Env
+		}
 
 		expect(getSpotifyConfiguration(env)).toEqual({
 			clientID: 'spotify-client-id',
