@@ -92,39 +92,30 @@ export function observeAIRunner(
 	return {
 		async run(model, input, options) {
 			const startedAt = performance.now()
+			const capture = {
+				...observation,
+				input: readModelInput(input),
+				kind: observation.kind ?? inferEventKind(input),
+				maxTokens: readInputNumber(input, ['max_tokens', 'max_completion_tokens']),
+				model,
+				properties: { ...readGatewayMetadata(options), ...observation.properties },
+				temperature: readInputNumber(input, ['temperature']),
+			}
 			try {
 				const output = await runner.run(model, input, options)
 				scheduleCapture(observation.defer, capturePostHogAIEvent(env, {
-					...observation,
-					input: readModelInput(input),
+					...capture,
 					inputTokens: readUsageNumber(output, ['input_tokens', 'prompt_tokens']),
-					kind: observation.kind ?? inferEventKind(input),
 					latencySeconds: elapsedSeconds(startedAt),
-					maxTokens: readInputNumber(input, ['max_tokens', 'max_completion_tokens']),
-					model,
 					output: readModelOutput(output),
 					outputTokens: readUsageNumber(output, ['output_tokens', 'completion_tokens']),
-					properties: {
-						...readGatewayMetadata(options),
-						...observation.properties,
-					},
-					temperature: readInputNumber(input, ['temperature']),
 				}))
 				return output
 			} catch (error) {
 				scheduleCapture(observation.defer, capturePostHogAIEvent(env, {
-					...observation,
+					...capture,
 					error,
-					input: readModelInput(input),
-					kind: observation.kind ?? inferEventKind(input),
 					latencySeconds: elapsedSeconds(startedAt),
-					maxTokens: readInputNumber(input, ['max_tokens', 'max_completion_tokens']),
-					model,
-					properties: {
-						...readGatewayMetadata(options),
-						...observation.properties,
-					},
-					temperature: readInputNumber(input, ['temperature']),
 				}))
 				throw error
 			}
