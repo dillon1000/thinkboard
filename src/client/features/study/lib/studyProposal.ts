@@ -13,6 +13,7 @@ import {
 	reviewProposalSchema,
 	walkthroughProposalSchema,
 } from '@agentboard/shared'
+import { z } from 'zod'
 
 export type SupportedProposalName =
 	| 'addReviewNote'
@@ -28,9 +29,25 @@ export type SupportedProposalName =
 	| 'writeEquation'
 
 export interface LeakedProposal {
-	input: unknown
+	input: SupportedProposalInput
 	toolName: SupportedProposalName
 }
+
+type SupportedProposalInput =
+	| z.input<typeof agentMemoryProposalSchema>
+	| z.input<typeof conceptMapProposalSchema>
+	| z.input<typeof canvasPlanSchema>
+	| z.input<typeof equationProposalSchema>
+	| z.input<typeof flashcardProposalSchema>
+	| z.input<typeof mistakeProposalSchema>
+	| z.input<typeof practiceSetProposalSchema>
+	| z.input<typeof studyPackProposalSchema>
+	| z.input<typeof quizProposalSchema>
+	| z.input<typeof reviewProposalSchema>
+	| z.input<typeof walkthroughProposalSchema>
+
+const JSONValueSchema = z.json()
+const JSONRecordSchema = z.record(z.string(), JSONValueSchema)
 
 export function hasProviderToolCallEnvelope(text: string) {
 	return text.includes('<|tool_calls_section_begin|>') ||
@@ -50,6 +67,7 @@ const proposalNames: readonly SupportedProposalName[] = [
 	'recordMistake',
 	'saveMemory',
 ]
+const supportedProposalNameSchema = z.enum(proposalNames)
 
 export function parseLeakedProposal(text: string): LeakedProposal | null {
 	for (const value of [...parseProviderToolCalls(text), ...parseJSONValues(text)]) {
@@ -59,7 +77,7 @@ export function parseLeakedProposal(text: string): LeakedProposal | null {
 	return null
 }
 
-function parseProposalValue(value: unknown): LeakedProposal | null {
+function parseProposalValue<Value>(value: Value): LeakedProposal | null {
 	if (Array.isArray(value)) {
 		for (const item of value) {
 			const proposal = parseProposalValue(item)
@@ -75,52 +93,72 @@ function parseProposalValue(value: unknown): LeakedProposal | null {
 
 	const wrappedInput = value.parameters ?? value.arguments ?? value.input ?? functionCall?.arguments
 	const input = wrappedInput === undefined ? getFlatInput(value) : parsePossiblyEncodedJSON(wrappedInput)
-	if (toolName === 'addReviewNote' && reviewProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'addReviewNote') {
+		const validated = preserveValidatedInput(reviewProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createFlashcards' && flashcardProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createFlashcards') {
+		const validated = preserveValidatedInput(flashcardProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createQuiz' && quizProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createQuiz') {
+		const validated = preserveValidatedInput(quizProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createWalkthrough' && walkthroughProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createWalkthrough') {
+		const validated = preserveValidatedInput(walkthroughProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createConceptMap' && conceptMapProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createConceptMap') {
+		const validated = preserveValidatedInput(conceptMapProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createPracticeSet' && practiceSetProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createPracticeSet') {
+		const validated = preserveValidatedInput(practiceSetProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'createStudyPack' && studyPackProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'createStudyPack') {
+		const validated = preserveValidatedInput(studyPackProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'writeEquation' && equationProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'writeEquation') {
+		const validated = preserveValidatedInput(equationProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'recordMistake' && mistakeProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'recordMistake') {
+		const validated = preserveValidatedInput(mistakeProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
-	if (toolName === 'saveMemory' && agentMemoryProposalSchema.safeParse(input).success) {
-		return { input, toolName }
+	if (toolName === 'saveMemory') {
+		const validated = preserveValidatedInput(agentMemoryProposalSchema, input)
+		if (validated) return { input: validated, toolName }
 	}
 	if (toolName === 'composeCanvas') {
-		if (canvasPlanSchema.safeParse(input).success) return { input, toolName }
+		const plan = preserveValidatedInput(canvasPlanSchema, input)
+		if (plan) return { input: plan, toolName }
 		const result = canvasPlanInputSchema.safeParse(input)
 		if (result.success) return { input: normalizeCanvasPlanInput(result.data), toolName }
 	}
 	return null
 }
 
+function preserveValidatedInput<Schema extends z.ZodType>(
+	schema: Schema,
+	value: z.output<typeof JSONValueSchema>
+): z.input<Schema> | null {
+	if (!schema.safeParse(value).success) return null
+	// SAFETY: This returns the original JSON only after the owning proposal schema accepts it.
+	return value as z.input<Schema>
+}
+
 function parseProviderToolCalls(text: string) {
-	const values: unknown[] = []
+	const values: z.output<typeof JSONValueSchema>[] = []
 	const pattern = /<\|tool_call_begin\|>(?:functions\.)?([A-Za-z][A-Za-z0-9_]*)(?::\d+)?<\|tool_call_argument_begin\|>([\s\S]*?)<\|tool_call_end\|>/g
 	for (const match of text.matchAll(pattern)) {
 		const [, name, encodedInput] = match
 		if (!name || !encodedInput) continue
 		try {
-			values.push({ name, input: JSON.parse(encodedInput) as unknown })
+			values.push(JSONValueSchema.parse({ name, input: JSON.parse(encodedInput) }))
 		} catch {
 			// Another provider envelope in the same response may still contain valid JSON.
 		}
@@ -129,14 +167,14 @@ function parseProviderToolCalls(text: string) {
 }
 
 function parseJSONValues(text: string) {
-	const values: unknown[] = []
+	const values: z.output<typeof JSONValueSchema>[] = []
 	for (let start = 0; start < text.length; start += 1) {
 		const opening = text[start]
 		if (opening !== '{' && opening !== '[') continue
 		const end = findJSONEnd(text, start)
 		if (end === -1) continue
 		try {
-			values.push(JSON.parse(text.slice(start, end + 1)) as unknown)
+			values.push(JSONValueSchema.parse(JSON.parse(text.slice(start, end + 1))))
 			start = end
 		} catch {
 			// A later opening delimiter may still begin a valid tool call.
@@ -182,8 +220,8 @@ function findJSONEnd(text: string, start: number) {
 	return -1
 }
 
-function getFlatInput(value: Record<string, unknown>) {
-	const input: Record<string, unknown> = {}
+function getFlatInput(value: z.output<typeof JSONRecordSchema>) {
+	const input: z.output<typeof JSONRecordSchema> = {}
 	for (const [key, fieldValue] of Object.entries(value)) {
 		if (key !== 'name' && key !== 'toolName' && key !== 'function' && key !== 'type') {
 			input[key] = fieldValue
@@ -192,19 +230,20 @@ function getFlatInput(value: Record<string, unknown>) {
 	return input
 }
 
-function parsePossiblyEncodedJSON(value: unknown) {
-	if (typeof value !== 'string') return value
+function parsePossiblyEncodedJSON(value: z.output<typeof JSONValueSchema>) {
+	const encoded = z.string().safeParse(value)
+	if (!encoded.success) return value
 	try {
-		return JSON.parse(value) as unknown
+		return JSONValueSchema.parse(JSON.parse(encoded.data))
 	} catch {
 		return value
 	}
 }
 
-function isSupportedProposalName(value: unknown): value is SupportedProposalName {
-	return typeof value === 'string' && proposalNames.some((toolName) => toolName === value)
+function isSupportedProposalName<Value>(value: Value): value is Value & SupportedProposalName {
+	return supportedProposalNameSchema.safeParse(value).success
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
+function isRecord<Value>(value: Value): value is Value & z.output<typeof JSONRecordSchema> {
+	return JSONRecordSchema.safeParse(value).success
 }
