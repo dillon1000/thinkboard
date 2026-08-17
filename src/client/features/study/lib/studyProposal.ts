@@ -34,17 +34,17 @@ export interface LeakedProposal {
 }
 
 type SupportedProposalInput =
-	| z.input<typeof agentMemoryProposalSchema>
-	| z.input<typeof conceptMapProposalSchema>
-	| z.input<typeof canvasPlanSchema>
-	| z.input<typeof equationProposalSchema>
-	| z.input<typeof flashcardProposalSchema>
-	| z.input<typeof mistakeProposalSchema>
-	| z.input<typeof practiceSetProposalSchema>
-	| z.input<typeof studyPackProposalSchema>
-	| z.input<typeof quizProposalSchema>
-	| z.input<typeof reviewProposalSchema>
-	| z.input<typeof walkthroughProposalSchema>
+	| z.output<typeof agentMemoryProposalSchema>
+	| z.output<typeof conceptMapProposalSchema>
+	| z.output<typeof canvasPlanSchema>
+	| z.output<typeof equationProposalSchema>
+	| z.output<typeof flashcardProposalSchema>
+	| z.output<typeof mistakeProposalSchema>
+	| z.output<typeof practiceSetProposalSchema>
+	| z.output<typeof studyPackProposalSchema>
+	| z.output<typeof quizProposalSchema>
+	| z.output<typeof reviewProposalSchema>
+	| z.output<typeof walkthroughProposalSchema>
 
 const JSONValueSchema = z.json()
 const JSONRecordSchema = z.record(z.string(), JSONValueSchema)
@@ -68,6 +68,18 @@ const proposalNames: readonly SupportedProposalName[] = [
 	'saveMemory',
 ]
 const supportedProposalNameSchema = z.enum(proposalNames)
+const proposalSchemas = {
+	addReviewNote: reviewProposalSchema,
+	createConceptMap: conceptMapProposalSchema,
+	createFlashcards: flashcardProposalSchema,
+	createPracticeSet: practiceSetProposalSchema,
+	createQuiz: quizProposalSchema,
+	createStudyPack: studyPackProposalSchema,
+	createWalkthrough: walkthroughProposalSchema,
+	recordMistake: mistakeProposalSchema,
+	saveMemory: agentMemoryProposalSchema,
+	writeEquation: equationProposalSchema,
+} satisfies Record<Exclude<SupportedProposalName, 'composeCanvas'>, z.ZodType>
 
 export function parseLeakedProposal(text: string): LeakedProposal | null {
 	for (const value of [...parseProviderToolCalls(text), ...parseJSONValues(text)]) {
@@ -88,67 +100,23 @@ function parseProposalValue<Value>(value: Value): LeakedProposal | null {
 	if (!isRecord(value)) return null
 
 	const functionCall = isRecord(value.function) ? value.function : undefined
-	const toolName = value.name ?? value.toolName ?? functionCall?.name
-	if (!isSupportedProposalName(toolName)) return null
+	const parsedToolName = supportedProposalNameSchema.safeParse(
+		value.name ?? value.toolName ?? functionCall?.name
+	)
+	if (!parsedToolName.success) return null
+	const toolName = parsedToolName.data
 
 	const wrappedInput = value.parameters ?? value.arguments ?? value.input ?? functionCall?.arguments
 	const input = wrappedInput === undefined ? getFlatInput(value) : parsePossiblyEncodedJSON(wrappedInput)
-	if (toolName === 'addReviewNote') {
-		const validated = preserveValidatedInput(reviewProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createFlashcards') {
-		const validated = preserveValidatedInput(flashcardProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createQuiz') {
-		const validated = preserveValidatedInput(quizProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createWalkthrough') {
-		const validated = preserveValidatedInput(walkthroughProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createConceptMap') {
-		const validated = preserveValidatedInput(conceptMapProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createPracticeSet') {
-		const validated = preserveValidatedInput(practiceSetProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'createStudyPack') {
-		const validated = preserveValidatedInput(studyPackProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'writeEquation') {
-		const validated = preserveValidatedInput(equationProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'recordMistake') {
-		const validated = preserveValidatedInput(mistakeProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
-	if (toolName === 'saveMemory') {
-		const validated = preserveValidatedInput(agentMemoryProposalSchema, input)
-		if (validated) return { input: validated, toolName }
-	}
 	if (toolName === 'composeCanvas') {
-		const plan = preserveValidatedInput(canvasPlanSchema, input)
-		if (plan) return { input: plan, toolName }
+		const plan = canvasPlanSchema.safeParse(input)
+		if (plan.success) return { input: plan.data, toolName }
 		const result = canvasPlanInputSchema.safeParse(input)
 		if (result.success) return { input: normalizeCanvasPlanInput(result.data), toolName }
+		return null
 	}
-	return null
-}
-
-function preserveValidatedInput<Schema extends z.ZodType>(
-	schema: Schema,
-	value: z.output<typeof JSONValueSchema>
-): z.input<Schema> | null {
-	if (!schema.safeParse(value).success) return null
-	// SAFETY: This returns the original JSON only after the owning proposal schema accepts it.
-	return value as z.input<Schema>
+	const result = proposalSchemas[toolName].safeParse(input)
+	return result.success ? { input: result.data, toolName } : null
 }
 
 function parseProviderToolCalls(text: string) {
@@ -238,10 +206,6 @@ function parsePossiblyEncodedJSON(value: z.output<typeof JSONValueSchema>) {
 	} catch {
 		return value
 	}
-}
-
-function isSupportedProposalName<Value>(value: Value): value is Value & SupportedProposalName {
-	return supportedProposalNameSchema.safeParse(value).success
 }
 
 function isRecord<Value>(value: Value): value is Value & z.output<typeof JSONRecordSchema> {
