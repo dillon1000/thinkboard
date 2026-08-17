@@ -85,8 +85,10 @@ export function FlashcardAnswerPanel({
 		setIsSaving(true)
 		setError(null)
 		try {
-			const completion: FlashcardAnswerCompletion = { finalVerdict }
-			if (result.isDue) completion.rating = rating
+			const completion: FlashcardAnswerCompletion = {
+				finalVerdict,
+				...(result.isDue && { rating }),
+			}
 			const completed = await apiRequest(
 				apiRoutes.studyAnswerAttemptComplete(result.attempt.id),
 				{

@@ -264,13 +264,12 @@ async function getPDFPageLinks(
 function parsePDFLinkAnnotation<Value>(value: Value, index: number): PDFLinkAnnotation | null {
 	const parsed = PDFLinkAnnotationSchema.safeParse(value)
 	if (!parsed.success) return null
-	const annotation: PDFLinkAnnotation = {
+	return {
 		id: parsed.data.id ?? `link-${index}`,
 		rect: parsed.data.rect,
+		...(parsed.data.dest && { destination: parsed.data.dest }),
+		...(parsed.data.url && { URL: parsed.data.url }),
 	}
-	if (parsed.data.dest) annotation.destination = parsed.data.dest
-	if (parsed.data.url) annotation.URL = parsed.data.url
-	return annotation
 }
 
 function normalizeAnnotationRect(
