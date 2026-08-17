@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { TLShape } from 'tldraw'
 import {
 	findLectureCitationShape,
 	parseLectureCitationHref,
@@ -25,9 +24,9 @@ describe('findLectureCitationShape', () => {
 		const matching = {
 			props: { lectureID: 'lecture-one' },
 			type: 'agentboard-lecture',
-		} as unknown as TLShape
+		}
 		const shapes = [
-			{ props: {}, type: 'note' } as unknown as TLShape,
+			{ props: {}, type: 'note' },
 			matching,
 		]
 
