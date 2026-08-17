@@ -6,52 +6,73 @@ interface TestPromiseResolvers<T> {
 	resolve: (value: T | PromiseLike<T>) => void
 }
 
+interface MutablePromiseConstructor {
+	withResolvers?: <T>() => TestPromiseResolvers<T>
+}
+
+interface MutableAbortSignalConstructor {
+	any?: (signals: AbortSignal[]) => AbortSignal
+}
+
 describe('ensurePDFCompatibility', () => {
 	it('installs the APIs required by PDF.js on older browsers', async () => {
-		const originalWithResolvers = Reflect.get(Promise, 'withResolvers')
-		const originalAbortSignalAny = Reflect.get(AbortSignal, 'any')
+		const promiseConstructor: MutablePromiseConstructor = Promise
+		const abortSignalConstructor: MutableAbortSignalConstructor = AbortSignal
+		const originalWithResolvers = promiseConstructor.withResolvers
+		const originalAbortSignalAny = abortSignalConstructor.any
 		let resolvers: TestPromiseResolvers<number> | null = null
 		try {
-			Reflect.set(Promise, 'withResolvers', undefined)
-			Reflect.set(AbortSignal, 'any', undefined)
+			promiseConstructor.withResolvers = undefined
+			abortSignalConstructor.any = undefined
 
 			ensurePDFCompatibility()
-			const withResolvers = Reflect.get(Promise, 'withResolvers')
-			const combineSignals = Reflect.get(AbortSignal, 'any')
+			const withResolvers = readWithResolvers()
+			const combineSignals = readAbortSignalAny()
 			expect(withResolvers).toBeTypeOf('function')
 			expect(combineSignals).toBeTypeOf('function')
 
-			resolvers = Reflect.apply(withResolvers, Promise, []) as TestPromiseResolvers<number>
+			if (!withResolvers || !combineSignals) throw new Error('PDF compatibility APIs were not installed')
+			resolvers = withResolvers<number>()
 			const firstController = new AbortController()
 			const secondController = new AbortController()
-			const combined = Reflect.apply(combineSignals, AbortSignal, [[
+			const combined = combineSignals([
 				firstController.signal,
 				secondController.signal,
-			]]) as AbortSignal
+			])
 			secondController.abort('cancelled')
 			expect(combined.aborted).toBe(true)
-			expect(Reflect.get(combined, 'reason')).toBe('cancelled')
+			expect(combined.reason).toBe('cancelled')
 
 			const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
 			const loadingTask = pdfjs.getDocument({
 				data: new TextEncoder().encode('%PDF-1.4\n'),
 			})
-			let PDFError: unknown = null
+			let PDFError: Error | null = null
 			try {
 				await loadingTask.promise
 			} catch (error) {
-				PDFError = error
+				PDFError = error instanceof Error ? error : new Error(String(error))
 			} finally {
 				await loadingTask.destroy()
 			}
 			expect(PDFError).not.toBeNull()
 			expect(PDFError).not.toBeInstanceOf(TypeError)
 		} finally {
-			Reflect.set(Promise, 'withResolvers', originalWithResolvers)
-			Reflect.set(AbortSignal, 'any', originalAbortSignalAny)
+			promiseConstructor.withResolvers = originalWithResolvers
+			abortSignalConstructor.any = originalAbortSignalAny
 		}
 
 		resolvers?.resolve(42)
 		await expect(resolvers?.promise).resolves.toBe(42)
 	})
 })
+
+function readWithResolvers() {
+	const constructor: MutablePromiseConstructor = Promise
+	return constructor.withResolvers
+}
+
+function readAbortSignalAny() {
+	const constructor: MutableAbortSignalConstructor = AbortSignal
+	return constructor.any
+}

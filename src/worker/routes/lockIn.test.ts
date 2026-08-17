@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import type { LockInReviewRequest } from '@agentboard/shared'
 import {
 	createLockInReviewMessages,
@@ -62,10 +63,10 @@ describe('Lock In AI review', () => {
 			{ response: '{"status":"on-track"}' },
 			{ response: 'STATUS: on-track\nHEADLINE: Finish the graph\nCOACH: Label the horizontal axis next.\nEVIDENCE: The newest edits complete the curve but leave the axis unlabeled.' },
 		]
-		const inputs: unknown[] = []
+		const inputs: Array<z.infer<ReturnType<typeof z.json>>> = []
 		const ai = {
-			run: (_model: string, input: unknown) => {
-				inputs.push(input)
+			run: <Input>(_model: string, input: Input) => {
+				inputs.push(z.json().parse(input))
 				return Promise.resolve(responses.shift())
 			},
 		}

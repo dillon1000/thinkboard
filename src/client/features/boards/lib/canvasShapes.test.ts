@@ -7,6 +7,7 @@ import {
 	type TLUnknownShape,
 } from 'tldraw'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import {
 	ConceptMapShapeUtil,
 	FlashcardShapeUtil,
@@ -67,7 +68,8 @@ describe('synchronizedShapeUtils', () => {
 
 		expect(result.type).toBe('success')
 		if (result.type !== 'success' || result.value.typeName !== 'shape') return
-		expect(Reflect.get(result.value.props, 'alternateAnswers')).toEqual([])
+		const props = z.object({ alternateAnswers: z.array(z.string()) }).parse(result.value.props)
+		expect(props.alternateAnswers).toEqual([])
 		expect(() => schema.types.shape.validator.validate(result.value)).not.toThrow()
 	})
 })

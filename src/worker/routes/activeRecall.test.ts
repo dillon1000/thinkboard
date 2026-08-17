@@ -1,5 +1,6 @@
 import type { ActiveRecallGradeRequest } from '@agentboard/shared'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import {
 	gradeActiveRecall,
 	parseActiveRecallGrade,
@@ -40,10 +41,10 @@ const grade = {
 
 describe('active recall grading', () => {
 	it('sends selected handwriting with source material and validates the grade', async () => {
-		const inputs: unknown[] = []
+		const inputs: Array<z.infer<ReturnType<typeof z.json>>> = []
 		const ai = {
-			run: (_model: string, input: unknown) => {
-				inputs.push(input)
+			run: <Input>(_model: string, input: Input) => {
+				inputs.push(z.json().parse(input))
 				return Promise.resolve({ response: JSON.stringify(grade) })
 			},
 		}
