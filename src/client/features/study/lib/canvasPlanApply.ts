@@ -3,7 +3,6 @@ import {
 	type CanvasConnector,
 	type CanvasObjectReference,
 	type CanvasPlan,
-	type CanvasPlanInput,
 	type CanvasPlanElement,
 	type CanvasShapeStyle,
 	type CanvasSize,
@@ -61,9 +60,9 @@ type CanvasMathShape = TLBaseShape<typeof MATH_SHAPE_TYPE, {
  * Applies one validated plan as one undoable editor operation. A failed mutation returns the
  * editor to its history mark, including deletions and changes to existing shapes.
  */
-export function applyCanvasPlan(
+export function applyCanvasPlan<Input>(
 	editor: Editor,
-	input: CanvasPlanInput,
+	input: Input,
 	{ anchor, documentClock, select }: ApplyCanvasPlanOptions = {}
 ): CanvasPlanEffect {
 	const plan = normalizeCanvasPlanInput(input)

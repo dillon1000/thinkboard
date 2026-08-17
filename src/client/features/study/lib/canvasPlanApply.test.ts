@@ -1,8 +1,7 @@
-import { canvasPlanInputSchema } from '@agentboard/shared'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import {
-	type Editor,
+	Editor,
 	type TLShape,
 	type TLShapeId,
 	type TLShapePartial,
@@ -12,7 +11,7 @@ import { applyCanvasPlan } from './canvasPlanApply'
 describe('applyCanvasPlan', () => {
 	it('creates native shapes and bound connectors without duplicating a retried plan', () => {
 		const harness = createEditorHarness()
-		const plan = canvasPlanInputSchema.parse({
+		const plan = {
 			version: 1,
 			planID: 'native-map',
 			elements: [
@@ -45,7 +44,7 @@ describe('applyCanvasPlan', () => {
 				to: { type: 'element', id: 'target' },
 				label: 'leads to',
 			}],
-		})
+		}
 
 		const first = applyCanvasPlan(harness.editor, plan)
 		const second = applyCanvasPlan(harness.editor, plan)
@@ -63,12 +62,12 @@ describe('applyCanvasPlan', () => {
 	it('rejects stale plans before it changes the editor', () => {
 		const harness = createEditorHarness()
 
-		const stalePlan = canvasPlanInputSchema.parse({
+		const stalePlan = {
 			version: 1,
 			planID: 'stale-plan',
 			baseDocumentClock: 10,
 			elements: [{ id: 'note', kind: 'note', text: 'Old context' }],
-		})
+		}
 		expect(() => applyCanvasPlan(harness.editor, stalePlan, {
 			documentClock: 11,
 		})).toThrow('The space changed')
@@ -91,10 +90,6 @@ interface MockShape {
 }
 
 type MockBinding = Parameters<Editor['createBinding']>[0]
-
-interface CanvasPlanEditorFixture {
-	run(operation: () => void): void
-}
 
 const mockDimensionsSchema = z.object({
 	h: z.number().optional(),
@@ -189,9 +184,8 @@ function createEditorHarness() {
 		},
 		zoomToBounds: () => undefined,
 	}
-	const editorCandidate: CanvasPlanEditorFixture = editorFixture
 	// SAFETY: The fixture implements every Editor method that applyCanvasPlan calls.
-	const editor = editorCandidate as Editor
+	const editor = Object.assign(Object.create(Editor.prototype), editorFixture) as Editor
 
 	return {
 		editor,
