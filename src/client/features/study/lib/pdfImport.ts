@@ -3,12 +3,15 @@ import {
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,
+	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
-	type DocumentStatusResponse,
+	documentStatusResponseSchema,
+	documentSummarySchema,
 	type DocumentSummary,
 	type PDFTextBlock,
 } from '@agentboard/shared'
 import type { PDFPageProxy } from 'pdfjs-dist'
+import { z } from 'zod'
 import { createShapeId, isShapeId, type Editor } from 'tldraw'
 import { loadPDFJS } from './pdfRuntime'
 
@@ -20,6 +23,22 @@ const WEBP_QUALITY = 0.88
 const WEBP_FALLBACK_QUALITY = 0.76
 const OFFICE_CONVERSION_POLL_INTERVAL_MS = 1_500
 const OFFICE_CONVERSION_TIMEOUT_MS = 5 * 60_000
+const PDFTextItemSchema = z.object({
+	height: z.number(),
+	str: z.string(),
+	transform: z.array(z.number()).min(6),
+	width: z.number(),
+})
+const PDFPagePropsSchema = z.object({
+	documentId: z.string(),
+	pageNumber: z.number(),
+})
+const PDFPageNumberSchema = PDFPagePropsSchema.pick({ pageNumber: true })
+const PDFPageIdentitySchema = PDFPagePropsSchema.pick({ documentId: true })
+const savedImportSchema = z.object({ documentID: z.string() })
+const responseErrorSchema = z.object({ error: z.string() })
+const documentListSchema = z.object({ documents: z.array(documentSummarySchema) })
+const okResponseSchema = z.object({ ok: z.literal(true) })
 
 type OfficeSourceFormat = 'docx' | 'pptx'
 
@@ -39,7 +58,7 @@ interface ImportedPDFPage {
 }
 
 interface PDFPageShapeReference {
-	props: object
+	props: z.input<typeof PDFPageNumberSchema>
 }
 
 interface SavedImport {
@@ -218,18 +237,9 @@ async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDo
 		readPDFTextItems(page),
 	])
 	const textBlocks = textItems.flatMap((item): PDFTextBlock[] => {
-		const text = Reflect.get(item, 'str')
-		const transform = Reflect.get(item, 'transform')
-		const width = Reflect.get(item, 'width')
-		const height = Reflect.get(item, 'height')
-		if (
-			typeof text !== 'string' ||
-			!Array.isArray(transform) ||
-			transform.length < 6 ||
-			!transform.every((value) => typeof value === 'number') ||
-			typeof width !== 'number' ||
-			typeof height !== 'number'
-		) return []
+		const parsed = PDFTextItemSchema.safeParse(item)
+		if (!parsed.success) return []
+		const { height, str: text, transform, width } = parsed.data
 		const x = clamp01(transform[4] / displayViewport.width)
 		const y = clamp01(1 - transform[5] / displayViewport.height - height / displayViewport.height)
 		return [{
@@ -329,7 +339,7 @@ async function uploadDocumentPage(
 	form.set('text', page.text)
 	form.set('textLayout', JSON.stringify(page.textBlocks))
 	form.set('width', String(page.width))
-	await requestJSON(apiRoutes.boardDocumentPage(boardID, documentID, pageNumber), {
+	await requestJSON(apiRoutes.boardDocumentPage(boardID, documentID, pageNumber), z.json(), {
 		body: form,
 		method: 'PUT',
 	})
@@ -346,15 +356,19 @@ export function getDocumentStatus(boardID: string, documentID: string) {
 }
 
 export async function retryDocumentProcessing(boardID: string, documentID: string) {
-	await requestJSON(apiRoutes.boardDocumentRetry(boardID, documentID), { method: 'POST' })
+	await requestJSON(
+		apiRoutes.boardDocumentRetry(boardID, documentID),
+		okResponseSchema,
+		{ method: 'POST' }
+	)
 }
 
 export async function listBoardDocuments(boardID: string) {
-	return requestJSON<{ documents: DocumentSummary[] }>(apiRoutes.boardDocuments(boardID))
+	return requestJSON(apiRoutes.boardDocuments(boardID), documentListSchema)
 }
 
 export async function deleteBoardDocument(boardID: string, documentID: string) {
-	await requestJSON<{ ok: true }>(apiRoutes.boardDocument(boardID, documentID), {
+	await requestJSON(apiRoutes.boardDocument(boardID, documentID), okResponseSchema, {
 		method: 'DELETE',
 	})
 }
@@ -367,8 +381,8 @@ export function removePDFDocumentShapes(editor: Editor, documentID: string) {
 	const pageShapes = editor.getPages().flatMap((page) =>
 		[...editor.getPageShapeIds(page)].flatMap((shapeID) => {
 			const shape = editor.getShape(shapeID)
-			return shape?.type === 'pdf-page' &&
-				Reflect.get(shape.props, 'documentId') === documentID
+			return shape?.type === PDF_PAGE_SHAPE_TYPE &&
+				isPDFPageForDocument(shape.props, documentID)
 				? [shape]
 				: []
 		})
@@ -401,8 +415,8 @@ export function locatePDFDocument(editor: Editor, documentID: string) {
 		for (const shapeID of editor.getPageShapeIds(page)) {
 			const shape = editor.getShape(shapeID)
 			if (
-				shape?.type !== 'pdf-page' ||
-				Reflect.get(shape.props, 'documentId') !== documentID
+				shape?.type !== PDF_PAGE_SHAPE_TYPE ||
+				!isPDFPageForDocument(shape.props, documentID)
 			) continue
 			editor.setCurrentPage(page.id)
 			editor.setSelectedShapes([shape.id])
@@ -434,8 +448,8 @@ export function placePDFPages(
 	const existingPageShapes = editor.getPages().flatMap((page) =>
 		[...editor.getPageShapeIds(page)].flatMap((shapeID) => {
 			const shape = editor.getShape(shapeID)
-			return shape?.type === 'pdf-page' &&
-				Reflect.get(shape.props, 'documentId') === document.id
+			return shape?.type === PDF_PAGE_SHAPE_TYPE &&
+				isPDFPageForDocument(shape.props, document.id)
 				? [shape]
 				: []
 		})
@@ -444,7 +458,7 @@ export function placePDFPages(
 		editor.updateShapes(existingPageShapes.map((shape) => ({
 			id: shape.id,
 			props: { renderVersion },
-			type: 'pdf-page' as const,
+			type: PDF_PAGE_SHAPE_TYPE,
 		})))
 		return
 	}
@@ -512,7 +526,7 @@ export function placePDFPages(
 					renderVersion,
 					w: page.w,
 				},
-				type: 'pdf-page' as const,
+				type: PDF_PAGE_SHAPE_TYPE,
 				x: padding + (contentWidth - page.w) / 2,
 				y,
 			}
@@ -530,11 +544,17 @@ export function hasCompletePDFPageShapeSet(
 ) {
 	const expectedPageNumbers = new Set(pages.map(({ pageNumber }) => pageNumber))
 	if (existingShapes.length !== expectedPageNumbers.size) return false
-	const existingPageNumbers = new Set(existingShapes.map(({ props }) =>
-		Reflect.get(props, 'pageNumber')
-	))
+	const existingPageNumbers = new Set(existingShapes.flatMap(({ props }) => {
+		const parsed = PDFPageNumberSchema.safeParse(props)
+		return parsed.success ? [parsed.data.pageNumber] : []
+	}))
 	return existingPageNumbers.size === expectedPageNumbers.size &&
 		[...expectedPageNumbers].every((pageNumber) => existingPageNumbers.has(pageNumber))
+}
+
+function isPDFPageForDocument<Props>(props: Props, documentID: string) {
+	const parsed = PDFPageIdentitySchema.safeParse(props)
+	return parsed.success && parsed.data.documentId === documentID
 }
 
 function findOpenFrameOrigin(
@@ -586,6 +606,7 @@ interface BrowserScheduler {
 }
 
 export async function yieldToBrowser() {
+	// SAFETY: Chromium exposes this optional scheduling API before TypeScript's DOM library does.
 	const browserScheduler = (globalThis as typeof globalThis & {
 		scheduler?: BrowserScheduler
 	}).scheduler
@@ -601,21 +622,25 @@ function clamp01(value: number) {
 }
 
 async function requestDocumentStatus(input: RequestInfo | URL, init?: RequestInit) {
-	return requestJSON<DocumentStatusResponse>(input, init)
+	return requestJSON(input, documentStatusResponseSchema, init)
 }
 
-async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+async function requestJSON<Schema extends z.ZodType>(
+	input: RequestInfo | URL,
+	schema: Schema,
+	init?: RequestInit
+): Promise<z.output<Schema>> {
 	const response = await fetch(input, init)
 	if (!response.ok) {
 		throw new Error(await readResponseError(response))
 	}
-	return response.json() as Promise<T>
+	return schema.parse(await response.json())
 }
 
 async function readResponseError(response: Response) {
-	const body: unknown = await response.json().catch(() => null)
-	return body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
-		? String(Reflect.get(body, 'error'))
+	const body = responseErrorSchema.safeParse(await response.json().catch(() => null))
+	return body.success
+		? body.data.error
 		: `Request failed with status ${response.status}`
 }
 
@@ -627,9 +652,8 @@ function readSavedImport(boardID: string, file: File): SavedImport | null {
 	try {
 		const value = localStorage.getItem(savedImportKey(boardID, file))
 		if (!value) return null
-		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && typeof parsed === 'object' ? Reflect.get(parsed, 'documentID') : null
-		return typeof documentID === 'string' ? { documentID } : null
+		const parsed = savedImportSchema.safeParse(JSON.parse(value))
+		return parsed.success ? parsed.data : null
 	} catch {
 		return null
 	}
@@ -659,9 +683,8 @@ function readSavedOfficeImport(boardID: string, file: File): SavedImport | null 
 	try {
 		const value = localStorage.getItem(savedOfficeImportKey(boardID, file))
 		if (!value) return null
-		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && typeof parsed === 'object' ? Reflect.get(parsed, 'documentID') : null
-		return typeof documentID === 'string' ? { documentID } : null
+		const parsed = savedImportSchema.safeParse(JSON.parse(value))
+		return parsed.success ? parsed.data : null
 	} catch {
 		return null
 	}
