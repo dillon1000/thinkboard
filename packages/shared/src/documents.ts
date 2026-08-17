@@ -7,6 +7,31 @@ export const MAX_OFFICE_BYTES = 50 * 1_024 * 1_024
 
 export const documentStatusSchema = z.enum(['processing', 'ready', 'failed'])
 
+export const documentSummarySchema = z.object({
+	byteSize: z.number().nonnegative(),
+	createdAt: z.string(),
+	failureReason: z.string().nullable(),
+	id: z.string(),
+	ownerID: z.string(),
+	pageCount: z.number().int().nonnegative(),
+	status: documentStatusSchema,
+	title: z.string(),
+	uploadedPageCount: z.number().int().nonnegative(),
+})
+
+export const documentPageSummarySchema = z.object({
+	documentID: z.string(),
+	height: z.number().nonnegative(),
+	ocrApplied: z.boolean(),
+	pageNumber: z.number().int().positive(),
+	width: z.number().nonnegative(),
+})
+
+export const documentStatusResponseSchema = z.object({
+	document: documentSummarySchema,
+	pages: z.array(documentPageSummarySchema),
+})
+
 export const documentErrorCodeSchema = z.enum([
 	'DOCUMENT_NOT_FOUND',
 	'INVALID_PDF',
@@ -22,30 +47,9 @@ export const documentErrorCodeSchema = z.enum([
 	'PIPELINE_FAILED',
 ])
 
-export interface DocumentSummary {
-	byteSize: number
-	createdAt: string
-	failureReason: string | null
-	id: string
-	ownerID: string
-	pageCount: number
-	status: DocumentStatus
-	title: string
-	uploadedPageCount: number
-}
-
-export interface DocumentPageSummary {
-	documentID: string
-	height: number
-	ocrApplied: boolean
-	pageNumber: number
-	width: number
-}
-
-export interface DocumentStatusResponse {
-	document: DocumentSummary
-	pages: DocumentPageSummary[]
-}
+export type DocumentSummary = z.infer<typeof documentSummarySchema>
+export type DocumentPageSummary = z.infer<typeof documentPageSummarySchema>
+export type DocumentStatusResponse = z.infer<typeof documentStatusResponseSchema>
 
 export interface DocumentErrorResponse {
 	code: DocumentErrorCode

@@ -28,7 +28,10 @@ export {
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,
 	documentErrorCodeSchema,
+	documentPageSummarySchema,
+	documentStatusResponseSchema,
 	documentStatusSchema,
+	documentSummarySchema,
 	pdfTextBlockSchema,
 	pdfTextLayoutSchema,
 } from './documents'
