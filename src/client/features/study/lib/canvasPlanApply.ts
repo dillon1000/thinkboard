@@ -1,4 +1,3 @@
-import { isNumber } from '@agentboard/shared'
 import {
 	normalizeCanvasPlanInput,
 	type CanvasConnector,
@@ -201,7 +200,7 @@ function createElementShape(
 				w: box.w,
 				richText: toRichText(element.text),
 				autoSize: element.autoSize && element.size?.width !== 'fill' &&
-					!isNumber(element.size?.width),
+					typeof element.size?.width !== 'number',
 				...textStyleProps(element.style),
 			},
 		}
@@ -768,8 +767,8 @@ function resolveEditedSize(
 	if (!size) return undefined
 	const bounds = editor.getShapePageBounds(shape)
 	if (!bounds) return undefined
-	const requestedWidth = isNumber(size.width) ? size.width : bounds.w
-	const requestedHeight = isNumber(size.height) ? size.height : bounds.h
+	const requestedWidth = typeof size.width === 'number' ? size.width : bounds.w
+	const requestedHeight = typeof size.height === 'number' ? size.height : bounds.h
 	let w = Math.max(size.minWidth ?? 1, Math.min(size.maxWidth ?? 10_000, requestedWidth))
 	let h = Math.max(size.minHeight ?? 1, Math.min(size.maxHeight ?? 10_000, requestedHeight))
 	if (size.aspectRatio) {

@@ -1,4 +1,3 @@
-import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import { apiRoutes } from '@agentboard/shared'
 import {
 	type ClipboardEvent as ReactClipboardEvent,
@@ -234,28 +233,28 @@ async function getPDFPageLinks(
 }
 
 function parsePDFLinkAnnotation(value: unknown, index: number): PDFLinkAnnotation | null {
-	if (!value || !hasObjectType(value)) return null
+	if (!value || typeof value !== 'object') return null
 	const subtype = Reflect.get(value, 'subtype')
 	const rawRect = Reflect.get(value, 'rect')
 	if (subtype !== 'Link' || !isPDFRectangle(rawRect)) return null
 	const rawID = Reflect.get(value, 'id')
 	const rawURL = Reflect.get(value, 'url')
 	const rawDestination = Reflect.get(value, 'dest')
-	const destination = isString(rawDestination) || Array.isArray(rawDestination)
+	const destination = typeof rawDestination === 'string' || Array.isArray(rawDestination)
 		? rawDestination
 		: undefined
 	return {
 		...(destination ? { destination } : {}),
-		id: isString(rawID) ? rawID : `link-${index}`,
+		id: typeof rawID === 'string' ? rawID : `link-${index}`,
 		rect: rawRect,
-		...(isString(rawURL) ? { URL: rawURL } : {}),
+		...(typeof rawURL === 'string' ? { URL: rawURL } : {}),
 	}
 }
 
 function isPDFRectangle(value: unknown): value is [number, number, number, number] {
 	return Array.isArray(value) &&
 		value.length === 4 &&
-		value.every((coordinate) => isNumber(coordinate) && Number.isFinite(coordinate))
+		value.every((coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate))
 }
 
 function normalizeAnnotationRect(
@@ -290,11 +289,11 @@ async function resolveDestinationPageNumber(
 	PDFDocument: PDFDocumentProxy,
 	destination: string | readonly unknown[]
 ) {
-	const explicitDestination = isString(destination)
+	const explicitDestination = typeof destination === 'string'
 		? await PDFDocument.getDestination(destination)
 		: destination
 	const pageReference = explicitDestination?.[0]
-	if (isNumber(pageReference) && Number.isInteger(pageReference)) {
+	if (typeof pageReference === 'number' && Number.isInteger(pageReference)) {
 		const pageNumber = pageReference + 1
 		return pageNumber <= PDFDocument.numPages ? pageNumber : null
 	}
@@ -306,9 +305,9 @@ async function resolveDestinationPageNumber(
 function isPDFPageReference(value: unknown): value is { gen: number; num: number } {
 	return Boolean(
 		value &&
-		hasObjectType(value) &&
-		isNumber(Reflect.get(value, 'num')) &&
-		isNumber(Reflect.get(value, 'gen'))
+		typeof value === 'object' &&
+		typeof Reflect.get(value, 'num') === 'number' &&
+		typeof Reflect.get(value, 'gen') === 'number'
 	)
 }
 

@@ -1,4 +1,3 @@
-import { hasObjectType } from '@agentboard/shared'
 export type StudyToolContinuation = 'applied' | 'dismissed' | 'error' | 'saved'
 
 interface ChatMessageLike {
@@ -34,7 +33,7 @@ export function getStudyToolContinuation(
 	if (toolPart.state === 'output-error') return 'error'
 
 	const applied = toolPart.output &&
-		hasObjectType(toolPart.output) &&
+		typeof toolPart.output === 'object' &&
 		Reflect.get(toolPart.output, 'applied') === true
 	if (!applied) return 'dismissed'
 	return toolPart.type === 'tool-saveMemory' || toolPart.type === 'tool-recordMistake'

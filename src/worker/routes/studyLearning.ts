@@ -1,4 +1,3 @@
-import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	agentProfileSchema,
 	agentMemoryKeySchema,
@@ -135,10 +134,10 @@ export async function handleFlashcardAnswerAttempt(
 }
 
 function getAIErrorLog(error: unknown) {
-	const code = error && hasObjectType(error) ? Reflect.get(error, 'code') : null
+	const code = error && typeof error === 'object' ? Reflect.get(error, 'code') : null
 	const message = error instanceof Error ? error.message : String(error)
 	return {
-		...(isNumber(code) || isString(code) ? { code } : {}),
+		...(typeof code === 'number' || typeof code === 'string' ? { code } : {}),
 		message: message.slice(0, 500),
 		name: error instanceof Error ? error.name : 'UnknownError',
 	}
@@ -323,7 +322,7 @@ export async function handleFlashcardReview(request: IRequest, env: Env) {
 	if ('response' in authentication) return authentication.response
 	const body: unknown = await request.json().catch(() => null)
 	const rating = flashcardReviewRatingSchema.safeParse(
-		body && hasObjectType(body) ? Reflect.get(body, 'rating') : undefined
+		body && typeof body === 'object' ? Reflect.get(body, 'rating') : undefined
 	)
 	if (!rating.success) return Response.json({ error: 'Invalid review rating' }, { status: 400 })
 	const schedule = await reviewFlashcard(

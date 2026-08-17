@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	apiRoutes,
 	type AgentActionCreate,
@@ -136,10 +135,10 @@ function parseCanvasRecords(records: Array<Record<string, unknown>>): TLRecord[]
 }
 
 function isCanvasRecord(record: unknown): record is TLRecord {
-	if (!record || !hasObjectType(record)) return false
+	if (!record || typeof record !== 'object') return false
 	const typeName = Reflect.get(record, 'typeName')
 	return (typeName === 'shape' || typeName === 'binding') &&
-		isString(Reflect.get(record, 'id'))
+		typeof Reflect.get(record, 'id') === 'string'
 }
 
 function serializeRecord(record: TLRecord | undefined) {

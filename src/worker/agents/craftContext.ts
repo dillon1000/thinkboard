@@ -1,4 +1,3 @@
-import { isString } from '@agentboard/shared'
 import { getCraftDocumentCitationHref } from '@agentboard/shared'
 import type { ModelMessage, UserModelMessage } from 'ai'
 import { listCraftDocumentLinkRows } from '../db/craft'
@@ -28,7 +27,7 @@ export function attachCraftDocumentContext(
 	const userMessageIndex = messages.findLastIndex(({ role }) => role === 'user')
 	if (userMessageIndex < 0) return messages
 	const userMessage = messages[userMessageIndex] as UserModelMessage
-	const content = isString(userMessage.content)
+	const content = typeof userMessage.content === 'string'
 		? [{ type: 'text' as const, text: userMessage.content }]
 		: userMessage.content
 	const sources = results.map((result, index) => [

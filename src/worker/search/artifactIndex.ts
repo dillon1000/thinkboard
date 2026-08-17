@@ -1,4 +1,3 @@
-import { hasObjectType, isNumber } from '@agentboard/shared'
 import type { StudyArtifactInput } from '@agentboard/shared'
 import { getDocumentAIConfig } from '../config'
 import type { AIRunner } from '../observability/posthogAI'
@@ -73,12 +72,12 @@ export async function createArtifactVectorID(boardID: string, shapeID: string) {
 }
 
 function readEmbeddings(value: unknown): number[][] {
-	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
+	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
 	const data = Reflect.get(value, 'data')
 	if (
 		!Array.isArray(data) ||
 		!data.every((embedding) =>
-			Array.isArray(embedding) && embedding.every((entry) => isNumber(entry))
+			Array.isArray(embedding) && embedding.every((entry) => typeof entry === 'number')
 		)
 	) {
 		throw new Error('Embedding response did not contain vectors')

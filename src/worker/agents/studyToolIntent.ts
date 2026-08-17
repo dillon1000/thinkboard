@@ -1,4 +1,3 @@
-import { isString } from '@agentboard/shared'
 export type StudyToolName =
 	| 'addReviewNote'
 	| 'createConceptMap'
@@ -23,7 +22,7 @@ export function getRequestedStudyTool(
 	const latestMessage = messages.at(-1)
 	if (latestMessage?.role !== 'user') return undefined
 	const text = latestMessage.parts
-		.filter((part) => part.type === 'text' && isString(part.text))
+		.filter((part) => part.type === 'text' && typeof part.text === 'string')
 			.map((part) => part.text)
 			.join('\n')
 

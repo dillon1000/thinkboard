@@ -1,4 +1,3 @@
-import { hasObjectType, isString } from '@agentboard/shared'
 import type { AIRunner } from '../routes/lockIn'
 
 export const DEFAULT_CONVERSATION_TITLE_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct'
@@ -55,10 +54,10 @@ export function cleanTitle(raw: string): string | null {
 }
 
 function readGeneratedText(value: unknown): string {
-	if (!value || !hasObjectType(value)) return ''
+	if (!value || typeof value !== 'object') return ''
 	for (const key of ['response', 'result', 'text']) {
 		const candidate = Reflect.get(value, key)
-		if (isString(candidate)) return candidate
+		if (typeof candidate === 'string') return candidate
 	}
 	return ''
 }

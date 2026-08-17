@@ -1,4 +1,3 @@
-import { isString } from '@agentboard/shared'
 import { FLASHCARD_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor } from 'tldraw'
 
@@ -68,10 +67,10 @@ export function collectSpaceFlashcards(editor: Editor): ExportFlashcard[] {
 			const front = Reflect.get(shape.props, 'front')
 			const back = Reflect.get(shape.props, 'back')
 			const alternateAnswers = Reflect.get(shape.props, 'alternateAnswers')
-			if (!isString(front) || !isString(back)) continue
+			if (typeof front !== 'string' || typeof back !== 'string') continue
 			cards.push({
 				alternateAnswers: Array.isArray(alternateAnswers)
-					? alternateAnswers.filter((answer): answer is string => isString(answer))
+					? alternateAnswers.filter((answer): answer is string => typeof answer === 'string')
 					: [],
 				back,
 				front,
