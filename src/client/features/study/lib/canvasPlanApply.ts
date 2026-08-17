@@ -57,23 +57,6 @@ type CanvasMathShape = TLBaseShape<typeof MATH_SHAPE_TYPE, {
 	schemaVersion: number
 }>
 
-interface CanvasShapeCreateBase {
-	id: TLShapeId
-	x: number
-	y: number
-	rotation: number
-	isLocked: boolean
-	opacity?: number
-	meta: ReturnType<typeof createPlanMetadata>
-}
-
-interface CanvasShapeUpdateBase {
-	id: TLShapeId
-	rotation?: number
-	isLocked?: boolean
-	opacity?: number
-}
-
 /**
  * Applies one validated plan as one undoable editor operation. A failed mutation returns the
  * editor to its history mark, including deletions and changes to existing shapes.
@@ -184,15 +167,15 @@ function createElementShape(
 ): TLShapePartial {
 	if (!box) throw new Error(`Missing layout for canvas element: ${element.id}`)
 	const id = getPlanShapeID(planShapeIDs, element.id)
-	const base: CanvasShapeCreateBase = {
+	const base = {
 		id,
 		x: box.x,
 		y: box.y,
 		rotation: degreesToRadians(element.rotation),
 		isLocked: element.locked,
+		...(element.style?.opacity !== undefined && { opacity: element.style.opacity }),
 		meta: createPlanMetadata(plan, element.id),
 	}
-	if (element.style?.opacity !== undefined) base.opacity = element.style.opacity
 
 	if (element.kind === 'geo') {
 		const shape: TLShapePartial<TLGeoShape> = {
@@ -249,16 +232,15 @@ function createElementShape(
 		return shape
 	}
 	if (element.kind === 'frame') {
-		const props: Partial<TLFrameShape['props']> = {
-			w: box.w,
-			h: box.h,
-			name: element.name,
-		}
-		if (element.style?.color) props.color = element.style.color
 		const shape: TLShapePartial<TLFrameShape> = {
 			...base,
 			type: 'frame',
-			props,
+			props: {
+				w: box.w,
+				h: box.h,
+				name: element.name,
+				...(element.style?.color && { color: element.style.color }),
+			},
 		}
 		return shape
 	}
@@ -330,6 +312,7 @@ function createConnector(
 		x: start.x,
 		y: start.y,
 		meta: createPlanMetadata(plan, connector.id),
+		...(connector.style?.opacity !== undefined && { opacity: connector.style.opacity }),
 		props: {
 			start: { x: 0, y: 0 },
 			end: { x: end.x - start.x, y: end.y - start.y },
@@ -341,7 +324,6 @@ function createConnector(
 			...arrowStyleProps(connector.style),
 		},
 	}
-	if (connector.style?.opacity !== undefined) shape.opacity = connector.style.opacity
 	editor.createShape(shape)
 
 	if (from.shapeIDs.length === 1) {
@@ -498,77 +480,72 @@ function applyShapeEdit(
 	edit: CanvasPlan['edits'][number],
 	_finalBoxes: ReadonlyMap<string, CanvasLayoutBox>
 ) {
-	const common: CanvasShapeUpdateBase = {
+	const common = {
 		id: shape.id,
+		...(edit.rotation !== undefined && { rotation: degreesToRadians(edit.rotation) }),
+		...(edit.locked !== undefined && { isLocked: edit.locked }),
+		...(edit.style?.opacity !== undefined && { opacity: edit.style.opacity }),
 	}
-	if (edit.rotation !== undefined) common.rotation = degreesToRadians(edit.rotation)
-	if (edit.locked !== undefined) common.isLocked = edit.locked
-	if (edit.style?.opacity !== undefined) common.opacity = edit.style.opacity
 	if (shape.type === 'geo') {
 		const size = resolveEditedSize(editor, shape, edit.size)
-		const props = geoStyleProps(edit.style)
-		if (size) {
-			props.w = size.w
-			props.h = size.h
-		}
-		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLGeoShape>({
 			...common,
 			type: 'geo',
-			props,
+			props: {
+				...(size && { w: size.w, h: size.h }),
+				...(edit.text !== undefined && { richText: toRichText(edit.text) }),
+				...geoStyleProps(edit.style),
+			},
 		})
 		return
 	}
 	if (shape.type === 'text') {
 		const size = resolveEditedSize(editor, shape, edit.size)
-		const props = textStyleProps(edit.style)
-		if (size) {
-			props.w = size.w
-			props.autoSize = false
-		}
-		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLTextShape>({
 			...common,
 			type: 'text',
-			props,
+			props: {
+				...(size && { w: size.w, autoSize: false }),
+				...(edit.text !== undefined && { richText: toRichText(edit.text) }),
+				...textStyleProps(edit.style),
+			},
 		})
 		return
 	}
 	if (shape.type === 'note') {
 		const size = resolveEditedSize(editor, shape, edit.size)
-		const props = noteStyleProps(edit.style)
-		if (size) props.scale = Math.max(size.w, size.h) / NOTE_SIZE
-		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLNoteShape>({
 			...common,
 			type: 'note',
-			props,
+			props: {
+				...(size && { scale: Math.max(size.w, size.h) / NOTE_SIZE }),
+				...(edit.text !== undefined && { richText: toRichText(edit.text) }),
+				...noteStyleProps(edit.style),
+			},
 		})
 		return
 	}
 	if (shape.type === 'frame') {
 		const size = resolveEditedSize(editor, shape, edit.size)
-		const props: Partial<TLFrameShape['props']> = {}
-		if (size) {
-			props.w = size.w
-			props.h = size.h
-		}
-		if (edit.text !== undefined) props.name = edit.text
-		if (edit.style?.color) props.color = edit.style.color
 		editor.updateShape<TLFrameShape>({
 			...common,
 			type: 'frame',
-			props,
+			props: {
+				...(size && { w: size.w, h: size.h }),
+				...(edit.text !== undefined && { name: edit.text }),
+				...(edit.style?.color && { color: edit.style.color }),
+			},
 		})
 		return
 	}
 	if (shape.type === 'arrow') {
-		const props = arrowStyleProps(edit.style)
-		if (edit.text !== undefined) props.richText = toRichText(edit.text)
 		editor.updateShape<TLArrowShape>({
 			...common,
 			type: 'arrow',
-			props,
+			props: {
+				...(edit.text !== undefined && { richText: toRichText(edit.text) }),
+				...arrowStyleProps(edit.style),
+			},
 		})
 		return
 	}
@@ -582,16 +559,13 @@ function applyShapeEdit(
 	}
 	if (shape.type === MATH_SHAPE_TYPE) {
 		const size = resolveEditedSize(editor, shape, edit.size)
-		const props: Partial<CanvasMathShape['props']> = {}
-		if (size) {
-			props.w = size.w
-			props.h = size.h
-		}
-		if (edit.latex !== undefined) props.latex = normalizeEquationLatex(edit.latex)
 		editor.updateShape<CanvasMathShape>({
 			...common,
 			type: MATH_SHAPE_TYPE,
-			props,
+			props: {
+				...(size && { w: size.w, h: size.h }),
+				...(edit.latex !== undefined && { latex: normalizeEquationLatex(edit.latex) }),
+			},
 		})
 		return
 	}
@@ -798,55 +772,55 @@ function resolveEditedSize(
 }
 
 function geoStyleProps(style: CanvasShapeStyle | undefined): Partial<TLGeoShape['props']> {
-	const props: Partial<TLGeoShape['props']> = {}
-	if (style?.color) props.color = style.color
-	if (style?.labelColor) props.labelColor = style.labelColor
-	if (style?.fill) props.fill = style.fill
-	if (style?.dash) props.dash = style.dash
-	if (style?.size) props.size = style.size
-	if (style?.font) props.font = style.font
-	if (style?.textAlign) props.align = style.textAlign
-	if (style?.verticalAlign) props.verticalAlign = style.verticalAlign
-	return props
+	return {
+		...(style?.color && { color: style.color }),
+		...(style?.labelColor && { labelColor: style.labelColor }),
+		...(style?.fill && { fill: style.fill }),
+		...(style?.dash && { dash: style.dash }),
+		...(style?.size && { size: style.size }),
+		...(style?.font && { font: style.font }),
+		...(style?.textAlign && { align: style.textAlign }),
+		...(style?.verticalAlign && { verticalAlign: style.verticalAlign }),
+	}
 }
 
 function textStyleProps(style: CanvasShapeStyle | undefined): Partial<TLTextShape['props']> {
-	const props: Partial<TLTextShape['props']> = {}
-	if (style?.color) props.color = style.color
-	if (style?.size) props.size = style.size
-	if (style?.font) props.font = style.font
-	if (style?.textAlign) props.textAlign = style.textAlign
-	return props
+	return {
+		...(style?.color && { color: style.color }),
+		...(style?.size && { size: style.size }),
+		...(style?.font && { font: style.font }),
+		...(style?.textAlign && { textAlign: style.textAlign }),
+	}
 }
 
 function noteStyleProps(style: CanvasShapeStyle | undefined): Partial<TLNoteShape['props']> {
-	const props: Partial<TLNoteShape['props']> = {}
-	if (style?.color) props.color = style.color
-	if (style?.labelColor) props.labelColor = style.labelColor
-	if (style?.size) props.size = style.size
-	if (style?.font) props.font = style.font
-	if (style?.textAlign) props.align = style.textAlign
-	if (style?.verticalAlign) props.verticalAlign = style.verticalAlign
-	return props
+	return {
+		...(style?.color && { color: style.color }),
+		...(style?.labelColor && { labelColor: style.labelColor }),
+		...(style?.size && { size: style.size }),
+		...(style?.font && { font: style.font }),
+		...(style?.textAlign && { align: style.textAlign }),
+		...(style?.verticalAlign && { verticalAlign: style.verticalAlign }),
+	}
 }
 
 function lineStyleProps(style: CanvasShapeStyle | undefined): Partial<TLLineShape['props']> {
-	const props: Partial<TLLineShape['props']> = {}
-	if (style?.color) props.color = style.color
-	if (style?.dash) props.dash = style.dash
-	if (style?.size) props.size = style.size
-	return props
+	return {
+		...(style?.color && { color: style.color }),
+		...(style?.dash && { dash: style.dash }),
+		...(style?.size && { size: style.size }),
+	}
 }
 
 function arrowStyleProps(style: CanvasShapeStyle | undefined): Partial<TLArrowShape['props']> {
-	const props: Partial<TLArrowShape['props']> = {}
-	if (style?.color) props.color = style.color
-	if (style?.labelColor) props.labelColor = style.labelColor
-	if (style?.fill) props.fill = style.fill
-	if (style?.dash) props.dash = style.dash
-	if (style?.size) props.size = style.size
-	if (style?.font) props.font = style.font
-	return props
+	return {
+		...(style?.color && { color: style.color }),
+		...(style?.labelColor && { labelColor: style.labelColor }),
+		...(style?.fill && { fill: style.fill }),
+		...(style?.dash && { dash: style.dash }),
+		...(style?.size && { size: style.size }),
+		...(style?.font && { font: style.font }),
+	}
 }
 
 function attachmentPoint(
