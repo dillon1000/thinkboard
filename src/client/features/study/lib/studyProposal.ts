@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	agentMemoryProposalSchema,
 	conceptMapProposalSchema,
@@ -193,7 +194,7 @@ function getFlatInput(value: Record<string, unknown>) {
 }
 
 function parsePossiblyEncodedJSON(value: unknown) {
-	if (typeof value !== 'string') return value
+	if (!isString(value)) return value
 	try {
 		return JSON.parse(value) as unknown
 	} catch {
@@ -202,9 +203,9 @@ function parsePossiblyEncodedJSON(value: unknown) {
 }
 
 function isSupportedProposalName(value: unknown): value is SupportedProposalName {
-	return typeof value === 'string' && proposalNames.some((toolName) => toolName === value)
+	return isString(value) && proposalNames.some((toolName) => toolName === value)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null
+	return hasObjectType(value) && value !== null
 }

@@ -1,3 +1,4 @@
+import { isNumber, isString } from '@agentboard/shared'
 import { describe, expect, it } from 'vitest'
 import {
 	type Editor,
@@ -91,17 +92,17 @@ function createEditorHarness() {
 	let selected: TLShapeId[] = []
 
 	const getShape = (value: TLShapeId | TLShape) => {
-		const id = typeof value === 'string' ? value : value.id
+		const id = isString(value) ? value : value.id
 		return shapes.find((shape) => shape.id === id)
 	}
 	const getBounds = (value: TLShapeId | TLShape) => {
 		const shape = getShape(value)
 		if (!shape) return undefined
-		const scale = typeof shape.props.scale === 'number' ? shape.props.scale : 1
-		const w = typeof shape.props.w === 'number'
+		const scale = isNumber(shape.props.scale) ? shape.props.scale : 1
+		const w = isNumber(shape.props.w)
 			? shape.props.w
 			: shape.type === 'note' ? 200 * scale : 100
-		const h = typeof shape.props.h === 'number'
+		const h = isNumber(shape.props.h)
 			? shape.props.h
 			: shape.type === 'note' ? 200 * scale : shape.type === 'text' ? 40 : 100
 		return { x: shape.x, y: shape.y, w, h }

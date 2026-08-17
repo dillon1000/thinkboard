@@ -1,3 +1,4 @@
+import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import type { ModelMessage, UserModelMessage } from 'ai'
 import { getDocumentAIConfig } from '../config'
 import type { Database } from '../db/client'
@@ -91,35 +92,35 @@ export async function queryBoardDocumentVectors(
 		returnMetadata: 'all',
 		topK: MAX_RETRIEVAL_RESULTS,
 	})
-	if (!response || typeof response !== 'object') return []
+	if (!response || !hasObjectType(response)) return []
 	const matches = Reflect.get(response, 'matches')
 	if (!Array.isArray(matches)) return []
 	return matches.flatMap((match): DocumentRetrievalResult[] => {
-		if (!match || typeof match !== 'object') return []
+		if (!match || !hasObjectType(match)) return []
 		const metadata = Reflect.get(match, 'metadata')
 		const score = Reflect.get(match, 'score')
-		if (!metadata || typeof metadata !== 'object') return []
+		if (!metadata || !hasObjectType(metadata)) return []
 		const matchBoardID = Reflect.get(metadata, 'boardId')
 		const chunkText = Reflect.get(metadata, 'chunkText')
 		const resultKind = Reflect.get(metadata, 'resultKind')
-		if (matchBoardID !== boardID || typeof chunkText !== 'string') return []
+		if (matchBoardID !== boardID || !isString(chunkText)) return []
 		if (resultKind === 'lecture') {
 			const lectureID = Reflect.get(metadata, 'lectureId')
 			const lectureTitle = Reflect.get(metadata, 'lectureTitle')
 			const startSecond = Reflect.get(metadata, 'startSecond')
 			const endSecond = Reflect.get(metadata, 'endSecond')
 			if (
-				typeof lectureID !== 'string' ||
-				typeof lectureTitle !== 'string' ||
-				typeof startSecond !== 'number' ||
-				typeof endSecond !== 'number'
+				!isString(lectureID) ||
+				!isString(lectureTitle) ||
+				!isNumber(startSecond) ||
+				!isNumber(endSecond)
 			) return []
 			return [{
 				chunkText: chunkText.slice(0, 4_000),
 				endSecond,
 				lectureID,
 				lectureTitle,
-				score: typeof score === 'number' ? score : 0,
+				score: isNumber(score) ? score : 0,
 				sourceKind: 'lecture',
 				startSecond,
 			}]
@@ -128,16 +129,16 @@ export async function queryBoardDocumentVectors(
 		const documentTitle = Reflect.get(metadata, 'documentTitle')
 		const pageNumber = Reflect.get(metadata, 'pageNumber')
 		if (
-			typeof documentID !== 'string' ||
-			typeof documentTitle !== 'string' ||
-			typeof pageNumber !== 'number'
+			!isString(documentID) ||
+			!isString(documentTitle) ||
+			!isNumber(pageNumber)
 		) return []
 		return [{
 			chunkText: chunkText.slice(0, 4_000),
 			documentID,
 			documentTitle,
 			pageNumber,
-			score: typeof score === 'number' ? score : 0,
+			score: isNumber(score) ? score : 0,
 			sourceKind: 'pdf',
 		}]
 	})
@@ -151,7 +152,7 @@ export function attachDocumentRetrieval(
 	const userMessageIndex = messages.findLastIndex(({ role }) => role === 'user')
 	if (userMessageIndex < 0) return messages
 	const userMessage = messages[userMessageIndex] as UserModelMessage
-	const content = typeof userMessage.content === 'string'
+	const content = isString(userMessage.content)
 		? [{ type: 'text' as const, text: userMessage.content }]
 		: userMessage.content
 	const sources = results.map((result, index) => {
@@ -186,10 +187,10 @@ function formatTimestamp(value: number) {
 }
 
 function readFirstEmbedding(value: unknown) {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
+	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
 	const data = Reflect.get(value, 'data')
 	const first = Array.isArray(data) ? data[0] : null
-	if (!Array.isArray(first) || !first.every((entry) => typeof entry === 'number')) {
+	if (!Array.isArray(first) || !first.every((entry) => isNumber(entry))) {
 		throw new Error('Embedding response did not contain a vector')
 	}
 	return first

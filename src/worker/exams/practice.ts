@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	practiceSetProposalSchema,
 	type PracticeSetProposal,
@@ -148,8 +149,8 @@ async function generateFromPages(
 }
 
 function parseGeneratedPractice(value: unknown): GeneratedPractice {
-	const response = value && typeof value === 'object' ? Reflect.get(value, 'response') : value
-	const parsed = typeof response === 'string'
+	const response = value && hasObjectType(value) ? Reflect.get(value, 'response') : value
+	const parsed = isString(response)
 		? JSON.parse(response.slice(response.indexOf('{'), response.lastIndexOf('}') + 1))
 		: response
 	const result = practiceSetProposalSchema

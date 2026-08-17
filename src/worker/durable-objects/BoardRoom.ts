@@ -1,3 +1,4 @@
+import { isString } from '@agentboard/shared'
 import {
 	DurableObjectSqliteSyncWrapper,
 	type SessionStateSnapshot,
@@ -82,7 +83,7 @@ export class BoardRoom extends DurableObject<Env> {
 	// Handle new WebSocket connection requests
 	async handleConnect(request: IRequest) {
 		const sessionID = request.query.sessionId
-		if (typeof sessionID !== 'string' || !sessionID) return error(400, 'Missing sessionId')
+		if (!isString(sessionID) || !sessionID) return error(400, 'Missing sessionId')
 
 		// Create the websocket pair for the client
 		const { 0: clientWebSocket, 1: serverWebSocket } = new WebSocketPair()

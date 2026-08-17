@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 export async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
 	const response = await fetch(input, {
 		...init,
@@ -10,7 +11,7 @@ export async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit
 	if (!response.ok) {
 		const body: unknown = await response.json().catch(() => null)
 		const message =
-			body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
+			body && hasObjectType(body) && isString(Reflect.get(body, 'error'))
 				? String(Reflect.get(body, 'error'))
 				: `Request failed with status ${response.status}`
 		throw new Error(message)

@@ -1,3 +1,4 @@
+import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	MAX_CANVAS_SELECTION_IMAGE_DATA_LENGTH,
 	MAX_PDF_PAGES,
@@ -103,7 +104,7 @@ export function getOverlappingPDFPageRegions(
 		const bounds = editor.getShapePageBounds(shape)
 		const documentID = Reflect.get(shape.props, 'documentId')
 		const pageNumber = Reflect.get(shape.props, 'pageNumber')
-		if (!bounds || typeof documentID !== 'string' || typeof pageNumber !== 'number') return []
+		if (!bounds || !isString(documentID) || !isNumber(pageNumber)) return []
 		const intersection = intersectRectangles(selectionBounds, bounds)
 		if (!intersection) return []
 		return [{
@@ -184,14 +185,14 @@ function extractShapeStyle(shape: TLShape) {
 	] as const
 	const entries = keys.flatMap((key) => {
 		const value = Reflect.get(shape.props, key)
-		return typeof value === 'string' ? [[key, value] as const] : []
+		return isString(value) ? [[key, value] as const] : []
 	})
 	return entries.length ? Object.fromEntries(entries) : undefined
 }
 
 function getRichText(shape: TLShape): TLRichText | undefined {
 	const value = Reflect.get(shape.props, 'richText')
-	if (!value || typeof value !== 'object') return undefined
+	if (!value || !hasObjectType(value)) return undefined
 	if (Reflect.get(value, 'type') !== 'doc' || !Array.isArray(Reflect.get(value, 'content'))) {
 		return undefined
 	}
@@ -259,9 +260,9 @@ function isShapeVisible(
 function isPoint(value: unknown): value is { x: number; y: number } {
 	return Boolean(
 		value &&
-		typeof value === 'object' &&
-		typeof Reflect.get(value, 'x') === 'number' &&
-		typeof Reflect.get(value, 'y') === 'number'
+		hasObjectType(value) &&
+		isNumber(Reflect.get(value, 'x')) &&
+		isNumber(Reflect.get(value, 'y'))
 	)
 }
 

@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	DEFAULT_STUDY_MODEL_MODE,
 	DEFAULT_STUDY_REASONING_EFFORT,
@@ -620,29 +621,29 @@ function extractLatestUserText(messages: readonly StudyUIMessage[]) {
 	const message = messages.findLast(({ role }) => role === 'user')
 	if (!message) return ''
 	return message.parts.flatMap((part) => {
-		if (!part || typeof part !== 'object' || Reflect.get(part, 'type') !== 'text') return []
+		if (!part || !hasObjectType(part) || Reflect.get(part, 'type') !== 'text') return []
 		const text = Reflect.get(part, 'text')
-		return typeof text === 'string' ? [text] : []
+		return isString(text) ? [text] : []
 	}).join('\n').trim()
 }
 
 function migrateLegacyTextMessages(messages: unknown[]): StudyUIMessage[] {
 	return messages.flatMap((message) => {
-		if (!message || typeof message !== 'object') return []
+		if (!message || !hasObjectType(message)) return []
 		const id = Reflect.get(message, 'id')
 		const role = Reflect.get(message, 'role')
 		const parts = Reflect.get(message, 'parts')
 		if (
-			typeof id !== 'string' ||
+			!isString(id) ||
 			(role !== 'system' && role !== 'user' && role !== 'assistant') ||
 			!Array.isArray(parts)
 		) return []
 
 		const textParts = parts.flatMap((part) => {
-			if (!part || typeof part !== 'object') return []
+			if (!part || !hasObjectType(part)) return []
 			const type = Reflect.get(part, 'type')
 			const text = Reflect.get(part, 'text')
-			return type === 'text' && typeof text === 'string'
+			return type === 'text' && isString(text)
 				? [{ type: 'text' as const, text }]
 				: []
 		})

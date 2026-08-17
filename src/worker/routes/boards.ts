@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	archiveBoard,
 	createBoard,
@@ -100,9 +101,9 @@ export async function handleBoardRestore(request: IRequest, env: Env) {
 
 async function readTitle(request: Request) {
 	const body: unknown = await request.json().catch(() => null)
-	if (!body || typeof body !== 'object') return null
+	if (!body || !hasObjectType(body)) return null
 	const title = Reflect.get(body, 'title')
-	if (typeof title !== 'string') return null
+	if (!isString(title)) return null
 	const normalized = title.trim().replace(/\s+/g, ' ')
 	return normalized ? normalized.slice(0, MAX_TITLE_LENGTH) : null
 }

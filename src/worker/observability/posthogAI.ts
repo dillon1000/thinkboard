@@ -1,3 +1,4 @@
+import { hasObjectType, isBoolean, isNumber, isString } from '@agentboard/shared'
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 const MAX_CAPTURE_STRING_LENGTH = 20_000
 const MAX_CAPTURE_ARRAY_LENGTH = 100
@@ -168,24 +169,24 @@ function scheduleCapture(defer: Defer, capture: Promise<void>) {
 }
 
 function inferEventKind(input: unknown): AIEventKind {
-	if (!input || typeof input !== 'object') return 'generation'
+	if (!input || !hasObjectType(input)) return 'generation'
 	const text = Reflect.get(input, 'text')
 	const messages = Reflect.get(input, 'messages')
-	return (typeof text === 'string' || Array.isArray(text)) && !Array.isArray(messages)
+	return (isString(text) || Array.isArray(text)) && !Array.isArray(messages)
 		? 'embedding'
 		: 'generation'
 }
 
 function readModelInput(input: unknown) {
-	if (!input || typeof input !== 'object') return input
+	if (!input || !hasObjectType(input)) return input
 	const messages = Reflect.get(input, 'messages')
 	if (Array.isArray(messages)) return messages
 	const text = Reflect.get(input, 'text')
-	return typeof text === 'string' || Array.isArray(text) ? text : input
+	return isString(text) || Array.isArray(text) ? text : input
 }
 
 function readModelOutput(output: unknown) {
-	if (!output || typeof output !== 'object') return output
+	if (!output || !hasObjectType(output)) return output
 	for (const key of ['response', 'result', 'text']) {
 		const value = Reflect.get(output, key)
 		if (value !== undefined) return value
@@ -194,56 +195,56 @@ function readModelOutput(output: unknown) {
 }
 
 function readUsageNumber(output: unknown, keys: readonly string[]) {
-	if (!output || typeof output !== 'object') return undefined
+	if (!output || !hasObjectType(output)) return undefined
 	const usage = Reflect.get(output, 'usage')
-	if (!usage || typeof usage !== 'object') return undefined
+	if (!usage || !hasObjectType(usage)) return undefined
 	for (const key of keys) {
 		const value = Reflect.get(usage, key)
-		if (typeof value === 'number') return value
+		if (isNumber(value)) return value
 	}
 	return undefined
 }
 
 function readInputNumber(input: unknown, keys: readonly string[]) {
-	if (!input || typeof input !== 'object') return undefined
+	if (!input || !hasObjectType(input)) return undefined
 	for (const key of keys) {
 		const value = Reflect.get(input, key)
-		if (typeof value === 'number') return value
+		if (isNumber(value)) return value
 	}
 	return undefined
 }
 
 function readGatewayMetadata(options: unknown): Record<string, AIProperty> {
-	if (!options || typeof options !== 'object') return {}
+	if (!options || !hasObjectType(options)) return {}
 	const gateway = Reflect.get(options, 'gateway')
-	if (!gateway || typeof gateway !== 'object') return {}
+	if (!gateway || !hasObjectType(gateway)) return {}
 	const metadata = Reflect.get(gateway, 'metadata')
-	if (!metadata || typeof metadata !== 'object') return {}
+	if (!metadata || !hasObjectType(metadata)) return {}
 	return Object.fromEntries(
 		Object.entries(metadata).filter(
 			(entry): entry is [string, AIProperty] =>
-				typeof entry[1] === 'boolean'
-				|| typeof entry[1] === 'number'
-				|| typeof entry[1] === 'string'
+				isBoolean(entry[1])
+				|| isNumber(entry[1])
+				|| isString(entry[1])
 		)
 	)
 }
 
 function sanitizeCaptureValue(value: unknown, depth = 0): unknown {
 	if (depth >= MAX_CAPTURE_DEPTH) return '[nested value omitted]'
-	if (typeof value === 'string') {
+	if (isString(value)) {
 		if (value.startsWith('data:')) return '[data URL omitted]'
 		return value.length > MAX_CAPTURE_STRING_LENGTH
 			? `${value.slice(0, MAX_CAPTURE_STRING_LENGTH)}…`
 			: value
 	}
-	if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value
+	if (isNumber(value) || isBoolean(value) || value === null) return value
 	if (Array.isArray(value)) {
 		return value
 			.slice(0, MAX_CAPTURE_ARRAY_LENGTH)
 			.map((item) => sanitizeCaptureValue(item, depth + 1))
 	}
-	if (!value || typeof value !== 'object') return String(value)
+	if (!value || !hasObjectType(value)) return String(value)
 	return Object.fromEntries(
 		Object.entries(value)
 			.slice(0, MAX_CAPTURE_OBJECT_KEYS)

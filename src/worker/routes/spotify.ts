@@ -1,3 +1,4 @@
+import { hasObjectType, isBoolean, isNumber, isString } from '@agentboard/shared'
 import {
 	spotifyPlaybackActionSchema,
 	type SpotifyAgentPlayOutput,
@@ -314,22 +315,22 @@ function readFirstImageURL(value: unknown) {
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {
-	return value !== null && typeof value === 'object'
+	return value !== null && hasObjectType(value)
 		? value as Record<string, unknown>
 		: null
 }
 
 function readString(record: Record<string, unknown> | null | undefined, key: string) {
 	const value = record?.[key]
-	return typeof value === 'string' ? value : null
+	return isString(value) ? value : null
 }
 
 function readNumber(record: Record<string, unknown> | null | undefined, key: string) {
 	const value = record?.[key]
-	return typeof value === 'number' && Number.isFinite(value) ? value : null
+	return isNumber(value) && Number.isFinite(value) ? value : null
 }
 
 function readBoolean(record: Record<string, unknown> | null | undefined, key: string) {
 	const value = record?.[key]
-	return typeof value === 'boolean' ? value : null
+	return isBoolean(value) ? value : null
 }

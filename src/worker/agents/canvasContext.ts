@@ -1,3 +1,4 @@
+import { isString } from '@agentboard/shared'
 import type {
 	CanvasContext,
 	CanvasShape,
@@ -32,7 +33,7 @@ export function attachCanvasContext(
 		? removeHistoricalImages(messages, userMessageIndex)
 		: messages
 	const userMessage = focusedMessages[userMessageIndex] as UserModelMessage
-	const content = typeof userMessage.content === 'string'
+	const content = isString(userMessage.content)
 		? [{ type: 'text' as const, text: userMessage.content }]
 		: userMessage.content
 	const canvasContextText = formatCanvasContextForModel(canvasContext)
@@ -64,7 +65,7 @@ function removeHistoricalImages(messages: ModelMessage[], currentUserMessageInde
 		if (
 			message.role !== 'user' ||
 			messageIndex === currentUserMessageIndex ||
-			typeof message.content === 'string'
+			isString(message.content)
 		) return message
 
 		return {
