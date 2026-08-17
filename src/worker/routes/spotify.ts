@@ -6,11 +6,44 @@ import {
 	type SpotifyPlayerResponse,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { createAuth, getSpotifyConfiguration } from '../auth/createAuth'
 import { requireSession } from '../auth/session'
 
 const SPOTIFY_PLAYER_URL = 'https://api.spotify.com/v1/me/player'
 const SPOTIFY_SEARCH_URL = 'https://api.spotify.com/v1/search'
+const spotifyArtistSchema = z.object({ name: z.string() })
+const spotifyImageSchema = z.object({ url: z.string() })
+const spotifyItemSchema = z.object({
+	album: z.object({ images: z.array(spotifyImageSchema).optional() }).optional(),
+	artists: z.array(spotifyArtistSchema).optional(),
+	duration_ms: z.number().finite().optional(),
+	external_urls: z.object({ spotify: z.string().optional() }).optional(),
+	images: z.array(spotifyImageSchema).optional(),
+	name: z.string().optional(),
+	show: z.object({ name: z.string().optional() }).optional(),
+	type: z.enum(['track', 'episode']).optional(),
+})
+const spotifySearchTrackSchema = spotifyItemSchema.extend({
+	name: z.string(),
+	uri: z.string(),
+})
+const spotifyPlaybackSchema = z.object({
+	device: z.object({
+		is_restricted: z.boolean().nullish(),
+		name: z.string().nullish(),
+		type: z.string().nullish(),
+	}).nullish(),
+	is_playing: z.boolean().nullish(),
+	item: spotifyItemSchema.nullish(),
+	progress_ms: z.number().finite().nullish(),
+})
+const spotifySearchSchema = z.object({
+	tracks: z.object({ items: z.array(spotifySearchTrackSchema) }),
+})
+const spotifyErrorSchema = z.object({
+	error: z.object({ message: z.string().optional() }),
+})
 
 export async function handleSpotifyPlayerGet(request: IRequest, env: Env) {
 	const connection = await getSpotifyConnection(request, env)
@@ -193,8 +226,8 @@ function getSpotifyActionRequest(action: 'next' | 'pause' | 'play' | 'previous')
 }
 
 async function spotifyAPIErrorResponse(response: Response) {
-	const data: unknown = await response.json().catch(() => null)
-	const providerMessage = readString(readRecord(readRecord(data)?.error), 'message')
+	const data = spotifyErrorSchema.safeParse(await response.json().catch(() => null))
+	const providerMessage = data.success ? data.data.error.message : undefined
 
 	if (response.status === 401) {
 		return Response.json(
@@ -222,8 +255,8 @@ async function spotifyAPIErrorResponse(response: Response) {
 }
 
 async function spotifyAgentErrorMessage(response: Response) {
-	const data: unknown = await response.json().catch(() => null)
-	const providerMessage = readString(readRecord(readRecord(data)?.error), 'message')
+	const data = spotifyErrorSchema.safeParse(await response.json().catch(() => null))
+	const providerMessage = data.success ? data.data.error.message : undefined
 
 	if (response.status === 401) {
 		return 'Spotify authorization has expired. Reconnect it in Settings.'
@@ -240,96 +273,65 @@ async function spotifyAgentErrorMessage(response: Response) {
 	return providerMessage ?? 'Spotify is unavailable right now.'
 }
 
-export function parseSpotifyPlayback(data: unknown): SpotifyPlayback | null {
-	const playback = readRecord(data)
-	if (!playback) return null
-
-	const device = readRecord(playback.device)
+export function parseSpotifyPlayback<Value>(data: Value): SpotifyPlayback | null {
+	const playback = spotifyPlaybackSchema.safeParse(data)
+	if (!playback.success) return null
+	const { device, item, progress_ms: progressMS, is_playing: isPlaying } = playback.data
 	return {
 		device: {
-			isRestricted: readBoolean(device, 'is_restricted') ?? false,
-			name: readString(device, 'name') ?? 'Spotify',
-			type: readString(device, 'type') ?? 'device',
+			isRestricted: device?.is_restricted ?? false,
+			name: device?.name ?? 'Spotify',
+			type: device?.type ?? 'device',
 		},
-		isPlaying: readBoolean(playback, 'is_playing') ?? false,
-		item: parseSpotifyItem(playback.item),
-		progressMS: Math.max(0, readNumber(playback, 'progress_ms') ?? 0),
+		isPlaying: isPlaying ?? false,
+		item: parseSpotifyItem(item),
+		progressMS: Math.max(0, progressMS ?? 0),
 	}
 }
 
-export function parseSpotifySearchTrack(data: unknown) {
-	const tracks = readRecord(readRecord(data)?.tracks)
-	const items = tracks?.items
-	if (!Array.isArray(items)) return null
-
-	const track = readRecord(items[0])
-	const uri = readString(track, 'uri')
-	const title = readString(track, 'name')
+export function parseSpotifySearchTrack<Value>(data: Value) {
+	const parsed = spotifySearchSchema.safeParse(data)
+	if (!parsed.success) return null
+	const track = parsed.data.tracks.items[0]
+	if (!track) return null
+	const { name: title, uri } = track
 	if (!uri || !title) return null
 
 	return {
-		artists: readArtistNames(track?.artists),
+		artists: readArtistNames(track.artists),
 		title,
 		uri,
 	}
 }
 
-function parseSpotifyItem(value: unknown): SpotifyPlaybackItem | null {
-	const item = readRecord(value)
-	if (!item) return null
-
-	const typeValue = readString(item, 'type')
-	const type = typeValue === 'track' || typeValue === 'episode' ? typeValue : 'unknown'
-	const album = readRecord(item.album)
-	const show = readRecord(item.show)
+function parseSpotifyItem<Value>(value: Value): SpotifyPlaybackItem | null {
+	const parsed = spotifyItemSchema.safeParse(value)
+	if (!parsed.success) return null
+	const item = parsed.data
+	const type = item.type ?? 'unknown'
 	const subtitle = type === 'track'
 		? readArtistNames(item.artists)
-		: readString(show, 'name') ?? ''
+		: item.show?.name ?? ''
 
 	return {
-		albumImageURL: readFirstImageURL(type === 'track' ? album?.images : item.images),
-		durationMS: Math.max(0, readNumber(item, 'duration_ms') ?? 0),
-		externalURL: readString(readRecord(item.external_urls), 'spotify'),
+		albumImageURL: readFirstImageURL(type === 'track' ? item.album?.images : item.images),
+		durationMS: Math.max(0, item.duration_ms ?? 0),
+		externalURL: item.external_urls?.spotify ?? null,
 		subtitle,
-		title: readString(item, 'name') ?? 'Unknown title',
+		title: item.name ?? 'Unknown title',
 		type,
 	}
 }
 
-function readArtistNames(value: unknown) {
-	if (!Array.isArray(value)) return ''
-	return value
-		.map((artist) => readString(readRecord(artist), 'name'))
-		.filter((name): name is string => Boolean(name))
+function readArtistNames<Value>(value: Value) {
+	const artists = z.array(spotifyArtistSchema).safeParse(value)
+	if (!artists.success) return ''
+	return artists.data
+		.map(({ name }) => name)
 		.join(', ')
 }
 
-function readFirstImageURL(value: unknown) {
-	if (!Array.isArray(value)) return null
-	for (const image of value) {
-		const url = readString(readRecord(image), 'url')
-		if (url) return url
-	}
-	return null
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-	return value !== null && typeof value === 'object'
-		? value as Record<string, unknown>
-		: null
-}
-
-function readString(record: Record<string, unknown> | null | undefined, key: string) {
-	const value = record?.[key]
-	return typeof value === 'string' ? value : null
-}
-
-function readNumber(record: Record<string, unknown> | null | undefined, key: string) {
-	const value = record?.[key]
-	return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-
-function readBoolean(record: Record<string, unknown> | null | undefined, key: string) {
-	const value = record?.[key]
-	return typeof value === 'boolean' ? value : null
+function readFirstImageURL<Value>(value: Value) {
+	const images = z.array(spotifyImageSchema).safeParse(value)
+	return images.success ? images.data[0]?.url ?? null : null
 }
