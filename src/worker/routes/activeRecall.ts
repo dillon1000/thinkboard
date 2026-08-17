@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	activeRecallGradeRequestSchema,
 	activeRecallGradeResponseSchema,
@@ -190,11 +191,11 @@ export async function gradeActiveRecall(
 }
 
 export function parseActiveRecallGrade(value: unknown) {
-	const response = value && typeof value === 'object' ? Reflect.get(value, 'response') : value
-	if (response && typeof response === 'object') {
+	const response = value && hasObjectType(value) ? Reflect.get(value, 'response') : value
+	if (response && hasObjectType(response)) {
 		return activeRecallGradeResponseSchema.parse(response)
 	}
-	const text = typeof response === 'string' ? response : ''
+	const text = isString(response) ? response : ''
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Study checker returned invalid JSON')

@@ -1,3 +1,4 @@
+import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import type { LectureSegment } from '@agentboard/shared'
 import { getDocumentAIConfig } from '../config'
 import { createDatabase } from '../db/client'
@@ -127,9 +128,9 @@ export async function processLecture(
 }
 
 export function parseLectureTranscription(value: unknown) {
-	if (!value || typeof value !== 'object') throw new Error('Transcription response was invalid')
+	if (!value || !hasObjectType(value)) throw new Error('Transcription response was invalid')
 	const textValue = Reflect.get(value, 'text')
-	const text = typeof textValue === 'string'
+	const text = isString(textValue)
 		? textValue.trim().slice(0, MAX_TRANSCRIPT_CHARACTERS)
 		: ''
 	const segments = parseSegments(Reflect.get(value, 'segments'))
@@ -192,15 +193,15 @@ export function buildTranscriptChunks(
 function parseSegments(value: unknown): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	return value.flatMap((entry): LectureSegment[] => {
-		if (!entry || typeof entry !== 'object') return []
+		if (!entry || !hasObjectType(entry)) return []
 		const start = Reflect.get(entry, 'start')
 		const end = Reflect.get(entry, 'end')
 		const text = Reflect.get(entry, 'text')
 		if (
-			typeof start !== 'number' ||
-			typeof end !== 'number' ||
+			!isNumber(start) ||
+			!isNumber(end) ||
 			end < start ||
-			typeof text !== 'string' ||
+			!isString(text) ||
 			!text.trim()
 		) return []
 		return [{ end, start, text: text.trim().slice(0, 4_000) }]
@@ -210,11 +211,11 @@ function parseSegments(value: unknown): LectureSegment[] {
 function groupWords(value: unknown): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	const words = value.flatMap((entry) => {
-		if (!entry || typeof entry !== 'object') return []
+		if (!entry || !hasObjectType(entry)) return []
 		const word = Reflect.get(entry, 'word')
 		const start = Reflect.get(entry, 'start')
 		const end = Reflect.get(entry, 'end')
-		return typeof word === 'string' && typeof start === 'number' && typeof end === 'number'
+		return isString(word) && isNumber(start) && isNumber(end)
 			? [{ end, start, word: word.trim() }]
 			: []
 	})
@@ -232,18 +233,18 @@ function groupWords(value: unknown): LectureSegment[] {
 }
 
 function readDuration(value: unknown) {
-	if (!value || typeof value !== 'object') return null
+	if (!value || !hasObjectType(value)) return null
 	const duration = Reflect.get(value, 'duration')
-	return typeof duration === 'number' && duration >= 0 ? duration : null
+	return isNumber(duration) && duration >= 0 ? duration : null
 }
 
 function readEmbeddings(value: unknown): number[][] {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
+	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
 	const data = Reflect.get(value, 'data')
 	if (
 		!Array.isArray(data) ||
 		!data.every((embedding) =>
-			Array.isArray(embedding) && embedding.every((entry) => typeof entry === 'number')
+			Array.isArray(embedding) && embedding.every((entry) => isNumber(entry))
 		)
 	) throw new Error('Embedding response did not contain vectors')
 	return data

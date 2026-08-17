@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import type {
 	CraftDocumentBlockUpdate,
 	CraftDocumentCandidate,
@@ -720,17 +721,17 @@ function readWhiteboardTitle(record: Record<string, unknown>, index: number) {
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
+	return value && hasObjectType(value) && !Array.isArray(value)
 		? value as Record<string, unknown>
 		: null
 }
 
 function readString(value: Record<string, unknown> | null, key: string): string | null {
 	const field = value?.[key]
-	return typeof field === 'string' && field.trim() ? field : null
+	return isString(field) && field.trim() ? field : null
 }
 
 function readStringValue(value: Record<string, unknown> | null, key: string): string | null {
 	const field = value?.[key]
-	return typeof field === 'string' ? field : null
+	return isString(field) ? field : null
 }

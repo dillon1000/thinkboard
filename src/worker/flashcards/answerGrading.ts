@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import type {
 	FlashcardAnswerVerdict,
 	FlashcardGradingMethod,
@@ -180,8 +181,8 @@ function createAIGradeMessages(
 
 function parseAIGrade(value: unknown) {
 	const response = readGeneratedResponse(value)
-	if (response && typeof response === 'object') return aiGradeSchema.parse(response)
-	const text = typeof response === 'string' ? response : ''
+	if (response && hasObjectType(response)) return aiGradeSchema.parse(response)
+	const text = isString(response) ? response : ''
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Answer grader returned invalid JSON')
@@ -190,8 +191,8 @@ function parseAIGrade(value: unknown) {
 }
 
 function readGeneratedResponse(value: unknown) {
-	if (typeof value === 'string') return value
-	if (!value || typeof value !== 'object') return null
+	if (isString(value)) return value
+	if (!value || !hasObjectType(value)) return null
 	return Reflect.get(value, 'response')
 }
 

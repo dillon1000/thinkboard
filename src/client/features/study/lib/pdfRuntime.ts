@@ -1,3 +1,4 @@
+import { isFunction } from '@agentboard/shared'
 import modernPDFWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import legacyPDFWorkerURL from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import { ensurePDFCompatibility } from './pdfCompatibility'
@@ -14,8 +15,8 @@ export function loadPDFJS() {
 }
 
 export function supportsModernPDFJS() {
-	return typeof Reflect.get(Promise, 'withResolvers') === 'function' &&
-		typeof Reflect.get(AbortSignal, 'any') === 'function'
+	return isFunction(Reflect.get(Promise, 'withResolvers')) &&
+		isFunction(Reflect.get(AbortSignal, 'any'))
 }
 
 function loadLegacyPDFJS() {

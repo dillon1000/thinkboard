@@ -1,3 +1,4 @@
+import { isNumber, isString } from '@agentboard/shared'
 import {
 	DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,
 	LOCK_IN_REVIEW_INTERVAL_OPTIONS,
@@ -68,12 +69,12 @@ export function readLockInSession(boardID: string): LockInSession | null {
 		if (!value) return null
 		const session = JSON.parse(value) as Partial<LockInSession>
 		if (
-			typeof session.id !== 'string'
-			|| typeof session.goal !== 'string'
-			|| typeof session.finishLine !== 'string'
-			|| typeof session.durationMinutes !== 'number'
-			|| typeof session.elapsedMS !== 'number'
-			|| (typeof session.runningSince !== 'number' && session.runningSince !== null)
+			!isString(session.id)
+			|| !isString(session.goal)
+			|| !isString(session.finishLine)
+			|| !isNumber(session.durationMinutes)
+			|| !isNumber(session.elapsedMS)
+			|| (!isNumber(session.runningSince) && session.runningSince !== null)
 			|| !Array.isArray(session.scopeShapeIDs)
 		) return null
 		return {
@@ -84,7 +85,7 @@ export function readLockInSession(boardID: string): LockInSession | null {
 			id: session.id,
 			playlistEnabled: session.playlistEnabled === true,
 			redirectWhenDrifting: session.redirectWhenDrifting !== false,
-			reviewIntervalSeconds: typeof session.reviewIntervalSeconds === 'number'
+			reviewIntervalSeconds: isNumber(session.reviewIntervalSeconds)
 				&& LOCK_IN_REVIEW_INTERVAL_OPTIONS.some((value) => value === session.reviewIntervalSeconds)
 				? session.reviewIntervalSeconds
 				: DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,

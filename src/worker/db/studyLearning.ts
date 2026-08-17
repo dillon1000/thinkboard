@@ -1,3 +1,4 @@
+import { isString } from '@agentboard/shared'
 import type {
 	AgentMemory,
 	AgentMemoryProposal,
@@ -771,7 +772,7 @@ function toStudyMistake(value: typeof studyMistake.$inferSelect): StudyMistake {
 function parseShapeIDs(value: string) {
 	try {
 		const parsed: unknown = JSON.parse(value)
-		return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+		return Array.isArray(parsed) ? parsed.filter((item): item is string => isString(item)) : []
 	} catch {
 		return []
 	}

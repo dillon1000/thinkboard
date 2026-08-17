@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import { apiRoutes } from '@agentboard/shared'
 import { AssetRecordType, TLAsset, TLBookmarkAsset, getHashForString } from 'tldraw'
 
@@ -34,8 +35,8 @@ export async function getBookmarkPreview({ url }: { url: string }): Promise<TLAs
 }
 
 function getStringProperty(value: unknown, key: string): string {
-	if (!value || typeof value !== 'object') return ''
+	if (!value || !hasObjectType(value)) return ''
 
 	const property = Reflect.get(value, key)
-	return typeof property === 'string' ? property : ''
+	return isString(property) ? property : ''
 }

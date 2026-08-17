@@ -1,3 +1,4 @@
+import { hasObjectType } from '@agentboard/shared'
 import {
 	FLASHCARD_SHAPE_TYPE,
 	STUDY_MODELS,
@@ -1211,7 +1212,7 @@ function formatTokenCount(tokens: number) {
 function isAppliedOutput(output: unknown) {
 	return Boolean(
 		output &&
-		typeof output === 'object' &&
+		hasObjectType(output) &&
 		Reflect.get(output, 'applied') === true
 	)
 }

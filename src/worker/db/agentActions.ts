@@ -1,3 +1,4 @@
+import { hasObjectType, isString } from '@agentboard/shared'
 import type {
 	AgentActionCreate,
 	AgentActionSummary,
@@ -125,7 +126,7 @@ function parseRecords(value: string): Array<Record<string, unknown>> {
 		const records: unknown = JSON.parse(value)
 		return Array.isArray(records)
 			? records.filter((record): record is Record<string, unknown> =>
-					Boolean(record) && typeof record === 'object' && !Array.isArray(record)
+					Boolean(record) && hasObjectType(record) && !Array.isArray(record)
 				)
 			: []
 	} catch {
@@ -137,7 +138,7 @@ function parseStringArray(value: string) {
 	try {
 		const values: unknown = JSON.parse(value)
 		return Array.isArray(values)
-			? values.filter((item): item is string => typeof item === 'string')
+			? values.filter((item): item is string => isString(item))
 			: []
 	} catch {
 		return []

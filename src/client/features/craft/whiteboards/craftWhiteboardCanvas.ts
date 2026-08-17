@@ -1,3 +1,4 @@
+import { hasObjectType, isBoolean, isNumber, isString } from '@agentboard/shared'
 import {
 	CRAFT_WHITEBOARD_CONFLICT_MESSAGE,
 	MAX_CRAFT_WHITEBOARD_ELEMENTS,
@@ -947,7 +948,7 @@ function mergeCraftElementIdentity(
 						: value
 				})
 			: element.boundElements,
-		containerId: typeof element.containerId === 'string'
+		containerId: isString(element.containerId)
 			? IDMap.get(element.containerId) ?? element.containerId
 			: element.containerId,
 		frameId,
@@ -977,7 +978,7 @@ function mergeCraftElementIdentity(
 function getCraftGroupIDs(editor: Editor, shape: TLShape) {
 	const groupIDs: string[] = []
 	let parentID = shape.parentId
-	while (typeof parentID === 'string' && parentID.startsWith('shape:')) {
+	while (isString(parentID) && parentID.startsWith('shape:')) {
 		const parent = editor.getShape(parentID as TLShapeId)
 		if (!parent) break
 		if (parent.type === 'group') {
@@ -990,7 +991,7 @@ function getCraftGroupIDs(editor: Editor, shape: TLShape) {
 
 function getCraftFrameElementID(editor: Editor, shape: TLShape) {
 	let parentID = shape.parentId
-	while (typeof parentID === 'string' && parentID.startsWith('shape:')) {
+	while (isString(parentID) && parentID.startsWith('shape:')) {
 		const parent = editor.getShape(parentID as TLShapeId)
 		if (!parent) break
 		if (parent.type === 'frame') {
@@ -1060,7 +1061,7 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 		sourceOriginX === null ||
 		sourceOriginY === null ||
 		!Array.isArray(sourceElementIDs) ||
-		!sourceElementIDs.every((value) => typeof value === 'string')
+		!sourceElementIDs.every((value) => isString(value))
 	) return null
 	return {
 		appState,
@@ -1100,9 +1101,9 @@ function toMetadataJSON(metadata: CraftWhiteboardFrameMetadata): JsonObject {
 function toJSONValue(value: unknown): JsonValue {
 	if (
 		value === null ||
-		typeof value === 'string' ||
-		typeof value === 'number' ||
-		typeof value === 'boolean'
+		isString(value) ||
+		isNumber(value) ||
+		isBoolean(value)
 	) return value
 	if (Array.isArray(value)) return value.map(toJSONValue)
 	const record = readRecord(value)
@@ -1118,41 +1119,41 @@ function normalizePoints(points: readonly { x: number; y: number }[]) {
 }
 
 function getShapeColor(shape: TLShape) {
-	if ('color' in shape.props && typeof shape.props.color === 'string') {
+	if ('color' in shape.props && isString(shape.props.color)) {
 		return getExcalidrawColor(shape.props.color)
 	}
 	return '#1b1b1f'
 }
 
 function getShapeLabelColor(shape: TLShape) {
-	if ('labelColor' in shape.props && typeof shape.props.labelColor === 'string') {
+	if ('labelColor' in shape.props && isString(shape.props.labelColor)) {
 		return getExcalidrawColor(shape.props.labelColor)
 	}
 	return getShapeColor(shape)
 }
 
 function getShapeDash(shape: TLShape) {
-	if ('dash' in shape.props && typeof shape.props.dash === 'string') {
+	if ('dash' in shape.props && isString(shape.props.dash)) {
 		return getExcalidrawStrokeStyle(shape.props.dash)
 	}
 	return 'solid'
 }
 
 function getShapeStrokeWidth(shape: TLShape) {
-	if ('size' in shape.props && typeof shape.props.size === 'string') {
+	if ('size' in shape.props && isString(shape.props.size)) {
 		return getExcalidrawStrokeWidth(shape.props.size)
 	}
 	return 2
 }
 
 function getShapeFont(shape: TLShape) {
-	return 'font' in shape.props && typeof shape.props.font === 'string'
+	return 'font' in shape.props && isString(shape.props.font)
 		? shape.props.font
 		: 'sans'
 }
 
 function getShapeFontSize(shape: TLShape) {
-	if (!('size' in shape.props) || typeof shape.props.size !== 'string') return 20
+	if (!('size' in shape.props) || !isString(shape.props.size)) return 20
 	return { l: 28, m: 20, s: 16, xl: 36 }[shape.props.size] ?? 20
 }
 
@@ -1212,17 +1213,17 @@ function createSeed() {
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
+	return value && hasObjectType(value) && !Array.isArray(value)
 		? value as Record<string, unknown>
 		: null
 }
 
 function readString(record: Record<string, unknown> | null, key: string) {
 	const value = record?.[key]
-	return typeof value === 'string' && value.trim() ? value : null
+	return isString(value) && value.trim() ? value : null
 }
 
 function readNumber(record: Record<string, unknown> | null, key: string) {
 	const value = record?.[key]
-	return typeof value === 'number' && Number.isFinite(value) ? value : null
+	return isNumber(value) && Number.isFinite(value) ? value : null
 }

@@ -1,3 +1,4 @@
+import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	MAX_OFFICE_BYTES,
 	MAX_PDF_BYTES,
@@ -223,12 +224,12 @@ async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDo
 		const width = Reflect.get(item, 'width')
 		const height = Reflect.get(item, 'height')
 		if (
-			typeof text !== 'string' ||
+			!isString(text) ||
 			!Array.isArray(transform) ||
 			transform.length < 6 ||
-			!transform.every((value) => typeof value === 'number') ||
-			typeof width !== 'number' ||
-			typeof height !== 'number'
+			!transform.every((value) => isNumber(value)) ||
+			!isNumber(width) ||
+			!isNumber(height)
 		) return []
 		const x = clamp01(transform[4] / displayViewport.width)
 		const y = clamp01(1 - transform[5] / displayViewport.height - height / displayViewport.height)
@@ -614,7 +615,7 @@ async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 
 async function readResponseError(response: Response) {
 	const body: unknown = await response.json().catch(() => null)
-	return body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
+	return body && hasObjectType(body) && isString(Reflect.get(body, 'error'))
 		? String(Reflect.get(body, 'error'))
 		: `Request failed with status ${response.status}`
 }
@@ -628,8 +629,8 @@ function readSavedImport(boardID: string, file: File): SavedImport | null {
 		const value = localStorage.getItem(savedImportKey(boardID, file))
 		if (!value) return null
 		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && typeof parsed === 'object' ? Reflect.get(parsed, 'documentID') : null
-		return typeof documentID === 'string' ? { documentID } : null
+		const documentID = parsed && hasObjectType(parsed) ? Reflect.get(parsed, 'documentID') : null
+		return isString(documentID) ? { documentID } : null
 	} catch {
 		return null
 	}
@@ -660,8 +661,8 @@ function readSavedOfficeImport(boardID: string, file: File): SavedImport | null 
 		const value = localStorage.getItem(savedOfficeImportKey(boardID, file))
 		if (!value) return null
 		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && typeof parsed === 'object' ? Reflect.get(parsed, 'documentID') : null
-		return typeof documentID === 'string' ? { documentID } : null
+		const documentID = parsed && hasObjectType(parsed) ? Reflect.get(parsed, 'documentID') : null
+		return isString(documentID) ? { documentID } : null
 	} catch {
 		return null
 	}
