@@ -1,7 +1,13 @@
 import type { PublicConfig } from '@agentboard/shared'
-import { getOAuthConfiguration, getSpotifyConfiguration } from './auth/createAuth'
+import {
+	getOAuthConfiguration,
+	getSpotifyConfiguration,
+	type AuthConfigurationEnvironment,
+} from './auth/createAuth'
 
-export function getPublicConfig(env: Env): PublicConfig {
+export function getPublicConfig(
+	env: AuthConfigurationEnvironment & Partial<Pick<Env, 'TLDRAW_LICENSE_KEY'>>
+): PublicConfig {
 	const oAuth = getOAuthConfiguration(env)
 	const spotify = getSpotifyConfiguration(env)
 

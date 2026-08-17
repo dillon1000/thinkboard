@@ -117,7 +117,7 @@ export type ExaSearchOutput = z.infer<typeof exaSearchOutputSchema>
 export type ExaAnswerOutput = z.infer<typeof exaAnswerOutputSchema>
 export type ExaCrawlOutput = z.infer<typeof exaCrawlOutputSchema>
 
-type Fetcher = typeof fetch
+type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
 export async function searchExa(
 	apiKey: string,

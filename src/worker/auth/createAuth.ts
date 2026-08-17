@@ -21,7 +21,13 @@ export interface SpotifyConfiguration {
 	clientSecret: string
 }
 
-export function getOAuthConfiguration(env: Env): OAuthConfiguration | null {
+export type AuthConfigurationEnvironment = Partial<Pick<Env,
+	| 'OAUTH_CLIENT_ID' | 'OAUTH_CLIENT_SECRET' | 'OAUTH_DISCOVERY_URL'
+	| 'OAUTH_PROVIDER_ID' | 'OAUTH_PROVIDER_NAME' | 'OAUTH_SCOPES'
+	| 'SPOTIFY_CLIENT_ID' | 'SPOTIFY_CLIENT_SECRET'
+>>
+
+export function getOAuthConfiguration(env: AuthConfigurationEnvironment): OAuthConfiguration | null {
 	if (!env.OAUTH_CLIENT_ID || !env.OAUTH_CLIENT_SECRET || !env.OAUTH_DISCOVERY_URL) return null
 
 	return {
@@ -38,7 +44,7 @@ export function getOAuthConfiguration(env: Env): OAuthConfiguration | null {
 	}
 }
 
-export function getSpotifyConfiguration(env: Env): SpotifyConfiguration | null {
+export function getSpotifyConfiguration(env: AuthConfigurationEnvironment): SpotifyConfiguration | null {
 	if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) return null
 
 	return {

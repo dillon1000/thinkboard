@@ -29,7 +29,7 @@ describe('Exa tools', () => {
 			numResults: 5,
 			category: 'news',
 			includeDomains: ['example.com'],
-		}, fetcher as typeof fetch)
+		}, fetcher)
 
 		expect(capturedURL).toBe('https://api.exa.ai/search')
 		expect(capturedInit?.method).toBe('POST')
@@ -70,7 +70,7 @@ describe('Exa tools', () => {
 		const result = await answerExa(
 			'test-key',
 			{ query: 'What happened?' },
-			fetcher as typeof fetch
+			fetcher
 		)
 
 		expect(JSON.parse(String(capturedInit?.body))).toEqual({
@@ -110,7 +110,7 @@ describe('Exa tools', () => {
 		const result = await crawlExa('test-key', {
 			urls: ['https://example.com/page'],
 			maxCharacters: 8_000,
-		}, fetcher as typeof fetch)
+		}, fetcher)
 
 		expect(capturedURL).toBe('https://api.exa.ai/contents')
 		expect(JSON.parse(String(capturedInit?.body))).toEqual({
@@ -138,7 +138,7 @@ describe('Exa tools', () => {
 		await expect(answerExa(
 			'test-key',
 			{ query: 'Question' },
-			fetcher as typeof fetch
+			fetcher
 		)).rejects.toThrow('Exa request failed with status 422: invalid request')
 	})
 })

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { cleanTitle, generateConversationTitle } from './conversationTitle'
 import type { AIRunner } from '../routes/lockIn'
 
@@ -27,7 +28,8 @@ describe('generateConversationTitle', () => {
 		const ai: AIRunner = { run }
 		const title = await generateConversationTitle(ai, 'model', '  How does photosynthesis work?  ')
 		expect(title).toBe('Photosynthesis Basics')
-		const input = run.mock.calls[0][1] as { messages: Array<{ content: string; role: string }> }
+		const input = z.object({ messages: z.array(z.object({ content: z.string(), role: z.string() })) })
+			.parse(run.mock.calls[0]?.[1])
 		expect(input.messages.at(-1)).toEqual({ content: 'How does photosynthesis work?', role: 'user' })
 	})
 
