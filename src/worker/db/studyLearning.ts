@@ -15,6 +15,7 @@ import type {
 	StudyTodayTrendDay,
 } from '@agentboard/shared'
 import { and, desc, eq, gte, isNull, lte } from 'drizzle-orm'
+import { z } from 'zod'
 import type { Database } from './client'
 import {
 	board,
@@ -774,8 +775,7 @@ function toStudyMistake(value: typeof studyMistake.$inferSelect): StudyMistake {
 
 function parseShapeIDs(value: string) {
 	try {
-		const parsed: unknown = JSON.parse(value)
-		return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+		return z.array(z.string()).catch([]).parse(JSON.parse(value))
 	} catch {
 		return []
 	}

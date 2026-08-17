@@ -8,6 +8,7 @@ import { TLRecord } from '@tldraw/tlschema'
 import { apiRoutePatterns } from '@agentboard/shared'
 import { DurableObject } from 'cloudflare:workers'
 import { AutoRouter, error, IRequest } from 'itty-router'
+import { z } from 'zod'
 import { boardSchema } from '../boardSchema'
 
 interface SocketAttachment {
@@ -81,8 +82,8 @@ export class BoardRoom extends DurableObject<Env> {
 
 	// Handle new WebSocket connection requests
 	async handleConnect(request: IRequest) {
-		const sessionID = request.query.sessionId
-		if (typeof sessionID !== 'string' || !sessionID) return error(400, 'Missing sessionId')
+		const sessionID = z.string().min(1).safeParse(request.query.sessionId)
+		if (!sessionID.success) return error(400, 'Missing sessionId')
 
 		// Create the websocket pair for the client
 		const { 0: clientWebSocket, 1: serverWebSocket } = new WebSocketPair()
@@ -91,14 +92,14 @@ export class BoardRoom extends DurableObject<Env> {
 
 		// Store sessionId in attachment immediately so we can identify this socket
 		// after hibernation, before the connect handshake completes.
-		const attachment: SocketAttachment = { sessionID, snapshot: null }
+		const attachment: SocketAttachment = { sessionID: sessionID.data, snapshot: null }
 		serverWebSocket.serializeAttachment(attachment)
 
 		// Connect to the room. The first webSocketMessage from the client will
 		// complete the handshake and trigger debounced snapshot storage.
 		this.getOrCreateRoom().handleSocketConnect({
 			isReadonly: request.headers.get('x-agentboard-readonly') === 'true',
-			sessionId: sessionID,
+			sessionId: sessionID.data,
 			socket: serverWebSocket,
 		})
 
