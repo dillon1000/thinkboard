@@ -1,10 +1,12 @@
 import {
 	apiRoutes,
+	examPracticeSetSchema,
 	type ExamPracticeSet,
 } from '@agentboard/shared'
 import { IconClipboardCheck, IconX } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import type { Editor } from 'tldraw'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import {
 	applyProposal,
@@ -30,9 +32,9 @@ export function ExamPracticeImport({
 	const [isAdding, setIsAdding] = useState(false)
 
 	useEffect(() => {
-		void apiRequest<{ practice: ExamPracticeSet }>(apiRoutes.examPractice(examID), {
+		void apiRequest(apiRoutes.examPractice(examID), {
 			method: 'POST',
-		})
+		}, z.object({ practice: examPracticeSetSchema }))
 			.then((response) => setPractice(response.practice))
 			.catch((loadError) => {
 				setError(loadError instanceof Error ? loadError.message : 'Unable to assemble practice exam')

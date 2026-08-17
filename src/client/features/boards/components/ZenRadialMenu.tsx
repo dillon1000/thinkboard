@@ -39,6 +39,7 @@ import {
 	IconX,
 } from '@tabler/icons-react'
 import { type CSSProperties, type ReactNode, useEffect, useState } from 'react'
+import { z } from 'zod'
 import {
 	DefaultColorStyle,
 	DefaultDashStyle,
@@ -293,10 +294,10 @@ export function ZenRadialMenu() {
 		setMusicBusy(true)
 		setStatus(null)
 		try {
-			await apiRequest<{ ok: true }>(apiRoutes.spotifyPlayer, {
+			await apiRequest(apiRoutes.spotifyPlayer, {
 				body: JSON.stringify({ action }),
 				method: 'POST',
-			})
+			}, z.object({ ok: z.literal(true) }))
 			if (action === 'play' || action === 'pause') setMusicPlaying(action === 'play')
 			if (dismiss) closeMenu()
 		} catch (error) {

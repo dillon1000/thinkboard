@@ -1,5 +1,6 @@
 import {
 	craftAPIRoutes,
+	craftConnectionStatusSchema,
 	type CraftConnectionStatus,
 } from '@agentboard/shared'
 import {
@@ -26,7 +27,7 @@ export function CraftConnectionCard() {
 	const [isDisconnecting, setIsDisconnecting] = useState(false)
 
 	useEffect(() => {
-		void apiRequest<CraftConnectionStatus>(craftAPIRoutes.connection)
+		void apiRequest(craftAPIRoutes.connection, undefined, craftConnectionStatusSchema)
 			.then(setStatus)
 			.catch((caught) => setError(getErrorMessage(caught)))
 			.finally(() => setIsLoading(false))
@@ -37,10 +38,10 @@ export function CraftConnectionCard() {
 		setError(null)
 		setIsSaving(true)
 		try {
-			const nextStatus = await apiRequest<CraftConnectionStatus>(craftAPIRoutes.connection, {
+			const nextStatus = await apiRequest(craftAPIRoutes.connection, {
 				body: JSON.stringify({ apiURL }),
 				method: 'PUT',
-			})
+			}, craftConnectionStatusSchema)
 			setStatus(nextStatus)
 			setAPIURL('')
 		} catch (caught) {

@@ -1,5 +1,6 @@
 import {
 	apiRoutes,
+	lockInReviewResponseSchema,
 	type LockInReviewResponse,
 } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
@@ -154,7 +155,7 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 			const capture = await captureLockInReviewImages(editor, changedShapeIDs)
 			if (sessionRef.current?.id !== activeSession.id) return
 			setReviewState('reviewing')
-			const nextReview = await apiRequest<LockInReviewResponse>(
+			const nextReview = await apiRequest(
 				apiRoutes.boardLockInReview(boardID),
 				{
 					body: JSON.stringify({
@@ -166,7 +167,8 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 						sessionID: activeSession.id,
 					}),
 					method: 'POST',
-				}
+				},
+				lockInReviewResponseSchema
 			)
 			const currentSession = sessionRef.current
 			if (!currentSession || currentSession.id !== activeSession.id) return

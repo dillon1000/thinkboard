@@ -1,4 +1,5 @@
-import { apiRoutes, type Board } from '@agentboard/shared'
+import { apiRoutes, boardSchema } from '@agentboard/shared'
+import { z } from 'zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type Editor, type TLShapeId } from 'tldraw'
@@ -58,7 +59,7 @@ export function CraftDocumentsController({
 	}, [])
 
 	useEffect(() => {
-		void apiRequest<{ board: Board }>(apiRoutes.board(boardID))
+		void apiRequest(apiRoutes.board(boardID), undefined, z.object({ board: boardSchema }))
 			.then(({ board }) => setBoardTitle(board.title))
 			.catch(() => undefined)
 	}, [boardID])

@@ -1,5 +1,6 @@
 import {
 	DEFAULT_AGENT_PROFILE,
+	agentMemorySchema,
 	agentProfileSchema,
 	apiRoutes,
 	type AgentMemory,
@@ -11,18 +12,14 @@ import {
 } from '@agentboard/shared'
 import { IconCheck, IconPlus, IconTrash } from '@tabler/icons-react'
 import { type FormEvent, useEffect, useState } from 'react'
+import { z } from 'zod'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { apiRequest } from '../../../lib/api'
 import { WorkspaceShell } from '../../auth/components/WorkspaceShell'
 import '../styles/memory.css'
 
-interface StudyMemoryResponse {
-	memories: AgentMemory[]
-}
-
-interface AgentProfileResponse {
-	profile: AgentProfile
-}
+const studyMemoryResponseSchema = z.object({ memories: z.array(agentMemorySchema) })
+const agentProfileResponseSchema = z.object({ profile: agentProfileSchema })
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
 	day: 'numeric',
@@ -133,8 +130,8 @@ export function Component() {
 		setIsLoading(true)
 		try {
 			const [memoryResponse, profileResponse] = await Promise.all([
-				apiRequest<StudyMemoryResponse>(apiRoutes.studyMemory),
-				apiRequest<AgentProfileResponse>(apiRoutes.studyAgentProfile),
+				apiRequest(apiRoutes.studyMemory, undefined, studyMemoryResponseSchema),
+				apiRequest(apiRoutes.studyAgentProfile, undefined, agentProfileResponseSchema),
 			])
 			setMemories(memoryResponse.memories)
 			setProfile(profileResponse.profile)
@@ -147,7 +144,7 @@ export function Component() {
 	}
 
 	async function loadMemories() {
-		const response = await apiRequest<StudyMemoryResponse>(apiRoutes.studyMemory)
+		const response = await apiRequest(apiRoutes.studyMemory, undefined, studyMemoryResponseSchema)
 		setMemories(response.memories)
 	}
 
@@ -181,10 +178,10 @@ export function Component() {
 		}
 		setIsSavingProfile(true)
 		try {
-			const response = await apiRequest<AgentProfileResponse>(apiRoutes.studyAgentProfile, {
+			const response = await apiRequest(apiRoutes.studyAgentProfile, {
 				body: JSON.stringify(parsed.data),
 				method: 'PUT',
-			})
+			}, agentProfileResponseSchema)
 			setProfile(response.profile)
 			setSavedProfile(response.profile)
 			setProfileSaved(true)

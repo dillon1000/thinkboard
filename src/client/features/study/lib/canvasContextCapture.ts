@@ -288,7 +288,11 @@ function isShapeVisible(
 
 async function getDocumentClock(boardID: string) {
 	try {
-		const response = await apiRequest<{ documentClock: number }>(apiRoutes.boardContext(boardID))
+		const response = await apiRequest(
+			apiRoutes.boardContext(boardID),
+			undefined,
+			z.object({ documentClock: z.number().int().nonnegative() })
+		)
 		return response.documentClock
 	} catch {
 		return undefined

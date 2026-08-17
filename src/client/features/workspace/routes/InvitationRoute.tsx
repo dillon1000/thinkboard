@@ -1,11 +1,13 @@
 import {
 	apiRoutes,
 	appRoutes,
+	spaceInvitationPreviewSchema,
 	type SpaceInvitationPreview,
 } from '@agentboard/shared'
 import { IconArrowRight, IconLink, IconUsers } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import '../components/invitationRoute.css'
 
@@ -17,7 +19,11 @@ export function Component() {
 	const navigate = useNavigate()
 
 	useEffect(() => {
-		void apiRequest<{ invitation: SpaceInvitationPreview }>(apiRoutes.invitation(token))
+		void apiRequest(
+			apiRoutes.invitation(token),
+			undefined,
+			z.object({ invitation: spaceInvitationPreviewSchema })
+		)
 			.then((response) => setInvitation(response.invitation))
 			.catch((loadError) => {
 				setError(loadError instanceof Error ? loadError.message : 'Unable to open invitation')
@@ -28,9 +34,9 @@ export function Component() {
 		setIsAccepting(true)
 		setError(null)
 		try {
-			const response = await apiRequest<{ boardID: string }>(apiRoutes.invitation(token), {
+			const response = await apiRequest(apiRoutes.invitation(token), {
 				method: 'POST',
-			})
+			}, z.object({ boardID: z.string() }))
 			navigate(appRoutes.board(response.boardID), { replace: true })
 		} catch (acceptError) {
 			setError(acceptError instanceof Error ? acceptError.message : 'Unable to accept invitation')

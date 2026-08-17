@@ -36,5 +36,22 @@ export interface AgentActionUndoPayload {
 	beforeRecords: CanvasRecordSnapshot[]
 }
 
+export const agentActionSummarySchema: z.ZodType<AgentActionSummary> = z.object({
+	baseDocumentClock: z.number().optional(),
+	createdAt: z.string(),
+	id: z.string(),
+	planID: z.string().optional(),
+	recordIDs: z.array(z.string()),
+	status: z.enum(['accepted', 'undoing', 'undone']),
+	toolName: z.string(),
+	undoneAt: z.string().optional(),
+})
+
+export const agentActionUndoPayloadSchema: z.ZodType<AgentActionUndoPayload> = z.object({
+	action: agentActionSummarySchema,
+	afterRecords: z.array(canvasRecordSchema),
+	beforeRecords: z.array(canvasRecordSchema),
+})
+
 export type CanvasRecordSnapshot = z.infer<typeof canvasRecordSchema>
 export type AgentActionCreate = z.infer<typeof agentActionCreateSchema>

@@ -40,3 +40,21 @@ export type GlobalSearchResult =
 	| GlobalSearchDocumentResult
 	| GlobalSearchLectureResult
 	| GlobalSearchShapeResult
+
+export const globalSearchResultSchema: z.ZodType<GlobalSearchResult> = z.discriminatedUnion('kind', [
+	z.object({
+		boardID: z.string(), boardTitle: z.string(), documentID: z.string(),
+		kind: z.literal('document-page'), pageNumber: z.number(), score: z.number(),
+		snippet: z.string(), title: z.string(),
+	}),
+	z.object({
+		boardID: z.string(), boardTitle: z.string(), kind: z.literal('lecture-segment'),
+		lectureID: z.string(), score: z.number(), snippet: z.string(),
+		startSecond: z.number(), title: z.string(),
+	}),
+	z.object({
+		artifactKind: studyArtifactKindSchema, boardID: z.string(), boardTitle: z.string(),
+		kind: z.literal('shape'), score: z.number(), shapeID: z.string(),
+		snippet: z.string(), title: z.string(),
+	}),
+])

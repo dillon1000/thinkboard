@@ -1,4 +1,21 @@
-export async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+import { z } from 'zod'
+
+const apiErrorSchema = z.object({ error: z.string() })
+
+export async function apiRequest<Schema extends z.ZodType>(
+	input: RequestInfo | URL,
+	init: RequestInit | undefined,
+	schema: Schema
+): Promise<z.output<Schema>>
+export async function apiRequest(
+	input: RequestInfo | URL,
+	init?: RequestInit
+): Promise<z.infer<ReturnType<typeof z.json>>>
+export async function apiRequest(
+	input: RequestInfo | URL,
+	init?: RequestInit,
+	schema: z.ZodType = z.json()
+) {
 	const headers = new Headers(init?.headers)
 	if (init?.body && !headers.has('content-type')) headers.set('content-type', 'application/json')
 	const response = await fetch(input, {
@@ -7,13 +24,12 @@ export async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit
 	})
 
 	if (!response.ok) {
-		const body: unknown = await response.json().catch(() => null)
-		const message =
-			body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
-				? String(Reflect.get(body, 'error'))
-				: `Request failed with status ${response.status}`
+		const body = apiErrorSchema.safeParse(await response.json().catch(() => null))
+		const message = body.success
+			? body.data.error
+			: `Request failed with status ${response.status}`
 		throw new Error(message)
 	}
 
-	return response.json() as Promise<T>
+	return schema.parse(await response.json())
 }

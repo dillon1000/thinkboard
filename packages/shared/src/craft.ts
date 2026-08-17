@@ -76,7 +76,7 @@ const craftWhiteboardElementSchema = z.object({
 	id: z.string().trim().min(1).max(256),
 	type: z.string().trim().min(1).max(64),
 }).catchall(z.json())
-const craftWhiteboardRecordSchema = z.record(z.string(), z.json())
+export const craftWhiteboardRecordSchema = z.record(z.string(), z.json())
 const craftJSONObjectSchema = z.looseObject({})
 const craftJSONPrimitiveSchema = z.union([
 	z.string(),
@@ -200,6 +200,63 @@ export interface CraftWhiteboardSaveOutput {
 	revision: string
 	updated: number
 }
+
+export const craftConnectionStatusSchema: z.ZodType<CraftConnectionStatus> = z.object({
+	connected: z.boolean(),
+	connectedAt: z.string().nullable(),
+	spaceName: z.string().nullable(),
+})
+
+export const craftDocumentCandidateSchema: z.ZodType<CraftDocumentCandidate> = z.object({
+	documentID: z.string(),
+	lastModifiedAt: z.string().nullable(),
+	title: z.string(),
+})
+
+export const craftDocumentLinkSchema: z.ZodType<CraftDocumentLink> = z.object({
+	canEdit: z.boolean(),
+	createdAt: z.string(),
+	documentID: z.string(),
+	id: z.string(),
+	title: z.string(),
+})
+
+export const craftDocumentPreviewSchema: z.ZodType<CraftDocumentPreview> = z.object({
+	markdown: z.string(),
+	title: z.string(),
+})
+
+export const craftDocumentAppendOutputSchema: z.ZodType<CraftDocumentAppendOutput> = z.object({
+	added: z.boolean(),
+	title: z.string(),
+})
+
+export const craftDocumentBlocksUpdateOutputSchema: z.ZodType<CraftDocumentBlocksUpdateOutput> =
+	z.object({ title: z.string(), updated: z.number().int().nonnegative() })
+
+export const craftWhiteboardCandidateSchema: z.ZodType<CraftWhiteboardCandidate> = z.object({
+	documentID: z.string(),
+	title: z.string(),
+	whiteboardBlockID: z.string(),
+})
+
+export const craftWhiteboardImportSchema: z.ZodType<CraftWhiteboardImport> = z.object({
+	appState: craftWhiteboardRecordSchema,
+	assets: craftWhiteboardRecordSchema,
+	connectionOwnerID: z.string().optional(),
+	documentID: z.string(),
+	elements: z.array(craftWhiteboardElementSchema),
+	revision: z.string(),
+	title: z.string(),
+	whiteboardBlockID: z.string(),
+})
+
+export const craftWhiteboardSaveOutputSchema: z.ZodType<CraftWhiteboardSaveOutput> = z.object({
+	added: z.number().int().nonnegative(),
+	deleted: z.number().int().nonnegative(),
+	revision: z.string(),
+	updated: z.number().int().nonnegative(),
+})
 
 export const craftAPIRoutes = {
 	connection: '/api/integrations/craft',

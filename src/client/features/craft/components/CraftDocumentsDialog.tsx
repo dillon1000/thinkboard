@@ -2,6 +2,9 @@ import {
 	MAX_CRAFT_DOCUMENT_LINKS,
 	appRoutes,
 	craftAPIRoutes,
+	craftDocumentCandidateSchema,
+	craftDocumentLinkSchema,
+	craftDocumentPreviewSchema,
 	type CraftDocumentCandidate,
 	type CraftDocumentLink,
 	type CraftDocumentPreview,
@@ -21,6 +24,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Streamdown } from 'streamdown'
 import type { Editor } from 'tldraw'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import {
 	addCraftDocumentShape,
@@ -80,8 +84,10 @@ export function CraftDocumentsDialog({
 	async function loadBoardDocuments() {
 		setIsLoading(true)
 		try {
-			const response = await apiRequest<{ documents: CraftDocumentLink[] }>(
-				craftAPIRoutes.boardDocuments(boardID)
+			const response = await apiRequest(
+				craftAPIRoutes.boardDocuments(boardID),
+				undefined,
+				z.object({ documents: z.array(craftDocumentLinkSchema) })
 			)
 			setDocuments(response.documents)
 		} catch (caught) {
@@ -94,8 +100,10 @@ export function CraftDocumentsDialog({
 	async function loadCandidates(searchQuery: string) {
 		setCandidateError(null)
 		try {
-			const response = await apiRequest<{ documents: CraftDocumentCandidate[] }>(
-				craftAPIRoutes.boardCandidates(boardID, searchQuery)
+			const response = await apiRequest(
+				craftAPIRoutes.boardCandidates(boardID, searchQuery),
+				undefined,
+				z.object({ documents: z.array(craftDocumentCandidateSchema) })
 			)
 			setCandidates(response.documents)
 		} catch (caught) {
@@ -112,7 +120,7 @@ export function CraftDocumentsDialog({
 		}
 		setPendingDocumentID(candidate.documentID)
 		try {
-			const response = await apiRequest<{ document: CraftDocumentLink }>(
+			const response = await apiRequest(
 				craftAPIRoutes.boardDocuments(boardID),
 				{
 					body: JSON.stringify({
@@ -120,7 +128,8 @@ export function CraftDocumentsDialog({
 						title: candidate.title,
 					}),
 					method: 'POST',
-				}
+				},
+				z.object({ document: craftDocumentLinkSchema })
 			)
 			setDocuments((current) => [
 				...current.filter(({ id }) => id !== response.document.id),
@@ -161,8 +170,10 @@ export function CraftDocumentsDialog({
 		setPreviewLinkID(linkID)
 		setIsPreviewLoading(true)
 		try {
-			setPreview(await apiRequest<CraftDocumentPreview>(
-				craftAPIRoutes.boardDocumentPreview(boardID, linkID)
+			setPreview(await apiRequest(
+				craftAPIRoutes.boardDocumentPreview(boardID, linkID),
+				undefined,
+				craftDocumentPreviewSchema
 			))
 		} catch (caught) {
 			setError(getErrorMessage(caught))

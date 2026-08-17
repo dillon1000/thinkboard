@@ -51,3 +51,29 @@ export interface SpotifyPlayerResponse {
 	connected: boolean
 	playback: SpotifyPlayback | null
 }
+
+export const spotifyPlaybackItemSchema: z.ZodType<SpotifyPlaybackItem> = z.object({
+	albumImageURL: z.string().nullable(),
+	durationMS: z.number(),
+	externalURL: z.string().nullable(),
+	subtitle: z.string(),
+	title: z.string(),
+	type: z.enum(['episode', 'track', 'unknown']),
+})
+
+export const spotifyPlaybackSchema: z.ZodType<SpotifyPlayback> = z.object({
+	device: z.object({
+		isRestricted: z.boolean(),
+		name: z.string(),
+		type: z.string(),
+	}),
+	isPlaying: z.boolean(),
+	item: spotifyPlaybackItemSchema.nullable(),
+	progressMS: z.number(),
+})
+
+export const spotifyPlayerResponseSchema: z.ZodType<SpotifyPlayerResponse> = z.object({
+	configured: z.boolean(),
+	connected: z.boolean(),
+	playback: spotifyPlaybackSchema.nullable(),
+})

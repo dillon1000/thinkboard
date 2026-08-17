@@ -1,6 +1,8 @@
 import {
 	appRoutes,
 	craftAPIRoutes,
+	craftDocumentCandidateSchema,
+	craftWhiteboardCandidateSchema,
 	type Board,
 	type CraftDocumentCandidate,
 	type CraftWhiteboardCandidate,
@@ -18,6 +20,7 @@ import {
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import type {
 	CraftWhiteboardSyncResolution,
@@ -98,8 +101,10 @@ export function CraftWhiteboardImportDialog({
 		setError(null)
 		setIsLoadingDocuments(true)
 		try {
-			const response = await apiRequest<{ documents: CraftDocumentCandidate[] }>(
-				craftAPIRoutes.boardCandidates(boardID, query)
+			const response = await apiRequest(
+				craftAPIRoutes.boardCandidates(boardID, query),
+				undefined,
+				z.object({ documents: z.array(craftDocumentCandidateSchema) })
 			)
 			setDocuments(response.documents)
 		} catch (caught) {
@@ -116,8 +121,10 @@ export function CraftWhiteboardImportDialog({
 		setError(null)
 		setIsLoadingWhiteboards(true)
 		try {
-			const response = await apiRequest<{ whiteboards: CraftWhiteboardCandidate[] }>(
-				craftAPIRoutes.boardWhiteboards(boardID, documentID)
+			const response = await apiRequest(
+				craftAPIRoutes.boardWhiteboards(boardID, documentID),
+				undefined,
+				z.object({ whiteboards: z.array(craftWhiteboardCandidateSchema) })
 			)
 			setWhiteboards(response.whiteboards)
 		} catch (caught) {

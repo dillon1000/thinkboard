@@ -15,6 +15,8 @@ export type {
 } from './activeRecall'
 export {
 	agentActionCreateSchema,
+	agentActionSummarySchema,
+	agentActionUndoPayloadSchema,
 	agentActionUndoResultSchema,
 	canvasRecordSchema,
 } from './agentActions'
@@ -39,12 +41,14 @@ export {
 } from './documents'
 export {
 	examPlanInputSchema,
+	examPlanSchema,
+	examPracticeSetSchema,
 	quizArtifactPayloadSchema,
 	registerStudyArtifactsSchema,
 	studyArtifactInputSchema,
 	studyArtifactKindSchema,
 } from './exams'
-export { globalSearchQuerySchema } from './search'
+export { globalSearchQuerySchema, globalSearchResultSchema } from './search'
 export type {
 	GlobalSearchDocumentResult,
 	GlobalSearchLectureResult,
@@ -54,6 +58,7 @@ export type {
 export {
 	MAX_AUDIO_BYTES,
 	lectureSegmentSchema,
+	lectureSchema,
 	lectureStatusSchema,
 	lectureSummarySchema,
 } from './lectures'
@@ -91,13 +96,23 @@ export {
 	MAX_CRAFT_WHITEBOARD_ELEMENTS,
 	craftAPIRoutes,
 	craftConnectionInputSchema,
+	craftConnectionStatusSchema,
 	craftDocumentAppendInputSchema,
+	craftDocumentAppendOutputSchema,
 	craftDocumentBlocksUpdateInputSchema,
+	craftDocumentBlocksUpdateOutputSchema,
+	craftDocumentCandidateSchema,
 	craftDocumentLinkInputSchema,
+	craftDocumentLinkSchema,
+	craftDocumentPreviewSchema,
 	craftDocumentShapeProps,
 	craftDocumentShapeValidator,
 	craftShapeSchemas,
 	craftWhiteboardSaveInputSchema,
+	craftWhiteboardCandidateSchema,
+	craftWhiteboardImportSchema,
+	craftWhiteboardRecordSchema,
+	craftWhiteboardSaveOutputSchema,
 	createCraftWhiteboardRevision,
 	getCraftDocumentCitationHref,
 	parseCraftDocumentCitationHref,
@@ -253,14 +268,20 @@ export type {
 	TeachBackShapeProps,
 	LectureShapeProps,
 } from './studyShapes'
+export { boardSchema, publicConfigSchema, studyConversationSchema } from './types'
 export type { Board, PublicConfig, StudyConversation } from './types'
 export {
 	boardCourseUpdateSchema,
 	boardRoleSchema,
 	courseInputSchema,
+	courseSchema,
 	courseUpdateSchema,
 	invitationRoleSchema,
 	spaceInvitationInputSchema,
+	spaceInvitationCreatedSchema,
+	spaceInvitationPreviewSchema,
+	spaceInvitationSchema,
+	spaceMemberSchema,
 	spaceMemberRoleUpdateSchema,
 } from './workspace'
 export type {
@@ -277,6 +298,9 @@ export {
 	spotifyAgentPlayInputSchema,
 	spotifyAgentPlayOutputSchema,
 	spotifyPlaybackActionSchema,
+	spotifyPlaybackItemSchema,
+	spotifyPlaybackSchema,
+	spotifyPlayerResponseSchema,
 } from './spotify'
 export type {
 	SpotifyAgentPlayInput,
@@ -308,6 +332,7 @@ export type {
 } from './studyChat'
 export {
 	DEFAULT_AGENT_PROFILE,
+	agentMemorySchema,
 	agentMemoryKeySchema,
 	agentMemoryKindSchema,
 	agentMemoryProposalSchema,
@@ -315,7 +340,11 @@ export {
 	agentProfileSchema,
 	agentPromptSourcesSchema,
 	flashcardReviewRatingSchema,
+	dueFlashcardSchema,
+	flashcardAnswerAttemptSchema,
+	flashcardAnswerAttemptResultSchema,
 	flashcardAnswerAttemptRequestSchema,
+	flashcardAnswerCompletionResultSchema,
 	flashcardAnswerCompletionSchema,
 	flashcardAnswerVerdictSchema,
 	flashcardFinalVerdictSchema,
@@ -324,6 +353,7 @@ export {
 	mistakeProposalSchema,
 	registerFlashcardsSchema,
 	studyModeSchema,
+	studyTodayDashboardSchema,
 } from './studyLearning'
 export type {
 	AgentMemory,

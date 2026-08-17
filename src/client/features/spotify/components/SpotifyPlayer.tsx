@@ -1,6 +1,7 @@
 import {
 	apiRoutes,
 	appRoutes,
+	spotifyPlayerResponseSchema,
 	type SpotifyPlaybackAction,
 	type SpotifyPlayerResponse,
 } from '@agentboard/shared'
@@ -14,6 +15,7 @@ import {
 } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import {
 	SPOTIFY_STATUS_VISIBILITY_EVENT,
@@ -50,7 +52,11 @@ function SpotifyPlayerContent() {
 
 		const load = async () => {
 			try {
-				const response = await apiRequest<SpotifyPlayerResponse>(apiRoutes.spotifyPlayer)
+				const response = await apiRequest(
+					apiRoutes.spotifyPlayer,
+					undefined,
+					spotifyPlayerResponseSchema
+				)
 				if (!isActive) return
 				setPlayer(response)
 				setLastSyncedAt(Date.now())
@@ -99,10 +105,10 @@ function SpotifyPlayerContent() {
 		}
 
 		try {
-			await apiRequest<{ ok: true }>(apiRoutes.spotifyPlayer, {
+			await apiRequest(apiRoutes.spotifyPlayer, {
 				body: JSON.stringify({ action }),
 				method: 'POST',
-			})
+			}, z.object({ ok: z.literal(true) }))
 		} catch (actionError) {
 			setError(actionError instanceof Error ? actionError.message : 'Unable to control Spotify')
 		} finally {
