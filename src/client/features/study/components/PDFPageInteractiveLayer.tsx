@@ -1,4 +1,5 @@
 import { apiRoutes } from '@agentboard/shared'
+import { z } from 'zod'
 import {
 	type ClipboardEvent as ReactClipboardEvent,
 	type KeyboardEvent as ReactKeyboardEvent,
@@ -40,11 +41,40 @@ interface PDFPageLink {
 }
 
 interface PDFLinkAnnotation {
-	destination?: string | readonly unknown[]
+	destination?: PDFDestination
 	id: string
 	rect: [number, number, number, number]
 	URL?: string
 }
+
+interface PDFPageReference {
+	gen: number
+	num: number
+}
+
+type PDFDestinationValue = number | string | null | PDFPageReference | { name: string }
+type PDFDestination = string | readonly PDFDestinationValue[]
+
+const PDFPageReferenceSchema = z.object({ gen: z.number(), num: z.number() })
+const PDFDestinationValueSchema = z.union([
+	z.number(),
+	z.string(),
+	z.null(),
+	PDFPageReferenceSchema,
+	z.object({ name: z.string() }),
+])
+const PDFLinkAnnotationSchema = z.object({
+	dest: z.union([z.string(), z.array(PDFDestinationValueSchema)]).optional(),
+	id: z.string().optional(),
+	rect: z.tuple([
+		z.number().finite(),
+		z.number().finite(),
+		z.number().finite(),
+		z.number().finite(),
+	]),
+	subtype: z.literal('Link'),
+	url: z.string().optional(),
+})
 
 const documentPromises = new Map<string, Promise<PDFDocumentProxy>>()
 const MIN_PDF_INTERACTION_SCREEN_WIDTH = 320
@@ -195,7 +225,7 @@ async function loadPDFDocument(URL: string) {
 		.then((pdfjs) => {
 			return pdfjs.getDocument({ url: URL }).promise
 		})
-		.catch((error: unknown) => {
+		.catch((error) => {
 			documentPromises.delete(URL)
 			throw error
 		})
@@ -208,8 +238,7 @@ async function getPDFPageLinks(
 	page: PDFPageProxy,
 	viewport: PageViewport
 ) {
-	const rawAnnotations: unknown = await page.getAnnotations({ intent: 'display' })
-	if (!Array.isArray(rawAnnotations)) return []
+	const rawAnnotations = await page.getAnnotations({ intent: 'display' })
 	const annotations = rawAnnotations.flatMap((value, index) => {
 		const annotation = parsePDFLinkAnnotation(value, index)
 		return annotation ? [annotation] : []
@@ -232,29 +261,16 @@ async function getPDFPageLinks(
 	})).then((values) => values.filter((value): value is PDFPageLink => value !== null))
 }
 
-function parsePDFLinkAnnotation(value: unknown, index: number): PDFLinkAnnotation | null {
-	if (!value || typeof value !== 'object') return null
-	const subtype = Reflect.get(value, 'subtype')
-	const rawRect = Reflect.get(value, 'rect')
-	if (subtype !== 'Link' || !isPDFRectangle(rawRect)) return null
-	const rawID = Reflect.get(value, 'id')
-	const rawURL = Reflect.get(value, 'url')
-	const rawDestination = Reflect.get(value, 'dest')
-	const destination = typeof rawDestination === 'string' || Array.isArray(rawDestination)
-		? rawDestination
-		: undefined
-	return {
-		...(destination ? { destination } : {}),
-		id: typeof rawID === 'string' ? rawID : `link-${index}`,
-		rect: rawRect,
-		...(typeof rawURL === 'string' ? { URL: rawURL } : {}),
+function parsePDFLinkAnnotation<Value>(value: Value, index: number): PDFLinkAnnotation | null {
+	const parsed = PDFLinkAnnotationSchema.safeParse(value)
+	if (!parsed.success) return null
+	const annotation: PDFLinkAnnotation = {
+		id: parsed.data.id ?? `link-${index}`,
+		rect: parsed.data.rect,
 	}
-}
-
-function isPDFRectangle(value: unknown): value is [number, number, number, number] {
-	return Array.isArray(value) &&
-		value.length === 4 &&
-		value.every((coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate))
+	if (parsed.data.dest) annotation.destination = parsed.data.dest
+	if (parsed.data.url) annotation.URL = parsed.data.url
+	return annotation
 }
 
 function normalizeAnnotationRect(
@@ -287,14 +303,16 @@ export function getClickablePDFURL(value: string) {
 
 async function resolveDestinationPageNumber(
 	PDFDocument: PDFDocumentProxy,
-	destination: string | readonly unknown[]
+	destination: PDFDestination
 ) {
-	const explicitDestination = typeof destination === 'string'
-		? await PDFDocument.getDestination(destination)
+	const namedDestination = z.string().safeParse(destination)
+	const explicitDestination = namedDestination.success
+		? await PDFDocument.getDestination(namedDestination.data)
 		: destination
 	const pageReference = explicitDestination?.[0]
-	if (typeof pageReference === 'number' && Number.isInteger(pageReference)) {
-		const pageNumber = pageReference + 1
+	const pageIndex = z.number().int().safeParse(pageReference)
+	if (pageIndex.success) {
+		const pageNumber = pageIndex.data + 1
 		return pageNumber <= PDFDocument.numPages ? pageNumber : null
 	}
 	if (!isPDFPageReference(pageReference)) return null
@@ -302,13 +320,8 @@ async function resolveDestinationPageNumber(
 	return pageNumber <= PDFDocument.numPages ? pageNumber : null
 }
 
-function isPDFPageReference(value: unknown): value is { gen: number; num: number } {
-	return Boolean(
-		value &&
-		typeof value === 'object' &&
-		typeof Reflect.get(value, 'num') === 'number' &&
-		typeof Reflect.get(value, 'gen') === 'number'
-	)
+function isPDFPageReference<Value>(value: Value): value is Value & PDFPageReference {
+	return PDFPageReferenceSchema.safeParse(value).success
 }
 
 function clamp01(value: number) {
