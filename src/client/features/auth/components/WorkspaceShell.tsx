@@ -18,7 +18,7 @@ import { ThemeToggle } from '../../theme/ThemeToggle'
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
 interface WorkspaceShellProps {
-	activePage: 'boards' | 'memory' | 'settings' | 'today'
+	activePage: 'boards' /* default */| 'memory' | 'settings' | 'today'
 	children: ReactNode
 	skipTargetID: string
 	title: string
