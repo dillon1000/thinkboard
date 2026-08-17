@@ -1,4 +1,5 @@
 import {
+	MAX_OFFICE_BYTES,
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,
@@ -17,13 +18,17 @@ const MAX_RENDER_SCALE = 4
 const MIN_RENDER_SCALE = 3
 const WEBP_QUALITY = 0.88
 const WEBP_FALLBACK_QUALITY = 0.76
+const OFFICE_CONVERSION_POLL_INTERVAL_MS = 1_500
+const OFFICE_CONVERSION_TIMEOUT_MS = 5 * 60_000
+
+type OfficeSourceFormat = 'docx' | 'pptx'
 
 type PDFTextContent = Awaited<ReturnType<PDFPageProxy['getTextContent']>>
 
 export interface PDFImportProgress {
 	completed: number
 	documentID?: string
-	stage: 'opening' | 'original' | 'pages' | 'processing' | 'ready'
+	stage: 'converting' | 'opening' | 'original' | 'pages' | 'processing' | 'ready' | 'uploading'
 	total: number
 }
 
@@ -45,7 +50,8 @@ export async function importPDFToBoard(
 	boardID: string,
 	file: File,
 	editor: Editor,
-	onProgress: (progress: PDFImportProgress) => void
+	onProgress: (progress: PDFImportProgress) => void,
+	existingDocumentID?: string
 ) {
 	if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
 		throw new Error('Choose a PDF file to import.')
@@ -58,14 +64,17 @@ export async function importPDFToBoard(
 	const pdf = await loadingTask.promise
 	try {
 		if (pdf.numPages > MAX_PDF_PAGES) throw new Error('PDF files must contain 200 pages or fewer.')
-		const saved = readSavedImport(boardID, file)
-		const matchingDocument = saved
+		const saved = existingDocumentID ? null : readSavedImport(boardID, file)
+		const matchingDocument = saved || existingDocumentID
 			? null
 			: await listBoardDocuments(boardID)
 				.then(({ documents }) => findMatchingPDFDocument(documents, file, pdf.numPages))
 				.catch(() => null)
-		let status = saved || matchingDocument
-			? await getDocumentStatus(boardID, saved?.documentID ?? matchingDocument?.id ?? '').catch(() => null)
+		let status = saved || matchingDocument || existingDocumentID
+			? await getDocumentStatus(
+				boardID,
+				existingDocumentID ?? saved?.documentID ?? matchingDocument?.id ?? ''
+			).catch(() => null)
 			: null
 		if (
 			status &&
@@ -76,7 +85,8 @@ export async function importPDFToBoard(
 		}
 		if (!status) {
 			onProgress({ completed: 0, stage: 'original', total: 1 })
-			const documentID = saved?.documentID ?? crypto.randomUUID()
+			const documentID = existingDocumentID ?? saved?.documentID ?? crypto.randomUUID()
+			if (existingDocumentID) throw new Error('The converted PDF is no longer available.')
 			writeSavedImport(boardID, file, { documentID })
 			status = await createDocument(boardID, documentID, file, pdf.numPages)
 		}
@@ -121,6 +131,72 @@ export async function importPDFToBoard(
 	} finally {
 		await loadingTask.destroy()
 	}
+}
+
+/** Converts DOCX and PPTX files on the server, then resumes the normal PDF page importer. */
+export async function importDocumentToBoard(
+	boardID: string,
+	file: File,
+	editor: Editor,
+	onProgress: (progress: PDFImportProgress) => void
+) {
+	const sourceFormat = getOfficeSourceFormat(file)
+	if (!sourceFormat) return importPDFToBoard(boardID, file, editor, onProgress)
+	if (file.size > MAX_OFFICE_BYTES) throw new Error('Office files must be 50 MB or smaller.')
+
+	const saved = readSavedOfficeImport(boardID, file)
+	const documentID = saved?.documentID ?? crypto.randomUUID()
+	writeSavedOfficeImport(boardID, file, { documentID })
+	let status = saved
+		? await getDocumentStatus(boardID, documentID).catch(() => null)
+		: null
+	if (!status) {
+		onProgress({ completed: 0, documentID, stage: 'uploading', total: 1 })
+		status = await createOfficeDocument(boardID, documentID, file, sourceFormat)
+	}
+	const deadline = Date.now() + OFFICE_CONVERSION_TIMEOUT_MS
+	while (status.document.pageCount === 0) {
+		if (status.document.status === 'failed') {
+			throw new Error(status.document.failureReason ?? 'Office conversion failed.')
+		}
+		if (Date.now() >= deadline) {
+			throw new Error('Office conversion is taking too long. You can retry it from the document library.')
+		}
+		onProgress({ completed: 0, documentID, stage: 'converting', total: 1 })
+		await delay(OFFICE_CONVERSION_POLL_INTERVAL_MS)
+		status = await getDocumentStatus(boardID, documentID)
+	}
+
+	const response = await fetch(apiRoutes.boardDocumentOriginal(boardID, documentID))
+	if (!response.ok) throw new Error(await readResponseError(response))
+	const convertedPDF = await response.blob()
+	const pdfFile = new File(
+		[convertedPDF],
+		file.name.replace(/\.(docx|pptx)$/i, '.pdf'),
+		{ lastModified: file.lastModified, type: 'application/pdf' }
+	)
+	const document = await importPDFToBoard(
+		boardID,
+		pdfFile,
+		editor,
+		onProgress,
+		documentID
+	)
+	clearSavedOfficeImport(boardID, file)
+	return document
+}
+
+export function getOfficeSourceFormat(file: Pick<File, 'name' | 'type'>): OfficeSourceFormat | null {
+	const normalizedName = file.name.toLowerCase()
+	if (
+		file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+		normalizedName.endsWith('.docx')
+	) return 'docx'
+	if (
+		file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+		normalizedName.endsWith('.pptx')
+	) return 'pptx'
+	return null
 }
 
 async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDocumentProxy['getPage']>>) {
@@ -214,6 +290,27 @@ async function createDocument(
 			'content-type': 'application/pdf',
 			'x-document-import-id': documentID,
 			'x-document-page-count': String(pageCount),
+			'x-document-title': encodeURIComponent(file.name),
+		},
+		method: 'POST',
+	})
+}
+
+async function createOfficeDocument(
+	boardID: string,
+	documentID: string,
+	file: File,
+	sourceFormat: OfficeSourceFormat
+) {
+	return requestDocumentStatus(apiRoutes.boardDocuments(boardID), {
+		body: file,
+		headers: {
+			'content-type': sourceFormat === 'docx'
+				? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+				: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			'x-document-byte-size': String(file.size),
+			'x-document-import-id': documentID,
+			'x-document-source-format': sourceFormat,
 			'x-document-title': encodeURIComponent(file.name),
 		},
 		method: 'POST',
@@ -510,13 +607,16 @@ async function requestDocumentStatus(input: RequestInfo | URL, init?: RequestIni
 async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
 	const response = await fetch(input, init)
 	if (!response.ok) {
-		const body: unknown = await response.json().catch(() => null)
-		const message = body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
-			? String(Reflect.get(body, 'error'))
-			: `Request failed with status ${response.status}`
-		throw new Error(message)
+		throw new Error(await readResponseError(response))
 	}
 	return response.json() as Promise<T>
+}
+
+async function readResponseError(response: Response) {
+	const body: unknown = await response.json().catch(() => null)
+	return body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
+		? String(Reflect.get(body, 'error'))
+		: `Request failed with status ${response.status}`
 }
 
 function savedImportKey(boardID: string, file: File) {
@@ -549,4 +649,40 @@ function clearSavedImport(boardID: string, file: File) {
 	} catch {
 		// No cleanup is needed when browser storage is unavailable.
 	}
+}
+
+function savedOfficeImportKey(boardID: string, file: File) {
+	return `agentboard.office-import:${boardID}:${file.name}:${file.size}:${file.lastModified}`
+}
+
+function readSavedOfficeImport(boardID: string, file: File): SavedImport | null {
+	try {
+		const value = localStorage.getItem(savedOfficeImportKey(boardID, file))
+		if (!value) return null
+		const parsed: unknown = JSON.parse(value)
+		const documentID = parsed && typeof parsed === 'object' ? Reflect.get(parsed, 'documentID') : null
+		return typeof documentID === 'string' ? { documentID } : null
+	} catch {
+		return null
+	}
+}
+
+function writeSavedOfficeImport(boardID: string, file: File, value: SavedImport) {
+	try {
+		localStorage.setItem(savedOfficeImportKey(boardID, file), JSON.stringify(value))
+	} catch {
+		// Reselecting the file still creates a safe idempotent import when browser storage is unavailable.
+	}
+}
+
+function clearSavedOfficeImport(boardID: string, file: File) {
+	try {
+		localStorage.removeItem(savedOfficeImportKey(boardID, file))
+	} catch {
+		// No cleanup is needed when browser storage is unavailable.
+	}
+}
+
+function delay(milliseconds: number) {
+	return new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds))
 }

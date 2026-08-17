@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	canvasToBlob,
 	findMatchingPDFDocument,
+	getOfficeSourceFormat,
 	getPDFRenderScale,
 	hasCompletePDFPageShapeSet,
 	locatePDFDocument,
@@ -90,6 +91,14 @@ describe('getPDFRenderScale', () => {
 		expect(scale).toBeLessThan(2)
 		expect(2_000 * scale).toBeLessThanOrEqual(4_096)
 		expect(2_000 * scale * 3_000 * scale).toBeLessThanOrEqual(9_000_000)
+	})
+})
+
+describe('getOfficeSourceFormat', () => {
+	it('recognizes Word and PowerPoint files from MIME type or extension', () => {
+		expect(getOfficeSourceFormat({ name: 'notes', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })).toBe('docx')
+		expect(getOfficeSourceFormat({ name: 'lecture.PPTX', type: '' })).toBe('pptx')
+		expect(getOfficeSourceFormat({ name: 'reading.pdf', type: 'application/pdf' })).toBeNull()
 	})
 })
 

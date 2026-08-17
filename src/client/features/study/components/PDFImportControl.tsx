@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ThinkingOrb, type OrbState } from 'thinking-orbs'
 import type { Editor } from 'tldraw'
 import {
-	importPDFToBoard,
+	importDocumentToBoard,
 	listBoardDocuments,
 	retryDocumentProcessing,
 	type PDFImportProgress,
@@ -43,7 +43,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const zen = useZenMode()
 	const chrome = useBoardChrome()
 
-	/* Zen hides this button, so the radial menu's PDF petal opens the file picker through here. */
+	/* Zen hides this button, so the radial menu's document petal opens the file picker through here. */
 	useEffect(() => {
 		zen.registerImportPDF(() => inputRef.current?.click())
 		return () => zen.registerImportPDF(null)
@@ -68,10 +68,10 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 		if (!editor) return
 		const container = editor.getContainer()
 		const handleDragOver = (event: globalThis.DragEvent) => {
-			if (hasPDF(event.dataTransfer?.files)) event.preventDefault()
+			if (hasImportableDocument(event.dataTransfer?.files)) event.preventDefault()
 		}
 		const handleDrop = (event: globalThis.DragEvent) => {
-			const file = findPDF(event.dataTransfer?.files)
+			const file = findImportableDocument(event.dataTransfer?.files)
 			if (!file) return
 			event.preventDefault()
 			void importFile(file)
@@ -88,7 +88,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 		if (!editor || progress) return
 		setError(null)
 		try {
-			await importPDFToBoard(boardID, file, editor, setProgress)
+			await importDocumentToBoard(boardID, file, editor, setProgress)
 			await refreshDocuments()
 			window.setTimeout(() => setProgress(null), 2_500)
 		} catch (caught) {
@@ -103,7 +103,7 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	}
 
 	function handleFiles(event: ChangeEvent<HTMLInputElement>) {
-		const file = findPDF(event.target.files)
+		const file = findImportableDocument(event.target.files)
 		if (file) void importFile(file)
 		event.target.value = ''
 	}
@@ -124,12 +124,17 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	const progressLabel = progress ? formatProgress(progress) : null
 	return (
 		<div className="PDFImportControl" onDragOver={(event: DragEvent) => event.preventDefault()}>
-			<input accept="application/pdf,.pdf" onChange={handleFiles} ref={inputRef} type="file" />
+			<input
+				accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx"
+				onChange={handleFiles}
+				ref={inputRef}
+				type="file"
+			/>
 			<button
 				className="RibbonMenu-item PDFImportButton"
 				disabled={!editor || Boolean(progress)}
 				onClick={() => inputRef.current?.click()}
-				title="Import PDF pages into this space"
+				title="Import PDF, Word, or PowerPoint pages into this space"
 				type="button"
 			>
 				<span aria-hidden="true" className="RibbonMenu-itemIcon">
@@ -139,18 +144,18 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 						<IconFileTypePdf size={17} stroke={1.7} />
 					)}
 				</span>
-				<span aria-live="polite">{progressLabel ?? 'Import PDF'}</span>
+				<span aria-live="polite">{progressLabel ?? 'Import file'}</span>
 			</button>
 				<button
 					className="RibbonMenu-item CraftDocuments-trigger"
 					onClick={() => setIsLibraryOpen(true)}
-					title="Manage PDFs in this space"
+					title="Manage imported documents in this space"
 					type="button"
 				>
 					<span aria-hidden="true" className="RibbonMenu-itemIcon">
 						<IconLibrary size={17} stroke={1.7} />
 					</span>
-					<span>PDF library</span>
+					<span>Document library</span>
 				</button>
 				<button
 					className="RibbonMenu-item CraftDocuments-trigger"
@@ -236,7 +241,7 @@ function PDFImportErrorModal({
 			>
 				<header>
 					<div>
-						<h2 id="pdf-error-title">PDF import error</h2>
+						<h2 id="pdf-error-title">Document import error</h2>
 						<p id="pdf-error-summary">{error.summary}</p>
 					</div>
 					<button aria-label="Close PDF import error" onClick={onClose} title="Close" type="button">
@@ -246,7 +251,7 @@ function PDFImportErrorModal({
 				<label>
 					<span>Full error details</span>
 					<textarea
-						aria-label="Full PDF import error details"
+						aria-label="Full document import error details"
 						onFocus={(event) => event.currentTarget.select()}
 						readOnly
 						ref={detailsRef}
@@ -273,6 +278,8 @@ function PDFImportErrorModal({
 }
 
 function formatProgress(progress: PDFImportProgress) {
+	if (progress.stage === 'uploading') return 'Uploading file…'
+	if (progress.stage === 'converting') return 'Converting to PDF…'
 	if (progress.stage === 'opening') return 'Opening PDF…'
 	if (progress.stage === 'original') return 'Saving original…'
 	if (progress.stage === 'pages') return `Importing ${progress.completed}/${progress.total}`
@@ -281,18 +288,19 @@ function formatProgress(progress: PDFImportProgress) {
 }
 
 function getProgressOrbState(progress: PDFImportProgress): OrbState {
+	if (progress.stage === 'uploading' || progress.stage === 'converting') return 'searching'
 	if (progress.stage === 'opening') return 'searching'
 	if (progress.stage === 'pages') return 'shaping'
 	if (progress.stage === 'processing') return 'searching'
 	return 'working'
 }
 
-function findPDF(files: FileList | null | undefined) {
+function findImportableDocument(files: FileList | null | undefined) {
 	return Array.from(files ?? []).find((file) =>
-		file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+		file.type === 'application/pdf' || /\.(pdf|docx|pptx)$/i.test(file.name)
 	) ?? null
 }
 
-function hasPDF(files: FileList | null | undefined) {
-	return Boolean(findPDF(files))
+function hasImportableDocument(files: FileList | null | undefined) {
+	return Boolean(findImportableDocument(files))
 }

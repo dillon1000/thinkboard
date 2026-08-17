@@ -128,7 +128,7 @@ export function PDFDocumentLibrary({
 					<div>
 						<span className="PDFLibrary-mark"><IconFileTypePdf aria-hidden="true" size={20} stroke={1.7} /></span>
 						<div>
-							<h2 id="pdf-library-title">PDF library</h2>
+							<h2 id="pdf-library-title">Document library</h2>
 							<p>Manage the source material linked to this space.</p>
 						</div>
 					</div>
@@ -144,12 +144,12 @@ export function PDFDocumentLibrary({
 				</div>
 
 				<div className="PDFLibrary-list">
-					{isLoading ? <p className="PDFLibrary-empty">Loading PDF documents…</p> : null}
+					{isLoading ? <p className="PDFLibrary-empty">Loading documents…</p> : null}
 					{!isLoading && documents.length === 0 ? (
 						<div className="PDFLibrary-empty">
 							<IconFileTypePdf aria-hidden="true" size={28} stroke={1.3} />
-							<strong>No PDFs in this space</strong>
-							<span>Imported PDFs will appear here with their processing status.</span>
+							<strong>No documents in this space</strong>
+							<span>Imported files will appear here with their processing status.</span>
 						</div>
 					) : null}
 					{documents.map((document) => {
@@ -191,7 +191,7 @@ export function PDFDocumentLibrary({
 										className="PDFLibrary-delete"
 										disabled={pending}
 										onClick={() => void remove(document)}
-										title="Delete PDF"
+									title="Delete document"
 										type="button"
 									>
 										<IconTrash aria-hidden="true" size={15} />

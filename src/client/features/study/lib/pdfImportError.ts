@@ -19,9 +19,9 @@ export function describePDFImportFailure(
 		? error.message
 		: typeof error === 'string' && error
 			? error
-			: 'The PDF could not be imported.'
+			: 'The document could not be imported.'
 	const metadata = [
-		'PDF import failed',
+		'Document import failed',
 		`Time: ${(context.timestamp ?? new Date()).toISOString()}`,
 		`Page: ${context.location}`,
 		`Browser: ${context.browser}`,

@@ -61,7 +61,9 @@ export async function handleDocumentCreate(
 		return handleOfficeDocumentCreate(request, env, authorization, contentType)
 	}
 
-	const declaredBytes = parsePositiveInteger(request.headers.get('content-length'))
+	const declaredBytes = parsePositiveInteger(
+		request.headers.get('x-document-byte-size') ?? request.headers.get('content-length')
+	)
 	if (declaredBytes && declaredBytes > MAX_PDF_BYTES) {
 		return documentError(413, 'PDF_TOO_LARGE', 'PDF files must be 50 MB or smaller.', MAX_PDF_BYTES)
 	}
@@ -506,7 +508,9 @@ async function handleOfficeDocumentCreate(
 	if (!sourceFormat) {
 		return documentError(400, 'INVALID_OFFICE', 'Choose a DOCX, PPTX, or PDF file to import.')
 	}
-	const declaredBytes = parsePositiveInteger(request.headers.get('content-length'))
+	const declaredBytes = parsePositiveInteger(
+		request.headers.get('x-document-byte-size') ?? request.headers.get('content-length')
+	)
 	if (!declaredBytes) {
 		return documentError(411, 'INVALID_OFFICE', 'The Office file size is required.')
 	}

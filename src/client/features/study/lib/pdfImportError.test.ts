@@ -14,6 +14,7 @@ describe('describePDFImportFailure', () => {
 		})
 
 		expect(failure.summary).toBe('Unable to open PDF')
+		expect(failure.details).toContain('Document import failed')
 		expect(failure.details).toContain('Time: 2026-07-23T21:30:00.000Z')
 		expect(failure.details).toContain('Browser: Mobile Safari')
 		expect(failure.details).toContain('File: notes.pdf')
