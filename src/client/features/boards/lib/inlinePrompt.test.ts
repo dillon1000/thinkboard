@@ -1,4 +1,4 @@
-import { Box, type Editor } from 'tldraw'
+import { Box } from 'tldraw'
 import { afterEach, describe, expect, it } from 'vitest'
 import { closeInlinePrompt, getInlinePromptSession, openInlinePrompt } from './inlinePrompt'
 
@@ -11,7 +11,7 @@ function createEditor({ pointer, selection }: EditorStub) {
 	return {
 		getSelectionPageBounds: () => selection,
 		inputs: { currentPagePoint: pointer },
-	} as unknown as Editor
+	}
 }
 
 afterEach(() => {

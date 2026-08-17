@@ -16,7 +16,10 @@ const inlinePromptSession = atom<InlinePromptSession | null>('inlinePromptSessio
  * Opens the composer under the current selection, or at the pointer when nothing is selected, so
  * the request and its answer land where the student is already looking.
  */
-export function openInlinePrompt(editor: Editor) {
+export function openInlinePrompt(editor: {
+	getSelectionPageBounds: Editor['getSelectionPageBounds']
+	inputs: { currentPagePoint: VecModel }
+}) {
 	const selectionBounds = editor.getSelectionPageBounds()
 	const anchor = selectionBounds
 		? { x: selectionBounds.x, y: selectionBounds.maxY + SELECTION_GAP }

@@ -21,7 +21,7 @@ describe('projector mode', () => {
 
 	it('creates a zero-padded six-digit code', () => {
 		vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
-			;(array as Uint32Array)[0] = 42
+			if (array instanceof Uint32Array) array[0] = 42
 			return array
 		})
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { TLShape } from 'tldraw'
 import { findPDFCitationShape, parsePDFCitationHref } from './pdfCitation'
 
 describe('parsePDFCitationHref', () => {
@@ -22,9 +21,9 @@ describe('findPDFCitationShape', () => {
 		const matching = {
 			props: { documentId: 'document-one', pageNumber: 7 },
 			type: 'pdf-page',
-		} as unknown as TLShape
+		}
 		const shapes = [
-			{ props: {}, type: 'note' } as unknown as TLShape,
+			{ props: {}, type: 'note' },
 			matching,
 		]
 

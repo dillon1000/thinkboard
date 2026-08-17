@@ -21,8 +21,8 @@ export function parsePDFCitationHref(href: string | undefined): PDFCitationTarge
 	return { documentID, pageNumber }
 }
 
-export function findPDFCitationShape(
-	shapes: Iterable<TLShape>,
+export function findPDFCitationShape<Shape extends { props: object; type: string }>(
+	shapes: Iterable<Shape>,
 	target: PDFCitationTarget
 ) {
 	for (const shape of shapes) {

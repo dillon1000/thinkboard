@@ -20,8 +20,8 @@ export function parseLectureCitationHref(
 	return { lectureID, startSecond }
 }
 
-export function findLectureCitationShape(
-	shapes: Iterable<TLShape>,
+export function findLectureCitationShape<Shape extends { props: object; type: string }>(
+	shapes: Iterable<Shape>,
 	target: LectureCitationTarget
 ) {
 	for (const shape of shapes) {

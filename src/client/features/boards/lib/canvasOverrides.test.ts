@@ -1,10 +1,9 @@
-import type { Editor, TLUiActionItem } from 'tldraw'
+import type { TLUiActionItem } from 'tldraw'
 import { describe, expect, it } from 'vitest'
-import { canvasOverrides } from './canvasOverrides'
+import { overrideCanvasActions } from './canvasOverrides'
 
 function overrideActions(actions: Record<string, TLUiActionItem>) {
-	const editor = {} as Editor
-	return canvasOverrides.actions?.(editor, actions, {} as never) ?? actions
+	return overrideCanvasActions(actions, () => undefined)
 }
 
 describe('canvasOverrides actions', () => {
