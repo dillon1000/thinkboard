@@ -105,9 +105,11 @@ export type {
 	CraftDocumentLink,
 	CraftDocumentPreview,
 	CraftDocumentShapeProps,
+	CraftJSONValue,
 	CraftWhiteboardCandidate,
 	CraftWhiteboardElement,
 	CraftWhiteboardImport,
+	CraftWhiteboardRecord,
 	CraftWhiteboardSaveOutput,
 } from './craft'
 export {

@@ -4,6 +4,8 @@ import type {
 	CraftWhiteboardCandidate,
 	CraftWhiteboardElement,
 	CraftWhiteboardImport,
+	CraftJSONValue,
+	CraftWhiteboardRecord,
 	CraftWhiteboardSaveOutput,
 } from '@agentboard/shared'
 import {
@@ -11,6 +13,7 @@ import {
 	MAX_CRAFT_WHITEBOARD_ELEMENTS,
 	createCraftWhiteboardRevision,
 } from '@agentboard/shared'
+import { z } from 'zod'
 
 const CRAFT_HOSTNAME = 'connect.craft.do'
 const CRAFT_REQUEST_TIMEOUT_MS = 15_000
@@ -18,6 +21,14 @@ const MAX_CRAFT_JSON_BYTES = 2 * 1_024 * 1_024
 const MAX_CRAFT_MARKDOWN_BYTES = 512 * 1_024
 // Search context needs enough nearby blocks for precise edits without copying a full large document.
 const MAX_CRAFT_CONTEXT_BLOCKS = 20
+const craftJSONSchema = z.json()
+const craftRecordSchema = z.record(z.string(), craftJSONSchema)
+const craftConnectionSchema = z.object({
+	apiURL: z.string().min(1),
+	connectedAt: z.string().min(1),
+	spaceID: z.string().min(1),
+	spaceName: z.string().min(1),
+})
 
 export interface CraftConnectionSecret {
 	apiURL: string
@@ -276,7 +287,7 @@ export async function listCraftDocumentWhiteboards(
 ): Promise<CraftWhiteboardCandidate[]> {
 	const data = await getCraftDocumentBlocks(connection, documentID, options)
 	const whiteboards: CraftWhiteboardCandidate[] = []
-	const visit = (candidate: unknown) => {
+	const visit = (candidate: CraftJSONValue) => {
 		if (Array.isArray(candidate)) {
 			for (const item of candidate) visit(item)
 			return
@@ -585,7 +596,7 @@ async function requestCraftJSON(
 	)
 	const text = await readLimitedBody(response, MAX_CRAFT_JSON_BYTES)
 	try {
-		return JSON.parse(text) as unknown
+		return craftJSONSchema.parse(JSON.parse(text))
 	} catch {
 		throw new Error('Craft returned an invalid response.')
 	}
@@ -643,34 +654,28 @@ function craftConnectionKey(userID: string) {
 	return `user:${userID}:integration:craft:v1`
 }
 
-function parseCraftConnection(value: unknown): CraftConnectionSecret | null {
-	const record = readRecord(value)
-	const apiURL = readString(record, 'apiURL')
-	const connectedAt = readString(record, 'connectedAt')
-	const spaceID = readString(record, 'spaceID')
-	const spaceName = readString(record, 'spaceName')
-	return apiURL && connectedAt && spaceID && spaceName
-		? { apiURL, connectedAt, spaceID, spaceName }
-		: null
+function parseCraftConnection<Value>(value: Value): CraftConnectionSecret | null {
+	const parsed = craftConnectionSchema.safeParse(value)
+	return parsed.success ? parsed.data : null
 }
 
 function readCraftErrorMessage(value: string) {
 	try {
-		const data = readRecord(JSON.parse(value))
+		const data = readRecord(craftJSONSchema.parse(JSON.parse(value)))
 		return readString(data, 'error') ?? readString(data, 'message')
 	} catch {
 		return null
 	}
 }
 
-function readItems(value: unknown) {
+function readItems<Value>(value: Value) {
 	const items = readRecord(value)?.items
 	return Array.isArray(items) ? items : []
 }
 
-function readCraftEditableTextBlocks(value: unknown) {
+function readCraftEditableTextBlocks<Value>(value: Value) {
 	const blocks: CraftEditableTextBlock[] = []
-	const visit = (candidate: unknown) => {
+	const visit = (candidate: CraftJSONValue) => {
 		if (Array.isArray(candidate)) {
 			for (const item of candidate) visit(item)
 			return
@@ -683,11 +688,12 @@ function readCraftEditableTextBlocks(value: unknown) {
 		if (id && type === 'text' && markdown !== null) blocks.push({ id, markdown })
 		visit(record.content)
 	}
-	visit(value)
+	const parsed = craftJSONSchema.safeParse(value)
+	if (parsed.success) visit(parsed.data)
 	return blocks
 }
 
-function readCraftWhiteboardElements(value: unknown): CraftWhiteboardElement[] {
+function readCraftWhiteboardElements<Value>(value: Value): CraftWhiteboardElement[] {
 	if (!Array.isArray(value)) throw new Error('Craft returned invalid whiteboard elements.')
 	if (value.length > MAX_CRAFT_WHITEBOARD_ELEMENTS) {
 		throw new Error(
@@ -702,7 +708,7 @@ function readCraftWhiteboardElements(value: unknown): CraftWhiteboardElement[] {
 	})
 }
 
-function readCraftWhiteboardScene(value: unknown) {
+function readCraftWhiteboardScene(value: CraftJSONValue) {
 	const record = readRecord(value)
 	return {
 		appState: readRecord(record?.appState) ?? {},
@@ -711,7 +717,7 @@ function readCraftWhiteboardScene(value: unknown) {
 	}
 }
 
-function readWhiteboardTitle(record: Record<string, unknown>, index: number) {
+function readWhiteboardTitle(record: CraftWhiteboardRecord, index: number) {
 	for (const key of ['title', 'name', 'markdown', 'text']) {
 		const value = readString(record, key)
 		if (value) return value.replace(/<[^>]+>/g, '').trim().slice(0, 500)
@@ -719,18 +725,17 @@ function readWhiteboardTitle(record: Record<string, unknown>, index: number) {
 	return `Whiteboard ${index + 1}`
 }
 
-function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
-		? value as Record<string, unknown>
-		: null
+function readRecord<Value>(value: Value): CraftWhiteboardRecord | null {
+	const parsed = craftRecordSchema.safeParse(value)
+	return parsed.success ? parsed.data : null
 }
 
-function readString(value: Record<string, unknown> | null, key: string): string | null {
-	const field = value?.[key]
-	return typeof field === 'string' && field.trim() ? field : null
+function readString(value: CraftWhiteboardRecord | null, key: string): string | null {
+	const field = z.string().safeParse(value?.[key])
+	return field.success && field.data.trim() ? field.data : null
 }
 
-function readStringValue(value: Record<string, unknown> | null, key: string): string | null {
-	const field = value?.[key]
-	return typeof field === 'string' ? field : null
+function readStringValue(value: CraftWhiteboardRecord | null, key: string): string | null {
+	const field = z.string().safeParse(value?.[key])
+	return field.success ? field.data : null
 }
