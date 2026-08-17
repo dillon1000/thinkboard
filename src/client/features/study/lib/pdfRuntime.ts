@@ -1,20 +1,12 @@
 import modernPDFWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import legacyPDFWorkerURL from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
-import { ensurePDFCompatibility } from './pdfCompatibility'
+import {
+	ensurePDFCompatibility,
+	type CompatibleAbortSignalConstructor,
+	type CompatiblePromiseConstructor,
+} from './pdfCompatibility'
 
 type PDFJS = typeof import('pdfjs-dist')
-
-type CompatiblePromiseConstructor = {
-	withResolvers?: <T>() => {
-		promise: Promise<T>
-		reject: (reason?: Error | string) => void
-		resolve: (value: T | PromiseLike<T>) => void
-	}
-}
-
-type CompatibleAbortSignalConstructor = {
-	any?: (signals: AbortSignal[]) => AbortSignal
-}
 
 let runtimePromise: Promise<PDFJS> | null = null
 

@@ -1,26 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { ensurePDFCompatibility } from './pdfCompatibility'
-
-interface TestPromiseResolvers<T> {
-	promise: Promise<T>
-	resolve: (value: T | PromiseLike<T>) => void
-}
-
-interface MutablePromiseConstructor {
-	withResolvers?: <T>() => TestPromiseResolvers<T>
-}
-
-interface MutableAbortSignalConstructor {
-	any?: (signals: AbortSignal[]) => AbortSignal
-}
+import {
+	ensurePDFCompatibility,
+	type CompatibleAbortSignalConstructor,
+	type CompatiblePromiseConstructor,
+	type PromiseResolvers,
+} from './pdfCompatibility'
 
 describe('ensurePDFCompatibility', () => {
 	it('installs the APIs required by PDF.js on older browsers', async () => {
-		const promiseConstructor: MutablePromiseConstructor = Promise
-		const abortSignalConstructor: MutableAbortSignalConstructor = AbortSignal
+		const promiseConstructor: CompatiblePromiseConstructor = Promise
+		const abortSignalConstructor: CompatibleAbortSignalConstructor = AbortSignal
 		const originalWithResolvers = promiseConstructor.withResolvers
 		const originalAbortSignalAny = abortSignalConstructor.any
-		let resolvers: TestPromiseResolvers<number> | null = null
+		let resolvers: PromiseResolvers<number> | null = null
 		try {
 			promiseConstructor.withResolvers = undefined
 			abortSignalConstructor.any = undefined
@@ -68,11 +60,11 @@ describe('ensurePDFCompatibility', () => {
 })
 
 function readWithResolvers() {
-	const constructor: MutablePromiseConstructor = Promise
+	const constructor: CompatiblePromiseConstructor = Promise
 	return constructor.withResolvers
 }
 
 function readAbortSignalAny() {
-	const constructor: MutableAbortSignalConstructor = AbortSignal
+	const constructor: CompatibleAbortSignalConstructor = AbortSignal
 	return constructor.any
 }

@@ -1,14 +1,14 @@
-interface PromiseResolvers<T> {
+export interface PromiseResolvers<T> {
 	promise: Promise<T>
 	reject: (reason?: Error | string) => void
 	resolve: (value: T | PromiseLike<T>) => void
 }
 
-type CompatiblePromiseConstructor = {
+export type CompatiblePromiseConstructor = {
 	withResolvers?: <T>() => PromiseResolvers<T>
 }
 
-type CompatibleAbortSignalConstructor = {
+export type CompatibleAbortSignalConstructor = {
 	any?: (signals: AbortSignal[]) => AbortSignal
 }
 
