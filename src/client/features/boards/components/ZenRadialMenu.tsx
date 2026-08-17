@@ -57,6 +57,7 @@ import {
 	useValue,
 } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
+import { cssVariables, type CSSVariableStyle } from '../../../lib/styleTypes'
 import { requestZenChatPrompt } from '../../study/lib/zenChatPrompt'
 import {
 	RADIAL_BIND_ACTIONS,
@@ -236,7 +237,7 @@ export function ZenRadialMenu() {
 		}
 		const handlePointerDown = (event: PointerEvent) => {
 			if (menu || event.button > 0) return
-			if ((event.target as Element | null)?.closest('.ZenInteractive')) return
+			if (event.target instanceof Element && event.target.closest('.ZenInteractive')) return
 			const point = { x: event.clientX, y: event.clientY }
 			origin = point
 			timer = window.setTimeout(() => {
@@ -467,7 +468,7 @@ export function ZenRadialMenu() {
 		'--zen-menu-scale': menu?.scale ?? 1,
 		left: menu?.x,
 		top: menu?.y,
-	} as CSSProperties
+	} satisfies CSSVariableStyle
 
 	return active && menu ? (
 		<div className="ZenMenuLayer ZenInteractive">
@@ -552,9 +553,9 @@ export function ZenRadialMenu() {
 							icon={<IconBolt size={18} stroke={1.8} />}
 							key={index}
 							label={`Bind ${index + 1}: ${getBindLabel(binding)}`}
-							onHover={() => setFan(`bind-${index}` as FanID)}
+							onHover={() => setFan(getBindFanID(index))}
 							onSelect={() => binding === 'none'
-								? setFan(`bind-${index}` as FanID)
+								? setFan(getBindFanID(index))
 								: executeBinding(binding)}
 							shortLabel={`B${index + 1}`}
 						/>
@@ -658,7 +659,7 @@ function ColorFan({
 		const colors = editor.getCurrentTheme().colors[editor.getColorMode()]
 		return getColorStyleItems(colors).map((item) => ({
 			fill: getColorValue(colors, item.value, 'solid'),
-			value: item.value as TLDefaultColorStyle,
+			value: DefaultColorStyle.validate(item.value),
 		}))
 	}, [editor])
 	const activeColor = useValue(
@@ -680,10 +681,10 @@ function ColorFan({
 						applyColor(swatch.value)
 						onSelect()
 					}}
-					style={{
+					style={cssVariables({
 						...getFanStyle(index, swatches.length, -45, 210),
 						'--swatch': swatch.fill,
-					} as CSSProperties}
+					})}
 					type="button"
 				>
 					<span aria-hidden="true" className="ZenMenu-colorDot" />
@@ -997,11 +998,11 @@ function getBindIcon(action: RadialBindAction) {
 }
 
 /** Places every main action at the same radius and rotates the petal back toward the center. */
-function getPetalStyle(angle: number): CSSProperties {
+function getPetalStyle(angle: number): CSSVariableStyle {
 	return {
 		...getPolarStyle(angle, PETAL_RADIUS),
 		'--petal-rotation': `${angle + 90}deg`,
-	} as CSSProperties
+	}
 }
 
 function getFanStyle(
@@ -1009,14 +1010,14 @@ function getFanStyle(
 	count: number,
 	centerAngle: number,
 	spread: number,
-): CSSProperties {
+): CSSVariableStyle {
 	const angle = count === 1
 		? centerAngle
 		: centerAngle - spread / 2 + (spread * index) / (count - 1)
 	return {
 		...getPolarStyle(angle, FAN_RADIUS),
 		'--fan-delay': `${Math.min(index * 12, 96)}ms`,
-	} as CSSProperties
+	}
 }
 
 function getPolarStyle(angle: number, radius: number): CSSProperties {
@@ -1033,8 +1034,12 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function isEditableTarget(target: EventTarget | null) {
-	const element = target as HTMLElement | null
-	if (!element) return false
+	if (!(target instanceof HTMLElement)) return false
+	const element = target
 	const tag = element.tagName
 	return tag === 'INPUT' || tag === 'TEXTAREA' || element.isContentEditable
+}
+
+function getBindFanID(index: number): FanID {
+	return z.enum(['bind-0', 'bind-1', 'bind-2']).parse(`bind-${index}`)
 }

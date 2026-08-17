@@ -2,7 +2,7 @@ import { apiRoutes, boardSchema } from '@agentboard/shared'
 import { z } from 'zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { type Editor, type TLShapeId } from 'tldraw'
+import { isShapeId, type Editor } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
 import {
 	CRAFT_DOCUMENT_PREVIEW_EVENT,
@@ -143,7 +143,8 @@ export function CraftDocumentsController({
 					}}
 					onSyncImported={async (frameID, resolution) => {
 						if (!editor) throw new Error('The space is still loading. Try again.')
-						await syncFrame(frameID as TLShapeId, resolution)
+						if (!isShapeId(frameID)) throw new Error('The imported Craft frame ID is invalid.')
+						await syncFrame(frameID, resolution)
 					}}
 				/>
 			) : null}

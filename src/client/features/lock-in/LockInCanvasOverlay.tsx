@@ -1,4 +1,4 @@
-import { useEditor, useValue } from 'tldraw'
+import { isShapeId, useEditor, useValue } from 'tldraw'
 import { useLockIn } from './LockInProvider'
 
 interface ScreenRect {
@@ -47,7 +47,8 @@ export function LockInCanvasOverlay() {
 
 function getScopeScreenRect(editor: ReturnType<typeof useEditor>, shapeIDs: readonly string[]): ScreenRect | null {
 	const boxes = shapeIDs.flatMap((shapeID) => {
-		const bounds = editor.getShapePageBounds(shapeID as Parameters<typeof editor.getShapePageBounds>[0])
+		if (!isShapeId(shapeID)) return []
+		const bounds = editor.getShapePageBounds(shapeID)
 		return bounds ? [bounds] : []
 	})
 	if (boxes.length === 0) return null

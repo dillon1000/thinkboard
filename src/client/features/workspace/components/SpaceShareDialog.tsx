@@ -2,6 +2,7 @@ import {
 	apiRoutes,
 	appRoutes,
 	boardRoleSchema,
+	invitationRoleSchema,
 	spaceInvitationCreatedSchema,
 	spaceInvitationSchema,
 	spaceMemberSchema,
@@ -188,7 +189,7 @@ export function SpaceShareDialog({ boardID, onClose }: SpaceShareDialogProps) {
 							<label>
 								<span>Role</span>
 								<select
-									onChange={(event) => setInviteRole(event.target.value as InvitationRole)}
+									onChange={(event) => setInviteRole(invitationRoleSchema.parse(event.target.value))}
 									value={inviteRole}
 								>
 									<option value="editor">Editor</option>
@@ -229,7 +230,7 @@ export function SpaceShareDialog({ boardID, onClose }: SpaceShareDialogProps) {
 												aria-label={`Role for ${member.name}`}
 												onChange={(event) => void changeRole(
 													member.userID,
-													event.target.value as InvitationRole
+												invitationRoleSchema.parse(event.target.value)
 												)}
 												value={member.role}
 											>

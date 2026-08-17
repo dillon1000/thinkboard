@@ -10,7 +10,7 @@ import {
 } from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
-import { Editor, Tldraw, type TLShape, type TLShapeId } from 'tldraw'
+import { Editor, Tldraw, isShapeId, type TLShape } from 'tldraw'
 import { z } from 'zod'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
@@ -107,8 +107,8 @@ export function Component() {
 				clearFocusParameters()
 				return true
 			}
-			const target = focusShapeID
-				? editor.getShape(focusShapeID as TLShapeId)
+			const target = focusShapeID && isShapeId(focusShapeID)
+				? editor.getShape(focusShapeID)
 				: findPDFPageShape(editor, focusDocumentID ?? '', focusPage)
 			if (!target) return false
 			const pageID = editor.getAncestorPageId(target)

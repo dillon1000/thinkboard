@@ -12,6 +12,7 @@ import {
 	type Editor,
 	type TLShape,
 } from 'tldraw'
+import { z } from 'zod'
 import { openCraftDocumentPreview } from '../craftPreviewEvent'
 import './craftDocumentShape.css'
 
@@ -149,9 +150,10 @@ export function removeCraftDocumentShapes(editor: Editor, linkID: string) {
 }
 
 function getCraftDocumentShapes(editor: Editor, linkID?: string) {
-	return editor.getCurrentPageShapes().flatMap((shape): CraftDocumentShape[] => {
+	return editor.getCurrentPageShapes().flatMap((shape) => {
 		if (shape.type !== CRAFT_DOCUMENT_SHAPE_TYPE) return []
-		const craftShape = shape as CraftDocumentShape
-		return !linkID || craftShape.props.linkID === linkID ? [craftShape] : []
+		const props = z.object({ linkID: z.string() }).safeParse(shape.props)
+		if (!props.success || (linkID && props.data.linkID !== linkID)) return []
+		return [{ id: shape.id, props: props.data }]
 	})
 }

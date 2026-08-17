@@ -15,10 +15,11 @@ import {
 	IconPlus,
 	IconTrash,
 } from '@tabler/icons-react'
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { apiRequest } from '../../../lib/api'
+import { cssVariables } from '../../../lib/styleTypes'
 import { WorkspaceShell } from '../../auth/components/WorkspaceShell'
 import { FlashcardAnswerPanel } from '../../study/components/FlashcardAnswerPanel'
 import { studyMarkdownPlugins } from '../../study/lib/studyMath'
@@ -183,7 +184,7 @@ export function Component() {
 								<div aria-label="Reviews by day" className="Today-trend">
 									{dashboard.trend.map((day) => (
 										<div key={day.day}>
-											<span className="Today-trendBar" style={{ '--review-count': Math.min(day.reviewed, 12) } as CSSProperties}>
+											<span className="Today-trendBar" style={cssVariables({ '--review-count': Math.min(day.reviewed, 12) })}>
 												<i style={{ height: `${day.reviewed ? Math.max(18, day.remembered / day.reviewed * 100) : 0}%` }} />
 											</span>
 											<small>{formatDay(day.day)}</small>

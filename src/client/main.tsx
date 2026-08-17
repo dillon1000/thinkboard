@@ -10,8 +10,8 @@ import { router } from './app/router'
 import { ThemeProvider } from './features/theme/ThemeProvider'
 import './styles/global.css'
 
-const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN as string | undefined
-const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined
+const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
 
 if (posthogToken) {
 	posthog.init(posthogToken, {
