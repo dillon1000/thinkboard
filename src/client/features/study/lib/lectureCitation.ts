@@ -1,5 +1,8 @@
 import { LECTURE_SHAPE_TYPE } from '@agentboard/shared'
 import type { Editor, TLShape } from 'tldraw'
+import { z } from 'zod'
+
+const lectureCitationShapePropsSchema = z.object({ lectureID: z.string() })
 
 export interface LectureCitationTarget {
 	lectureID: string
@@ -22,9 +25,10 @@ export function findLectureCitationShape(
 	target: LectureCitationTarget
 ) {
 	for (const shape of shapes) {
+		const props = lectureCitationShapePropsSchema.safeParse(shape.props)
 		if (
 			shape.type === LECTURE_SHAPE_TYPE &&
-			Reflect.get(shape.props, 'lectureID') === target.lectureID
+			props.success && props.data.lectureID === target.lectureID
 		) return shape
 	}
 	return null

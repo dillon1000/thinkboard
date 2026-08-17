@@ -2,8 +2,10 @@ import {
 	LECTURE_SHAPE_TYPE,
 	MAX_AUDIO_BYTES,
 	apiRoutes,
+	lectureSummarySchema,
 	type LectureSummary,
 } from '@agentboard/shared'
+import { z } from 'zod'
 import {
 	IconHeadphones,
 	IconMicrophone,
@@ -116,17 +118,17 @@ function LectureImportDialog({
 					method: 'POST',
 				}
 			)
-			const body: unknown = await response.json().catch(() => null)
+			const body = await response.json().catch(() => null)
 			if (!response.ok) {
-				const message = body && typeof body === 'object' && typeof Reflect.get(body, 'error') === 'string'
-					? String(Reflect.get(body, 'error'))
+				const errorBody = z.object({ error: z.string() }).safeParse(body)
+				const message = errorBody.success
+					? errorBody.data.error
 					: 'Unable to upload this lecture'
 				throw new Error(message)
 			}
-			const lecture = body && typeof body === 'object'
-				? Reflect.get(body, 'lecture') as LectureSummary | undefined
-				: undefined
-			if (!lecture) throw new Error('The lecture upload returned no record')
+			const result = z.object({ lecture: lectureSummarySchema }).safeParse(body)
+			if (!result.success) throw new Error('The lecture upload returned no record')
+			const lecture: LectureSummary = result.data.lecture
 			setLectures((current) => [lecture, ...current])
 			placeLecture(editor, lecture)
 			onClose()

@@ -72,6 +72,7 @@ import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, CSSProperti
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Streamdown, type Components } from 'streamdown'
 import { Editor } from 'tldraw'
+import { z } from 'zod'
 import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
 import { ReasoningTrail } from './ReasoningTrail'
@@ -1206,12 +1207,8 @@ function formatTokenCount(tokens: number) {
 	return `${Math.round(tokens / 1_000)}K`
 }
 
-function isAppliedOutput(output: unknown) {
-	return Boolean(
-		output &&
-		typeof output === 'object' &&
-		Reflect.get(output, 'applied') === true
-	)
+function isAppliedOutput<Output>(output: Output) {
+	return z.object({ applied: z.literal(true) }).safeParse(output).success
 }
 
 type ProposalCallStatus = 'preparing' | 'ready' | 'accepted' | 'rejected' | 'error'
