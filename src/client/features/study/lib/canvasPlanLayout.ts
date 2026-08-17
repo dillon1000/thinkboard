@@ -6,6 +6,7 @@ import type {
 	CanvasPlanElement,
 	CanvasSpacing,
 } from '@agentboard/shared'
+import { z } from 'zod'
 
 export interface CanvasLayoutBox {
 	h: number
@@ -31,17 +32,18 @@ export interface ResolvedCanvasPlanLayout {
 	bounds: CanvasLayoutBox
 }
 
-export const CANVAS_SPACING: Readonly<Record<Exclude<CanvasSpacing, number>, number>> = {
+export const CANVAS_SPACING = {
 	xs: 8,
 	sm: 16,
 	md: 24,
 	lg: 40,
 	xl: 64,
 	xxl: 96,
-}
+} satisfies Readonly<Record<Exclude<CanvasSpacing, number>, number>>
 
 const COLLISION_STEP = CANVAS_SPACING.md
 const MAX_COLLISION_STEPS = 80
+const canvasSpacingNameSchema = z.enum(['xs', 'sm', 'md', 'lg', 'xl', 'xxl'])
 
 /**
  * Resolves a canvas plan in page coordinates. The function has no editor side effects, so the
@@ -53,12 +55,9 @@ export function resolveCanvasPlanLayout(
 	measuredSizes: ReadonlyMap<string, Pick<CanvasLayoutBox, 'w' | 'h'>> = new Map()
 ): ResolvedCanvasPlanLayout {
 	const boxes = new Map<string, CanvasLayoutBox>(
-		plan.elements.map((element) => {
+		plan.elements.map((element): [string, CanvasLayoutBox] => {
 			const size = measuredSizes.get(element.id) ?? measureCanvasPlanElement(element)
-			return [element.id, { h: size.h, w: size.w, x: 0, y: 0 }] as [
-				string,
-				CanvasLayoutBox,
-			]
+			return [element.id, { h: size.h, w: size.w, x: 0, y: 0 }]
 		})
 	)
 	const resolvedIDs = new Set<string>()
@@ -162,8 +161,10 @@ export function resolveCanvasPlanLayout(
 export function measureCanvasPlanElement(
 	element: CanvasPlanElement
 ): Pick<CanvasLayoutBox, 'w' | 'h'> {
-	const requestedWidth = typeof element.size?.width === 'number' ? element.size.width : undefined
-	const requestedHeight = typeof element.size?.height === 'number' ? element.size.height : undefined
+	const width = z.number().safeParse(element.size?.width)
+	const height = z.number().safeParse(element.size?.height)
+	const requestedWidth = width.success ? width.data : undefined
+	const requestedHeight = height.success ? height.data : undefined
 	let intrinsic: Pick<CanvasLayoutBox, 'w' | 'h'>
 
 	if (element.kind === 'geo') {
@@ -196,7 +197,8 @@ export function measureCanvasPlanElement(
 }
 
 export function spacingValue(spacing: CanvasSpacing) {
-	return typeof spacing === 'number' ? spacing : CANVAS_SPACING[spacing]
+	const numeric = z.number().safeParse(spacing)
+	return numeric.success ? numeric.data : CANVAS_SPACING[canvasSpacingNameSchema.parse(spacing)]
 }
 
 export function resolveCanvasPlacement(
@@ -274,12 +276,13 @@ function arrangeGrid(
 			const xOffset = layout.align === 'stretch'
 				? 0
 				: alignWithin(cellWidth, box.w, layout.align)
-			boxes.set(id, {
+			const placed = {
 				...box,
-				...(layout.align === 'stretch' ? { w: cellWidth } : {}),
 				x: columnX[columnIndex] + xOffset,
 				y: rowY[rowIndex],
-			})
+			}
+			if (layout.align === 'stretch') placed.w = cellWidth
+			boxes.set(id, placed)
 		}
 	}
 }
@@ -382,10 +385,12 @@ function fitFrameContainers(plan: CanvasPlan, boxes: Map<string, CanvasLayoutBox
 		const padding = spacingValue(frameElement.padding)
 		const requiredWidth = childBounds.w + padding * 2
 		const requiredHeight = childBounds.h + padding * 2
-		const width = typeof frameElement.size?.width === 'number'
+		const requestedWidth = z.number().safeParse(frameElement.size?.width)
+		const requestedHeight = z.number().safeParse(frameElement.size?.height)
+		const width = requestedWidth.success
 			? Math.max(frameBox.w, requiredWidth)
 			: requiredWidth
-		const height = typeof frameElement.size?.height === 'number'
+		const height = requestedHeight.success
 			? Math.max(frameBox.h, requiredHeight)
 			: requiredHeight
 		boxes.set(container.frame, {
