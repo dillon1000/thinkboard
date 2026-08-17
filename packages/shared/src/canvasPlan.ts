@@ -478,7 +478,7 @@ const legacyCanvasPlanSchema = z.object({
  */
 export const canvasPlanInputSchema = z.union([canvasPlanSchema, legacyCanvasPlanSchema])
 
-export function normalizeCanvasPlanInput(input: unknown): CanvasPlan {
+export function normalizeCanvasPlanInput<Input>(input: Input): CanvasPlan {
 	const current = canvasPlanSchema.safeParse(input)
 	if (current.success) return current.data
 	const legacy = legacyCanvasPlanSchema.parse(input)
@@ -515,14 +515,13 @@ function convertLegacyCanvasPlan(legacy: z.infer<typeof legacyCanvasPlanSchema>)
 		}
 		const style = legacyCanvasStyle(shape.props)
 		const text = legacyHTMLToText(shape.props.text)
-		return shape.type === 'geo'
+		const element: z.input<typeof canvasPlanElementSchema> = shape.type === 'geo'
 			? {
 					id: shape.id,
 					kind: 'geo' as const,
 					geo: shape.props.geo,
 					placement,
 					size: { width: box.w, height: box.h },
-					...(style ? { style } : {}),
 					text,
 				}
 			: {
@@ -531,19 +530,21 @@ function convertLegacyCanvasPlan(legacy: z.infer<typeof legacyCanvasPlanSchema>)
 					autoSize: false,
 					placement,
 					size: { width: box.w, height: box.h },
-					...(style ? { style } : {}),
 					text,
 				}
+		if (style) element.style = style
+		return element
 	})
 	const connectors = arrows.map((arrow) => {
 		const style = legacyCanvasStyle(arrow.props)
-		return {
+		const connector: z.input<typeof canvasConnectorSchema> = {
 			id: arrow.id,
 			from: legacyCanvasReference(arrow.props.start.boundShapeId, nodeIDs),
 			to: legacyCanvasReference(arrow.props.end.boundShapeId, nodeIDs),
 			label: legacyHTMLToText(arrow.props.text),
-			...(style ? { style } : {}),
 		}
+		if (style) connector.style = style
+		return connector
 	})
 
 	return {
