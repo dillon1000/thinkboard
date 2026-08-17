@@ -172,9 +172,22 @@
 					}
 				]
 			},
+			"exports": {
+				"BoardRoom": {
+					"type": "durable-object",
+					"storage": "sqlite"
+				},
+				"StudyAgent": {
+					"type": "durable-object",
+					"storage": "sqlite"
+				},
+				"Sandbox": {
+					"type": "durable-object",
+					"storage": "sqlite"
+				}
+			},
 			"containers": [
 				{
-					"name": "agentboard-preview-sandbox",
 					"class_name": "Sandbox",
 					"image": "./Dockerfile.office",
 					"instance_type": "standard-1",
