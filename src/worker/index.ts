@@ -99,6 +99,7 @@ import {
 } from './routes/lectures'
 
 export { BoardRoom } from './durable-objects/BoardRoom'
+export { Sandbox } from '@cloudflare/sandbox'
 export { StudyAgent }
 
 const router = AutoRouter<IRequest, [env: Env, ctx: ExecutionContext]>({

@@ -32,6 +32,7 @@
 		"OCR_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
 		"PDF_DAILY_PAGE_QUOTA": "1000",
 		"PDF_STORED_BYTES_QUOTA": "2147483648",
+		"SANDBOX_TRANSPORT": "rpc",
 		"POSTHOG_HOST": "https://us.i.posthog.com",
 		"BETTER_AUTH_URL": "https://ts.dillonr.ing",
 		"OAUTH_PROVIDER_ID": "campus-sso",
@@ -53,15 +54,31 @@
 			{
 				"name": "StudyAgent",
 				"class_name": "StudyAgent"
+			},
+			{
+				"name": "Sandbox",
+				"class_name": "Sandbox"
 			}
 		]
 	},
+	"containers": [
+		{
+			"class_name": "Sandbox",
+			"image": "./Dockerfile.office",
+			"instance_type": "standard-1",
+			"max_instances": 5
+		}
+	],
 	"exports": {
 		"BoardRoom": {
 			"type": "durable-object",
 			"storage": "sqlite"
 		},
 		"StudyAgent": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		},
+		"Sandbox": {
 			"type": "durable-object",
 			"storage": "sqlite"
 		}
