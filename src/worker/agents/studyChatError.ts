@@ -1,11 +1,16 @@
 import { APICallError } from '@ai-sdk/provider'
 import { RetryError } from 'ai'
+import { z } from 'zod'
 
 const FALLBACK_MESSAGE = 'The study partner could not finish that response.'
 const MAX_CLIENT_MESSAGE_LENGTH = 600
+const providerErrorSchema = z.object({
+	error: z.object({ message: z.string().trim().min(1) }),
+})
+const providerJSONSchema = z.json()
 
 /** Returns a useful provider error for the client without exposing request data, headers, or stacks. */
-export function getStudyChatClientError(error: unknown): string {
+export function getStudyChatClientError<Failure>(error: Failure): string {
 	const apiError = findAPICallError(error)
 	if (!apiError) return FALLBACK_MESSAGE
 
@@ -16,7 +21,7 @@ export function getStudyChatClientError(error: unknown): string {
 }
 
 /** Returns structured fields that Cloudflare can index without logging provider request data. */
-export function getStudyChatErrorLog(error: unknown) {
+export function getStudyChatErrorLog<Failure>(error: Failure) {
 	const apiError = findAPICallError(error)
 	if (!apiError) {
 		return {
@@ -33,7 +38,7 @@ export function getStudyChatErrorLog(error: unknown) {
 	}
 }
 
-function findAPICallError(error: unknown, depth = 0): APICallError | null {
+function findAPICallError<Failure>(error: Failure, depth = 0): APICallError | null {
 	if (depth > 4) return null
 	if (APICallError.isInstance(error)) return error
 	if (RetryError.isInstance(error)) return findAPICallError(error.lastError, depth + 1)
@@ -48,21 +53,18 @@ function getProviderMessage(error: APICallError): string {
 	return message.trim().replace(/\s+/g, ' ')
 }
 
-function parseResponseBody(responseBody: string | undefined): unknown {
+function parseResponseBody(responseBody: string | undefined) {
 	if (!responseBody) return null
 	try {
-		return JSON.parse(responseBody)
+		return providerJSONSchema.parse(JSON.parse(responseBody))
 	} catch {
 		return null
 	}
 }
 
-function readProviderMessage(value: unknown): string | null {
-	if (!value || typeof value !== 'object') return null
-	const error = Reflect.get(value, 'error')
-	if (!error || typeof error !== 'object') return null
-	const message = Reflect.get(error, 'message')
-	return typeof message === 'string' && message.trim() ? message : null
+function readProviderMessage<Value>(value: Value): string | null {
+	const parsed = providerErrorSchema.safeParse(value)
+	return parsed.success ? parsed.data.error.message : null
 }
 
 function truncate(message: string) {
