@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType } from '@agentboard/shared'
 export type StudyToolContinuation = 'applied' | 'dismissed' | 'error' | 'saved'
 
@@ -35,7 +36,7 @@ export function getStudyToolContinuation(
 
 	const applied = toolPart.output &&
 		hasObjectType(toolPart.output) &&
-		Reflect.get(toolPart.output, 'applied') === true
+		readProperty(toolPart.output, 'applied') === true
 	if (!applied) return 'dismissed'
 	return toolPart.type === 'tool-saveMemory' || toolPart.type === 'tool-recordMistake'
 		? 'saved'

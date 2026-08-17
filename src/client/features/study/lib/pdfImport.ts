@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import {
 	MAX_OFFICE_BYTES,
@@ -219,10 +220,10 @@ async function renderPDFPage(page: Awaited<ReturnType<import('pdfjs-dist').PDFDo
 		readPDFTextItems(page),
 	])
 	const textBlocks = textItems.flatMap((item): PDFTextBlock[] => {
-		const text = Reflect.get(item, 'str')
-		const transform = Reflect.get(item, 'transform')
-		const width = Reflect.get(item, 'width')
-		const height = Reflect.get(item, 'height')
+		const text = readProperty(item, 'str')
+		const transform = readProperty(item, 'transform')
+		const width = readProperty(item, 'width')
+		const height = readProperty(item, 'height')
 		if (
 			!isString(text) ||
 			!Array.isArray(transform) ||
@@ -369,7 +370,7 @@ export function removePDFDocumentShapes(editor: Editor, documentID: string) {
 		[...editor.getPageShapeIds(page)].flatMap((shapeID) => {
 			const shape = editor.getShape(shapeID)
 			return shape?.type === 'pdf-page' &&
-				Reflect.get(shape.props, 'documentId') === documentID
+				readProperty(shape.props, 'documentId') === documentID
 				? [shape]
 				: []
 		})
@@ -403,7 +404,7 @@ export function locatePDFDocument(editor: Editor, documentID: string) {
 			const shape = editor.getShape(shapeID)
 			if (
 				shape?.type !== 'pdf-page' ||
-				Reflect.get(shape.props, 'documentId') !== documentID
+				readProperty(shape.props, 'documentId') !== documentID
 			) continue
 			editor.setCurrentPage(page.id)
 			editor.setSelectedShapes([shape.id])
@@ -436,7 +437,7 @@ export function placePDFPages(
 		[...editor.getPageShapeIds(page)].flatMap((shapeID) => {
 			const shape = editor.getShape(shapeID)
 			return shape?.type === 'pdf-page' &&
-				Reflect.get(shape.props, 'documentId') === document.id
+				readProperty(shape.props, 'documentId') === document.id
 				? [shape]
 				: []
 		})
@@ -532,7 +533,7 @@ export function hasCompletePDFPageShapeSet(
 	const expectedPageNumbers = new Set(pages.map(({ pageNumber }) => pageNumber))
 	if (existingShapes.length !== expectedPageNumbers.size) return false
 	const existingPageNumbers = new Set(existingShapes.map(({ props }) =>
-		Reflect.get(props, 'pageNumber')
+		readProperty(props, 'pageNumber')
 	))
 	return existingPageNumbers.size === expectedPageNumbers.size &&
 		[...expectedPageNumbers].every((pageNumber) => existingPageNumbers.has(pageNumber))
@@ -615,8 +616,8 @@ async function requestJSON<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 
 async function readResponseError(response: Response) {
 	const body: unknown = await response.json().catch(() => null)
-	return body && hasObjectType(body) && isString(Reflect.get(body, 'error'))
-		? String(Reflect.get(body, 'error'))
+	return body && hasObjectType(body) && isString(readProperty(body, 'error'))
+		? String(readProperty(body, 'error'))
 		: `Request failed with status ${response.status}`
 }
 
@@ -629,7 +630,7 @@ function readSavedImport(boardID: string, file: File): SavedImport | null {
 		const value = localStorage.getItem(savedImportKey(boardID, file))
 		if (!value) return null
 		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && hasObjectType(parsed) ? Reflect.get(parsed, 'documentID') : null
+		const documentID = parsed && hasObjectType(parsed) ? readProperty(parsed, 'documentID') : null
 		return isString(documentID) ? { documentID } : null
 	} catch {
 		return null
@@ -661,7 +662,7 @@ function readSavedOfficeImport(boardID: string, file: File): SavedImport | null 
 		const value = localStorage.getItem(savedOfficeImportKey(boardID, file))
 		if (!value) return null
 		const parsed: unknown = JSON.parse(value)
-		const documentID = parsed && hasObjectType(parsed) ? Reflect.get(parsed, 'documentID') : null
+		const documentID = parsed && hasObjectType(parsed) ? readProperty(parsed, 'documentID') : null
 		return isString(documentID) ? { documentID } : null
 	} catch {
 		return null

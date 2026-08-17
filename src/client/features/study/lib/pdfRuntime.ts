@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { isFunction } from '@agentboard/shared'
 import modernPDFWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import legacyPDFWorkerURL from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
@@ -15,8 +16,8 @@ export function loadPDFJS() {
 }
 
 export function supportsModernPDFJS() {
-	return isFunction(Reflect.get(Promise, 'withResolvers')) &&
-		isFunction(Reflect.get(AbortSignal, 'any'))
+	return isFunction(readProperty(Promise, 'withResolvers')) &&
+		isFunction(readProperty(AbortSignal, 'any'))
 }
 
 function loadLegacyPDFJS() {

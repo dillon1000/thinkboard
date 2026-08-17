@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	DEFAULT_STUDY_MODEL_MODE,
@@ -621,8 +622,8 @@ function extractLatestUserText(messages: readonly StudyUIMessage[]) {
 	const message = messages.findLast(({ role }) => role === 'user')
 	if (!message) return ''
 	return message.parts.flatMap((part) => {
-		if (!part || !hasObjectType(part) || Reflect.get(part, 'type') !== 'text') return []
-		const text = Reflect.get(part, 'text')
+		if (!part || !hasObjectType(part) || readProperty(part, 'type') !== 'text') return []
+		const text = readProperty(part, 'text')
 		return isString(text) ? [text] : []
 	}).join('\n').trim()
 }
@@ -630,9 +631,9 @@ function extractLatestUserText(messages: readonly StudyUIMessage[]) {
 function migrateLegacyTextMessages(messages: unknown[]): StudyUIMessage[] {
 	return messages.flatMap((message) => {
 		if (!message || !hasObjectType(message)) return []
-		const id = Reflect.get(message, 'id')
-		const role = Reflect.get(message, 'role')
-		const parts = Reflect.get(message, 'parts')
+		const id = readProperty(message, 'id')
+		const role = readProperty(message, 'role')
+		const parts = readProperty(message, 'parts')
 		if (
 			!isString(id) ||
 			(role !== 'system' && role !== 'user' && role !== 'assistant') ||
@@ -641,8 +642,8 @@ function migrateLegacyTextMessages(messages: unknown[]): StudyUIMessage[] {
 
 		const textParts = parts.flatMap((part) => {
 			if (!part || !hasObjectType(part)) return []
-			const type = Reflect.get(part, 'type')
-			const text = Reflect.get(part, 'text')
+			const type = readProperty(part, 'type')
+			const text = readProperty(part, 'text')
 			return type === 'text' && isString(text)
 				? [{ type: 'text' as const, text }]
 				: []

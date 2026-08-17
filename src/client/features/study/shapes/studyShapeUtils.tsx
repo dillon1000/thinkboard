@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType } from '@agentboard/shared'
 import {
 	CONCEPT_MAP_SHAPE_TYPE,
@@ -1040,9 +1041,9 @@ function StudySources({ overlay = false, shape }: { overlay?: boolean; shape: TL
 }
 
 function readStudySources(shape: TLShape): PDFSourceReference[] {
-	const agentboard = Reflect.get(shape.meta, 'agentboard')
+	const agentboard = readProperty(shape.meta, 'agentboard')
 	if (!agentboard || !hasObjectType(agentboard)) return []
-	const parsed = pdfSourceReferenceSchema.array().safeParse(Reflect.get(agentboard, 'sources'))
+	const parsed = pdfSourceReferenceSchema.array().safeParse(readProperty(agentboard, 'sources'))
 	return parsed.success ? parsed.data : []
 }
 

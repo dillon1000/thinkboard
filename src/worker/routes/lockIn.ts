@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import {
 	lockInReviewRequestSchema,
@@ -275,7 +276,7 @@ function readPartialStatus(value: unknown): LockInReviewStatus | null {
 		try {
 			const candidate: unknown = JSON.parse(text.slice(start, end + 1))
 			const result = lockInReviewStatusSchema.safeParse(
-				candidate && hasObjectType(candidate) ? Reflect.get(candidate, 'status') : null
+				candidate && hasObjectType(candidate) ? readProperty(candidate, 'status') : null
 			)
 			if (result.success) return result.data
 		} catch {
@@ -325,7 +326,7 @@ function formatElapsedMinutes(value: number) {
 function readGeneratedText(value: unknown) {
 	if (!value || !hasObjectType(value)) return ''
 	for (const key of ['response', 'result', 'text']) {
-		const candidate = Reflect.get(value, key)
+		const candidate = readProperty(value, key)
 		if (isString(candidate)) return candidate
 	}
 	return ''

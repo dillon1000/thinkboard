@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import type { Editor } from 'tldraw'
 import { describe, expect, it, vi } from 'vitest'
 import { applyProposal } from './studyProposalApply'
@@ -58,8 +59,8 @@ describe('applyProposal study pack', () => {
 		)).toBe(true)
 		const flashcards = createdShapes.filter((shape) => shape.type === 'agentboard-flashcard')
 		expect(flashcards.every((shape) => (
-			Reflect.get(shape.props as object, 'w') === 220
-			&& Reflect.get(shape.props as object, 'h') === 118
+			readProperty(shape.props as object, 'w') === 220
+			&& readProperty(shape.props as object, 'h') === 118
 		))).toBe(true)
 		expect(effect.flashcards).toHaveLength(2)
 		expect(effect.shapeIDs).toHaveLength(4)

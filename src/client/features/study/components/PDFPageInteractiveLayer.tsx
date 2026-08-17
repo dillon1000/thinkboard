@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import { apiRoutes } from '@agentboard/shared'
 import {
@@ -235,12 +236,12 @@ async function getPDFPageLinks(
 
 function parsePDFLinkAnnotation(value: unknown, index: number): PDFLinkAnnotation | null {
 	if (!value || !hasObjectType(value)) return null
-	const subtype = Reflect.get(value, 'subtype')
-	const rawRect = Reflect.get(value, 'rect')
+	const subtype = readProperty(value, 'subtype')
+	const rawRect = readProperty(value, 'rect')
 	if (subtype !== 'Link' || !isPDFRectangle(rawRect)) return null
-	const rawID = Reflect.get(value, 'id')
-	const rawURL = Reflect.get(value, 'url')
-	const rawDestination = Reflect.get(value, 'dest')
+	const rawID = readProperty(value, 'id')
+	const rawURL = readProperty(value, 'url')
+	const rawDestination = readProperty(value, 'dest')
 	const destination = isString(rawDestination) || Array.isArray(rawDestination)
 		? rawDestination
 		: undefined
@@ -307,8 +308,8 @@ function isPDFPageReference(value: unknown): value is { gen: number; num: number
 	return Boolean(
 		value &&
 		hasObjectType(value) &&
-		isNumber(Reflect.get(value, 'num')) &&
-		isNumber(Reflect.get(value, 'gen'))
+		isNumber(readProperty(value, 'num')) &&
+		isNumber(readProperty(value, 'gen'))
 	)
 }
 

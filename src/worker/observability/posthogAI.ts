@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isBoolean, isNumber, isString } from '@agentboard/shared'
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 const MAX_CAPTURE_STRING_LENGTH = 20_000
@@ -170,8 +171,8 @@ function scheduleCapture(defer: Defer, capture: Promise<void>) {
 
 function inferEventKind(input: unknown): AIEventKind {
 	if (!input || !hasObjectType(input)) return 'generation'
-	const text = Reflect.get(input, 'text')
-	const messages = Reflect.get(input, 'messages')
+	const text = readProperty(input, 'text')
+	const messages = readProperty(input, 'messages')
 	return (isString(text) || Array.isArray(text)) && !Array.isArray(messages)
 		? 'embedding'
 		: 'generation'
@@ -179,16 +180,16 @@ function inferEventKind(input: unknown): AIEventKind {
 
 function readModelInput(input: unknown) {
 	if (!input || !hasObjectType(input)) return input
-	const messages = Reflect.get(input, 'messages')
+	const messages = readProperty(input, 'messages')
 	if (Array.isArray(messages)) return messages
-	const text = Reflect.get(input, 'text')
+	const text = readProperty(input, 'text')
 	return isString(text) || Array.isArray(text) ? text : input
 }
 
 function readModelOutput(output: unknown) {
 	if (!output || !hasObjectType(output)) return output
 	for (const key of ['response', 'result', 'text']) {
-		const value = Reflect.get(output, key)
+		const value = readProperty(output, key)
 		if (value !== undefined) return value
 	}
 	return output
@@ -196,10 +197,10 @@ function readModelOutput(output: unknown) {
 
 function readUsageNumber(output: unknown, keys: readonly string[]) {
 	if (!output || !hasObjectType(output)) return undefined
-	const usage = Reflect.get(output, 'usage')
+	const usage = readProperty(output, 'usage')
 	if (!usage || !hasObjectType(usage)) return undefined
 	for (const key of keys) {
-		const value = Reflect.get(usage, key)
+		const value = readProperty(usage, key)
 		if (isNumber(value)) return value
 	}
 	return undefined
@@ -208,7 +209,7 @@ function readUsageNumber(output: unknown, keys: readonly string[]) {
 function readInputNumber(input: unknown, keys: readonly string[]) {
 	if (!input || !hasObjectType(input)) return undefined
 	for (const key of keys) {
-		const value = Reflect.get(input, key)
+		const value = readProperty(input, key)
 		if (isNumber(value)) return value
 	}
 	return undefined
@@ -216,9 +217,9 @@ function readInputNumber(input: unknown, keys: readonly string[]) {
 
 function readGatewayMetadata(options: unknown): Record<string, AIProperty> {
 	if (!options || !hasObjectType(options)) return {}
-	const gateway = Reflect.get(options, 'gateway')
+	const gateway = readProperty(options, 'gateway')
 	if (!gateway || !hasObjectType(gateway)) return {}
-	const metadata = Reflect.get(gateway, 'metadata')
+	const metadata = readProperty(gateway, 'metadata')
 	if (!metadata || !hasObjectType(metadata)) return {}
 	return Object.fromEntries(
 		Object.entries(metadata).filter(

@@ -1,3 +1,4 @@
+import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber } from '@agentboard/shared'
 import type { StudyArtifactInput } from '@agentboard/shared'
 import { getDocumentAIConfig } from '../config'
@@ -74,7 +75,7 @@ export async function createArtifactVectorID(boardID: string, shapeID: string) {
 
 function readEmbeddings(value: unknown): number[][] {
 	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
+	const data = readProperty(value, 'data')
 	if (
 		!Array.isArray(data) ||
 		!data.every((embedding) =>
