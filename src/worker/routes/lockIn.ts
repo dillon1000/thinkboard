@@ -7,6 +7,7 @@ import {
 	type LockInReviewStatus,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import { getBoardAccess } from '../db/boards'
 import { createDatabase } from '../db/client'
@@ -20,6 +21,11 @@ export type { AIRunner } from '../observability/posthogAI'
 const DEFAULT_LOCK_IN_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct'
 
 const lockInModelResponseSchema = lockInReviewResponseSchema.omit({ reviewedAt: true })
+const generatedTextSchema = z.object({
+	response: z.string().optional(),
+	result: z.string().optional(),
+	text: z.string().optional(),
+})
 
 const LOCK_IN_REVIEW_JSON_SCHEMA = {
 	additionalProperties: false,
@@ -86,6 +92,7 @@ export async function handleLockInReview(
 			tags: ['agentboard', 'lock-in-review'],
 		}
 		const traceID = crypto.randomUUID()
+		// SAFETY: Env.AI implements this JSON-returning subset through Cloudflare's model overloads.
 		const review = await generateLockInReview(
 			observeAIRunner(env.AI as AIRunner, env, {
 				defer: (capture) => ctx.waitUntil(capture),
@@ -165,11 +172,11 @@ export function createLockInReviewMessages(review: LockInReviewRequest) {
 	]
 }
 
-export async function generateLockInReview(
+export async function generateLockInReview<Options>(
 	ai: AIRunner,
 	model: string,
 	review: LockInReviewRequest,
-	options?: unknown,
+	options?: Options,
 	reviewedAt = new Date()
 ): Promise<LockInReviewResponse> {
 	const initialResponse = await ai.run(
@@ -216,23 +223,22 @@ export async function generateLockInReview(
 	)
 }
 
-export function parseLockInModelResponse(
-	value: unknown,
+export function parseLockInModelResponse<Value>(
+	value: Value,
 	reviewedAt = new Date()
 ): LockInReviewResponse {
 	const text = readGeneratedText(value)
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Focus coach returned invalid JSON')
-	const candidate: unknown = JSON.parse(text.slice(start, end + 1))
-	const result = lockInModelResponseSchema.parse(candidate)
+	const result = lockInModelResponseSchema.parse(JSON.parse(text.slice(start, end + 1)))
 	return {
 		...result,
 		reviewedAt: reviewedAt.toISOString(),
 	}
 }
 
-function tryParseLockInModelResponse(value: unknown, reviewedAt: Date) {
+function tryParseLockInModelResponse<Value>(value: Value, reviewedAt: Date) {
 	try {
 		return parseLockInModelResponse(value, reviewedAt)
 	} catch {
@@ -240,7 +246,7 @@ function tryParseLockInModelResponse(value: unknown, reviewedAt: Date) {
 	}
 }
 
-function parseTaggedLockInResponse(value: unknown, reviewedAt: Date) {
+function parseTaggedLockInResponse<Value>(value: Value, reviewedAt: Date) {
 	const text = readGeneratedText(value)
 	const status = matchTaggedField(text, 'STATUS')
 	const headline = matchTaggedField(text, 'HEADLINE')
@@ -266,17 +272,16 @@ function matchTaggedField(text: string, label: string) {
 	return line?.slice(line.indexOf(':') + 1).trim()
 }
 
-function readPartialStatus(value: unknown): LockInReviewStatus | null {
+function readPartialStatus<Value>(value: Value): LockInReviewStatus | null {
 	const text = readGeneratedText(value)
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start >= 0 && end >= start) {
 		try {
-			const candidate: unknown = JSON.parse(text.slice(start, end + 1))
-			const result = lockInReviewStatusSchema.safeParse(
-				candidate && typeof candidate === 'object' ? Reflect.get(candidate, 'status') : null
+			const candidate = z.object({ status: lockInReviewStatusSchema }).safeParse(
+				JSON.parse(text.slice(start, end + 1))
 			)
-			if (result.success) return result.data
+			if (candidate.success) return candidate.data.status
 		} catch {
 			// Tagged output is checked below.
 		}
@@ -292,7 +297,7 @@ function createSafeLockInFallback(
 	reviewedAt: Date
 ): LockInReviewResponse {
 	const safeStatus = status === 'complete' ? 'unclear' : status
-	const headline: Record<LockInReviewStatus, string> = {
+	const headline = {
 		'on-track': 'Keep this direction',
 		drifting: 'Return to your finish line',
 		stalled: 'Restart with one visible step',
@@ -321,11 +326,9 @@ function formatElapsedMinutes(value: number) {
 	return `${rounded} minute${rounded === 1 ? '' : 's'}`
 }
 
-function readGeneratedText(value: unknown) {
-	if (!value || typeof value !== 'object') return ''
-	for (const key of ['response', 'result', 'text']) {
-		const candidate = Reflect.get(value, key)
-		if (typeof candidate === 'string') return candidate
-	}
-	return ''
+function readGeneratedText<Value>(value: Value) {
+	const parsed = generatedTextSchema.safeParse(value)
+	return parsed.success
+		? parsed.data.response ?? parsed.data.result ?? parsed.data.text ?? ''
+		: ''
 }
