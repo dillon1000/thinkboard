@@ -1,4 +1,10 @@
+import { z } from 'zod'
+
 export const CRAFT_DOCUMENT_PREVIEW_EVENT = 'agentboard:craft-document-preview'
+
+const craftDocumentPreviewDetailSchema = z.object({
+	linkID: z.string().min(1).nullable(),
+})
 
 export function openCraftDocuments() {
 	window.dispatchEvent(new CustomEvent(CRAFT_DOCUMENT_PREVIEW_EVENT, {
@@ -14,9 +20,6 @@ export function openCraftDocumentPreview(linkID: string) {
 
 export function readCraftDocumentPreviewEvent(event: Event) {
 	if (!(event instanceof CustomEvent)) return undefined
-	const detail: unknown = event.detail
-	if (!detail || typeof detail !== 'object') return undefined
-	const linkID = Reflect.get(detail, 'linkID')
-	if (linkID === null) return null
-	return typeof linkID === 'string' && linkID ? linkID : undefined
+	const detail = craftDocumentPreviewDetailSchema.safeParse(event.detail)
+	return detail.success ? detail.data.linkID : undefined
 }
