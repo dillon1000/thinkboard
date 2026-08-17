@@ -1,7 +1,9 @@
+import { z } from 'zod'
+
 export type StudyToolContinuation = 'applied' | 'dismissed' | 'error' | 'saved'
 
-interface ChatMessageLike {
-	parts: ReadonlyArray<{ state?: string; type: string; output?: unknown }>
+interface ChatMessageLike<Output = never> {
+	parts: ReadonlyArray<{ state?: string; type: string; output?: Output }>
 	role: string
 }
 
@@ -19,8 +21,8 @@ const STUDY_TOOL_TYPES = new Set([
 	'tool-writeEquation',
 ])
 
-export function getStudyToolContinuation(
-	messages: readonly ChatMessageLike[]
+export function getStudyToolContinuation<Output>(
+	messages: readonly ChatMessageLike<Output>[]
 ): StudyToolContinuation | undefined {
 	const latestMessage = messages.at(-1)
 	if (latestMessage?.role !== 'assistant') return undefined
@@ -32,9 +34,7 @@ export function getStudyToolContinuation(
 	if (!toolPart) return undefined
 	if (toolPart.state === 'output-error') return 'error'
 
-	const applied = toolPart.output &&
-		typeof toolPart.output === 'object' &&
-		Reflect.get(toolPart.output, 'applied') === true
+	const applied = z.object({ applied: z.literal(true) }).safeParse(toolPart.output).success
 	if (!applied) return 'dismissed'
 	return toolPart.type === 'tool-saveMemory' || toolPart.type === 'tool-recordMistake'
 		? 'saved'

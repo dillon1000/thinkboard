@@ -1,5 +1,5 @@
 import { getCraftDocumentCitationHref } from '@agentboard/shared'
-import type { ModelMessage, UserModelMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 import { listCraftDocumentLinkRows } from '../db/craft'
 import type { Database } from '../db/client'
 import {
@@ -26,10 +26,11 @@ export function attachCraftDocumentContext(
 	if (!results.length) return messages
 	const userMessageIndex = messages.findLastIndex(({ role }) => role === 'user')
 	if (userMessageIndex < 0) return messages
-	const userMessage = messages[userMessageIndex] as UserModelMessage
-	const content = typeof userMessage.content === 'string'
-		? [{ type: 'text' as const, text: userMessage.content }]
-		: userMessage.content
+	const userMessage = messages[userMessageIndex]
+	if (userMessage?.role !== 'user') return messages
+	const content = Array.isArray(userMessage.content)
+		? userMessage.content
+		: [{ type: 'text' as const, text: userMessage.content }]
 	const sources = results.map((result, index) => [
 		`Source ${index + 1}: [${result.title}](${getCraftDocumentCitationHref(result.linkID)})`,
 		`Linked document ID for Craft tools: ${result.linkID}`,

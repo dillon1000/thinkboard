@@ -8,6 +8,7 @@ import {
 	type DocumentErrorCode,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { createDatabase } from '../db/client'
 import {
 	countUploadedDocumentPages,
@@ -31,6 +32,12 @@ const DEFAULT_STORED_PDF_BYTES_QUOTA = 2 * 1_024 * 1_024 * 1_024
 const DEFAULT_DAILY_PDF_PAGE_QUOTA = 1_000
 const MAX_EXTRACTED_PAGE_TEXT_LENGTH = 200_000
 const MAX_TEXT_LAYOUT_LENGTH = 2_000_000
+
+interface DocumentErrorBody {
+	code: DocumentErrorCode
+	error: string
+	limit?: number
+}
 const ALLOWED_PAGE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export interface AuthorizedBoardContext {
@@ -170,22 +177,25 @@ export async function handleDocumentPageUpload(request: IRequest, env: Env) {
 	if (!pageNumber) return documentError(400, 'INVALID_PAGE', 'The PDF page number is invalid.')
 
 	const form = await request.formData().catch(() => null)
-	const image = form?.get('image')
-	const extractedText = form?.get('text')
-	const rawTextLayout = form?.get('textLayout')
+	const image = z.instanceof(File).safeParse(form?.get('image'))
+	const extractedText = z.string().safeParse(form?.get('text'))
+	const rawTextLayout = z.string().safeParse(form?.get('textLayout'))
 	const width = parseFiniteNumber(form?.get('width'))
 	const height = parseFiniteNumber(form?.get('height'))
 	if (
-		!(image instanceof File) ||
-		!ALLOWED_PAGE_IMAGE_TYPES.has(image.type) ||
-		typeof extractedText !== 'string' ||
-		typeof rawTextLayout !== 'string' ||
+		!image.success ||
+		!ALLOWED_PAGE_IMAGE_TYPES.has(image.data.type) ||
+		!extractedText.success ||
+		!rawTextLayout.success ||
 		!width ||
 		!height
 	) {
 		return documentError(400, 'INVALID_PAGE', 'The rendered PDF page is invalid.')
 	}
-	if (image.size > MAX_PDF_PAGE_IMAGE_BYTES) {
+	const imageFile = image.data
+	const pageText = extractedText.data
+	const textLayoutJSON = rawTextLayout.data
+	if (imageFile.size > MAX_PDF_PAGE_IMAGE_BYTES) {
 		return documentError(
 			413,
 			'PAGE_IMAGE_TOO_LARGE',
@@ -193,15 +203,15 @@ export async function handleDocumentPageUpload(request: IRequest, env: Env) {
 			MAX_PDF_PAGE_IMAGE_BYTES
 		)
 	}
-	if (extractedText.length > MAX_EXTRACTED_PAGE_TEXT_LENGTH) {
+	if (pageText.length > MAX_EXTRACTED_PAGE_TEXT_LENGTH) {
 		return documentError(400, 'INVALID_PAGE', 'The extracted page text is too long.')
 	}
-	if (rawTextLayout.length > MAX_TEXT_LAYOUT_LENGTH) {
+	if (textLayoutJSON.length > MAX_TEXT_LAYOUT_LENGTH) {
 		return documentError(400, 'INVALID_PAGE', 'The extracted PDF text layout is too large.')
 	}
 	const parsedTextLayout: unknown = (() => {
 		try {
-			return JSON.parse(rawTextLayout)
+			return JSON.parse(textLayoutJSON)
 		} catch {
 			return null
 		}
@@ -215,15 +225,15 @@ export async function handleDocumentPageUpload(request: IRequest, env: Env) {
 		request.params.boardID,
 		documentRow.id,
 		pageNumber,
-		image.type
+		imageFile.type
 	)
 	const previousPage = await getDocumentPageRow(database, documentRow.id, pageNumber)
-	await env.TLDRAW_BUCKET.put(imageR2Key, image.stream(), {
-		httpMetadata: { contentType: image.type },
+	await env.TLDRAW_BUCKET.put(imageR2Key, imageFile.stream(), {
+		httpMetadata: { contentType: imageFile.type },
 	})
 	await upsertDocumentPage(database, {
 		documentID: documentRow.id,
-		extractedText,
+		extractedText: pageText,
 		height,
 		imageR2Key,
 		pageNumber,
@@ -426,7 +436,7 @@ function documentError(
 	error: string,
 	limit?: number
 ) {
-	const body: { code: DocumentErrorCode; error: string; limit?: number } = { code, error }
+	const body: DocumentErrorBody = { code, error }
 	if (limit !== undefined) body.limit = limit
 	return Response.json(body, { status })
 }
@@ -450,14 +460,16 @@ function safeKeyPart(value: string) {
 }
 
 function parsePositiveInteger(value: FormDataEntryValue | string | null | undefined) {
-	if (typeof value !== 'string' || !/^\d+$/.test(value)) return null
-	const parsed = Number(value)
+	const text = z.string().regex(/^\d+$/).safeParse(value)
+	if (!text.success) return null
+	const parsed = Number(text.data)
 	return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
 function parseFiniteNumber(value: FormDataEntryValue | null | undefined) {
-	if (typeof value !== 'string') return null
-	const parsed = Number(value)
+	const text = z.string().safeParse(value)
+	if (!text.success) return null
+	const parsed = Number(text.data)
 	return Number.isFinite(parsed) && parsed > 0 && parsed <= 20_000 ? parsed : null
 }
 
