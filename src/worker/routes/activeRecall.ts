@@ -5,6 +5,7 @@ import {
 	type ActiveRecallGradeResponse,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import { hydratePDFSelectionContext } from '../agents/pdfContext'
 import { getBoardAccess } from '../db/boards'
@@ -67,6 +68,9 @@ const ACTIVE_RECALL_JSON_SCHEMA = {
 	required: ['verdict', 'score', 'summary', 'strengths', 'steps', 'nextStep'],
 	type: 'object',
 } as const
+const activeRecallProviderResponseSchema = z.object({
+	response: z.union([z.string(), activeRecallGradeResponseSchema]),
+})
 
 export async function handleActiveRecallGrade(
 	request: IRequest,
@@ -93,6 +97,7 @@ export async function handleActiveRecallGrade(
 	const input = { ...parsed.data, canvasContext: hydrated ?? parsed.data.canvasContext }
 	const traceID = crypto.randomUUID()
 	try {
+		// SAFETY: Env.AI implements this JSON subset through Cloudflare's model overloads.
 		const result = await gradeActiveRecall(
 			observeAIRunner(env.AI as AIRunner, env, {
 				defer: (capture) => ctx.waitUntil(capture),
@@ -131,11 +136,11 @@ export async function handleActiveRecallGrade(
  * The source and student work are untrusted model inputs, and the structured result is validated
  * before it can become an approvable canvas annotation.
  */
-export async function gradeActiveRecall(
+export async function gradeActiveRecall<Options>(
 	ai: AIRunner,
 	model: string,
 	input: ActiveRecallGradeRequest,
-	options?: unknown
+	options?: Options
 ): Promise<ActiveRecallGradeResponse> {
 	const image = input.canvasContext.selectionImage
 	const sourceText = [
@@ -189,15 +194,14 @@ export async function gradeActiveRecall(
 	return parseActiveRecallGrade(response)
 }
 
-export function parseActiveRecallGrade(value: unknown) {
-	const response = value && typeof value === 'object' ? Reflect.get(value, 'response') : value
-	if (response && typeof response === 'object') {
-		return activeRecallGradeResponseSchema.parse(response)
-	}
-	const text = typeof response === 'string' ? response : ''
+export function parseActiveRecallGrade<Value>(value: Value) {
+	const parsed = activeRecallProviderResponseSchema.safeParse(value)
+	if (!parsed.success) throw new Error('Study checker returned an invalid response')
+	const structured = activeRecallGradeResponseSchema.safeParse(parsed.data.response)
+	if (structured.success) return structured.data
+	const text = z.string().parse(parsed.data.response)
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Study checker returned invalid JSON')
-	const candidate: unknown = JSON.parse(text.slice(start, end + 1))
-	return activeRecallGradeResponseSchema.parse(candidate)
+	return activeRecallGradeResponseSchema.parse(JSON.parse(text.slice(start, end + 1)))
 }
