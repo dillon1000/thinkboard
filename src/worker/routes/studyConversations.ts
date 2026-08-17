@@ -14,9 +14,12 @@ import {
 } from '../agents/conversationTitle'
 import type { AIRunner } from './lockIn'
 import { observeAIRunner } from '../observability/posthogAI'
+import { z } from 'zod'
 
 const MAX_TITLE_LENGTH = 80
 const MAX_TITLE_SOURCE_LENGTH = 2_000
+const optionalTitleInputSchema = z.object({ title: z.string().optional() })
+const titleSourceInputSchema = z.object({ message: z.string() })
 
 type ConversationAuthorization =
 	| { database: Database; userID: string }
@@ -75,6 +78,7 @@ export async function handleStudyConversationTitle(
 	const conversationID = request.params.conversationID
 	let title: string | null = null
 	try {
+		// SAFETY: Env.AI implements this JSON subset through Cloudflare's model overloads.
 		title = await generateConversationTitle(
 			observeAIRunner(env.AI as AIRunner, env, {
 				defer: (capture) => ctx.waitUntil(capture),
@@ -132,20 +136,19 @@ async function authorize(request: IRequest, env: Env): Promise<ConversationAutho
 
 async function readOptionalTitle(request: Request) {
 	const body: unknown = await request.json().catch(() => ({}))
-	if (!body || typeof body !== 'object') return null
-	const value = Reflect.get(body, 'title')
+	const parsed = optionalTitleInputSchema.safeParse(body)
+	if (!parsed.success) return null
+	const value = parsed.data.title
 	if (value === undefined) return undefined
-	if (typeof value !== 'string') return null
 	const title = value.trim().replace(/\s+/g, ' ')
 	return title ? title.slice(0, MAX_TITLE_LENGTH) : null
 }
 
 async function readTitleSource(request: Request): Promise<string | null> {
 	const body: unknown = await request.json().catch(() => ({}))
-	if (!body || typeof body !== 'object') return null
-	const value = Reflect.get(body, 'message')
-	if (typeof value !== 'string') return null
-	const message = value.trim().replace(/\s+/g, ' ')
+	const parsed = titleSourceInputSchema.safeParse(body)
+	if (!parsed.success) return null
+	const message = parsed.data.message.trim().replace(/\s+/g, ' ')
 	return message ? message.slice(0, MAX_TITLE_SOURCE_LENGTH) : null
 }
 
