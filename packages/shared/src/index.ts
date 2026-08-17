@@ -16,11 +16,13 @@ export type {
 export {
 	agentActionCreateSchema,
 	agentActionUndoResultSchema,
+	canvasRecordSchema,
 } from './agentActions'
 export type {
 	AgentActionCreate,
 	AgentActionSummary,
 	AgentActionUndoPayload,
+	CanvasRecordSnapshot,
 } from './agentActions'
 export {
 	MAX_OFFICE_BYTES,

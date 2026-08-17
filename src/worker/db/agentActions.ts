@@ -1,9 +1,11 @@
-import type {
-	AgentActionCreate,
-	AgentActionSummary,
-	AgentActionUndoPayload,
+import {
+	canvasRecordSchema,
+	type AgentActionCreate,
+	type AgentActionSummary,
+	type AgentActionUndoPayload,
 } from '@agentboard/shared'
 import { and, desc, eq, lt, or } from 'drizzle-orm'
+import { z } from 'zod'
 import type { Database } from './client'
 import { agentAction } from './schema'
 
@@ -108,26 +110,23 @@ export async function resolveAgentActionUndo(
 }
 
 function toSummary(row: typeof agentAction.$inferSelect): AgentActionSummary {
-	return {
-		...(row.baseDocumentClock === null ? {} : { baseDocumentClock: row.baseDocumentClock }),
+	const summary: AgentActionSummary = {
 		createdAt: row.createdAt.toISOString(),
 		id: row.id,
-		...(row.planID ? { planID: row.planID } : {}),
 		recordIDs: parseStringArray(row.recordIDs),
 		status: row.status,
 		toolName: row.toolName,
-		...(row.undoneAt ? { undoneAt: row.undoneAt.toISOString() } : {}),
 	}
+	if (row.baseDocumentClock !== null) summary.baseDocumentClock = row.baseDocumentClock
+	if (row.planID) summary.planID = row.planID
+	if (row.undoneAt) summary.undoneAt = row.undoneAt.toISOString()
+	return summary
 }
 
-function parseRecords(value: string): Array<Record<string, unknown>> {
+function parseRecords(value: string) {
 	try {
-		const records: unknown = JSON.parse(value)
-		return Array.isArray(records)
-			? records.filter((record): record is Record<string, unknown> =>
-					Boolean(record) && typeof record === 'object' && !Array.isArray(record)
-				)
-			: []
+		const records = canvasRecordSchema.array().safeParse(JSON.parse(value))
+		return records.success ? records.data : []
 	} catch {
 		return []
 	}
@@ -135,10 +134,8 @@ function parseRecords(value: string): Array<Record<string, unknown>> {
 
 function parseStringArray(value: string) {
 	try {
-		const values: unknown = JSON.parse(value)
-		return Array.isArray(values)
-			? values.filter((item): item is string => typeof item === 'string')
-			: []
+		const values = z.array(z.string()).safeParse(JSON.parse(value))
+		return values.success ? values.data : []
 	} catch {
 		return []
 	}

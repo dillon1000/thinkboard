@@ -1,8 +1,10 @@
 import {
 	apiRoutes,
+	canvasRecordSchema,
 	type AgentActionCreate,
 	type AgentActionSummary,
 	type AgentActionUndoPayload,
+	type CanvasRecordSnapshot,
 } from '@agentboard/shared'
 import { Editor, type TLRecord } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
@@ -15,7 +17,9 @@ interface AgentActionMetadata {
 }
 
 export function captureCanvasRecords(editor: Editor) {
-	return structuredClone(editor.store.allRecords().filter(isCanvasRecord))
+	return structuredClone(editor.store.allRecords().filter((record) =>
+		record.typeName === 'shape' || record.typeName === 'binding'
+	))
 }
 
 /**
@@ -38,11 +42,11 @@ export function createAgentAction(
 		...metadata,
 		afterRecords: changedIDs.flatMap((id) => {
 			const record = afterByID.get(id)
-			return record ? [record as unknown as Record<string, unknown>] : []
+			return record ? [canvasRecordSchema.parse(record)] : []
 		}),
 		beforeRecords: changedIDs.flatMap((id) => {
 			const record = beforeByID.get(id)
-			return record ? [record as unknown as Record<string, unknown>] : []
+			return record ? [canvasRecordSchema.parse(record)] : []
 		}),
 		recordIDs: changedIDs,
 	}
@@ -56,8 +60,8 @@ export async function persistAgentAction(boardID: string, action: AgentActionCre
 }
 
 export function rollbackUnpersistedAgentAction(editor: Editor, action: AgentActionCreate) {
-	const beforeRecords = parseCanvasRecords(action.beforeRecords)
-	const afterRecords = parseCanvasRecords(action.afterRecords)
+	const beforeRecords = parseCanvasRecords(editor, action.beforeRecords)
+	const afterRecords = parseCanvasRecords(editor, action.afterRecords)
 	assertRecordsUnchanged(editor, beforeRecords, afterRecords)
 	restoreRecords(editor, beforeRecords, afterRecords, 'rollback unsaved AI change')
 }
@@ -81,8 +85,8 @@ export async function undoAgentAction(
 	)
 	let completed = false
 	try {
-		const beforeRecords = parseCanvasRecords(payload.beforeRecords)
-		const afterRecords = parseCanvasRecords(payload.afterRecords)
+		const beforeRecords = parseCanvasRecords(editor, payload.beforeRecords)
+		const afterRecords = parseCanvasRecords(editor, payload.afterRecords)
 		assertRecordsUnchanged(editor, beforeRecords, afterRecords)
 		restoreRecords(editor, beforeRecords, afterRecords, `undo AI change:${actionID}`)
 		completed = true
@@ -129,16 +133,10 @@ export function assertRecordsUnchanged(
 	}
 }
 
-function parseCanvasRecords(records: Array<Record<string, unknown>>): TLRecord[] {
-	if (!records.every(isCanvasRecord)) throw new Error('The saved AI change contains invalid records')
-	return records as unknown as TLRecord[]
-}
-
-function isCanvasRecord(record: unknown): record is TLRecord {
-	if (!record || typeof record !== 'object') return false
-	const typeName = Reflect.get(record, 'typeName')
-	return (typeName === 'shape' || typeName === 'binding') &&
-		typeof Reflect.get(record, 'id') === 'string'
+function parseCanvasRecords(editor: Editor, records: CanvasRecordSnapshot[]): TLRecord[] {
+	return canvasRecordSchema.array().parse(records).map((record) =>
+		editor.store.schema.types[record.typeName].validator.validate(record)
+	)
 }
 
 function serializeRecord(record: TLRecord | undefined) {
