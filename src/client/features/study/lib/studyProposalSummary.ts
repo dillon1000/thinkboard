@@ -37,7 +37,7 @@ export interface ProposalPreview {
  * Describes the artifact without exposing content intended to stay hidden until the student
  * interacts with it on the board.
  */
-export function getProposalPreview(toolName: string, input: unknown): ProposalPreview {
+export function getProposalPreview<Input>(toolName: string, input: Input): ProposalPreview {
 	const description = summarizeProposal(toolName, input)
 
 	if (toolName === 'addReviewNote') {
@@ -190,7 +190,7 @@ export function getProposalPreview(toolName: string, input: unknown): ProposalPr
 	return { description, details: [] }
 }
 
-export function summarizeProposal(toolName: string, input: unknown) {
+export function summarizeProposal<Input>(toolName: string, input: Input) {
 	if (toolName === 'createFlashcards') {
 		const proposal = flashcardProposalSchema.safeParse(input)
 		return proposal.success
@@ -257,7 +257,7 @@ function formatMemoryKind(kind: string) {
 	return kind.split('-').map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ')
 }
 
-function parseCanvasPlan(input: unknown) {
+function parseCanvasPlan<Input>(input: Input) {
 	try {
 		return normalizeCanvasPlanInput(input)
 	} catch {

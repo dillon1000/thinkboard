@@ -363,7 +363,7 @@ export function CraftWhiteboardImportDialog({
 	)
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'Craft is unavailable right now.'
 }
 

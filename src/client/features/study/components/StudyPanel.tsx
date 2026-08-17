@@ -639,10 +639,10 @@ function StudyConversationChat({
 		writeStudyMode(nextMode)
 	}
 
-	async function resolveProposal(
+	async function resolveProposal<Proposal>(
 		toolName: StudyToolName,
 		toolCallID: string,
-		proposal: unknown,
+		proposal: Proposal,
 		applied: boolean
 	) {
 		try {
@@ -1490,7 +1490,7 @@ function formatAgentActionName(toolName: string) {
 	return labels.get(toolName) ?? 'AI canvas change'
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<ErrorValue>(error: ErrorValue) {
 	return error instanceof Error ? error.message : 'Something went wrong'
 }
 
