@@ -3,6 +3,7 @@ import type {
 	FlashcardGradingMethod,
 } from '@agentboard/shared'
 import { z } from 'zod'
+import type { AIRunner } from '../observability/posthogAI'
 
 const ANSWER_EDIT_RATIO = 0.1
 const ANSWER_WORD_COVERAGE = 0.8
@@ -31,10 +32,6 @@ const AI_GRADE_JSON_SCHEMA = {
 	type: 'object',
 } as const
 
-export interface AIRunner {
-	run(model: string, input: unknown, options?: unknown): Promise<unknown>
-}
-
 export interface FlashcardGrade {
 	feedback: string | null
 	gradingMethod: FlashcardGradingMethod
@@ -49,7 +46,7 @@ interface GradeFlashcardAnswerInput {
 	answer: string
 	front: string
 	model: string
-	onAIError?: (error: unknown) => void
+	onAIError?: (error: Error) => void
 	options?: unknown
 }
 
@@ -90,7 +87,7 @@ export async function gradeFlashcardAnswer({
 			verdict: result.verdict,
 		}
 	} catch (error) {
-		onAIError?.(error)
+		onAIError?.(error instanceof Error ? error : new Error(String(error)))
 		return {
 			feedback: 'The automatic comparison was unavailable. Choose how to grade this answer.',
 			gradingMethod: 'ai-unavailable',
@@ -178,21 +175,18 @@ function createAIGradeMessages(
 	]
 }
 
-function parseAIGrade(value: unknown) {
-	const response = readGeneratedResponse(value)
-	if (response && typeof response === 'object') return aiGradeSchema.parse(response)
-	const text = typeof response === 'string' ? response : ''
+function parseAIGrade<Value>(value: Value) {
+	const response = z.object({
+		response: z.union([z.string(), aiGradeSchema]),
+	}).safeParse(value)
+	if (!response.success) throw new Error('Answer grader returned an invalid response')
+	const structured = aiGradeSchema.safeParse(response.data.response)
+	if (structured.success) return structured.data
+	const text = z.string().parse(response.data.response)
 	const start = text.indexOf('{')
 	const end = text.lastIndexOf('}')
 	if (start < 0 || end < start) throw new Error('Answer grader returned invalid JSON')
-	const candidate: unknown = JSON.parse(text.slice(start, end + 1))
-	return aiGradeSchema.parse(candidate)
-}
-
-function readGeneratedResponse(value: unknown) {
-	if (typeof value === 'string') return value
-	if (!value || typeof value !== 'object') return null
-	return Reflect.get(value, 'response')
+	return aiGradeSchema.parse(JSON.parse(text.slice(start, end + 1)))
 }
 
 function correctGrade(

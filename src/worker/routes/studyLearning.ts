@@ -35,9 +35,8 @@ import {
 import { getAgentProfile, saveAgentProfile } from '../db/agentProfile'
 import {
 	gradeFlashcardAnswer,
-	type AIRunner,
 } from '../flashcards/answerGrading'
-import { observeAIRunner } from '../observability/posthogAI'
+import { observeAIRunner, type AIRunner } from '../observability/posthogAI'
 
 const DEFAULT_FLASHCARD_GRADING_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'
 
