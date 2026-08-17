@@ -243,10 +243,10 @@ export function createExaTools(apiKey?: string, fetcher: Fetcher = fetch) {
 	}
 }
 
-async function postExa<Schema extends z.ZodType>(
+async function postExa<Body, Schema extends z.ZodType>(
 	apiKey: string,
 	path: string,
-	body: unknown,
+	body: Body,
 	schema: Schema,
 	fetcher: Fetcher,
 	signal?: AbortSignal
@@ -277,12 +277,13 @@ async function postExa<Schema extends z.ZodType>(
 }
 
 function normalizeSource(source: z.infer<typeof exaResultSchema>) {
-	return {
+	const normalized: z.output<typeof exaSourceSchema> = {
 		title: source.title?.trim() || source.url,
 		url: source.url,
-		...(source.publishedDate ? { publishedDate: source.publishedDate } : {}),
-		...(source.author ? { author: source.author } : {}),
-		...(source.highlights ? { highlights: source.highlights } : {}),
-		...(source.text ? { text: source.text } : {}),
 	}
+	if (source.publishedDate) normalized.publishedDate = source.publishedDate
+	if (source.author) normalized.author = source.author
+	if (source.highlights) normalized.highlights = source.highlights
+	if (source.text) normalized.text = source.text
+	return normalized
 }

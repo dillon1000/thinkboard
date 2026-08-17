@@ -2,6 +2,7 @@ import {
 	practiceSetProposalSchema,
 	type PracticeSetProposal,
 } from '@agentboard/shared'
+import { z } from 'zod'
 import { getDocumentAIConfig } from '../config'
 import type { Database } from '../db/client'
 import {
@@ -68,6 +69,7 @@ export async function buildExamPracticeSet(
 	}
 
 	if (quizzes.length < 2 && sources.pages.length) {
+		// SAFETY: Env.AI implements this JSON subset through Cloudflare's model overloads.
 		const generated = await generateFromPages(env.AI as AIRunner, env, sources.pages)
 			.catch((error) => {
 				console.warn(JSON.stringify({
@@ -147,10 +149,13 @@ async function generateFromPages(
 	return parseGeneratedPractice(response)
 }
 
-function parseGeneratedPractice(value: unknown): GeneratedPractice {
-	const response = value && typeof value === 'object' ? Reflect.get(value, 'response') : value
-	const parsed = typeof response === 'string'
-		? JSON.parse(response.slice(response.indexOf('{'), response.lastIndexOf('}') + 1))
+function parseGeneratedPractice<Value>(value: Value): GeneratedPractice {
+	const response = z.object({
+		response: z.union([z.string(), practiceSetProposalSchema.omit({ x: true, y: true })]),
+	}).parse(value).response
+	const encoded = z.string().safeParse(response)
+	const parsed = encoded.success
+		? JSON.parse(encoded.data.slice(encoded.data.indexOf('{'), encoded.data.lastIndexOf('}') + 1))
 		: response
 	const result = practiceSetProposalSchema
 		.omit({ x: true, y: true })

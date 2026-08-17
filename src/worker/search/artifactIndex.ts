@@ -1,8 +1,10 @@
 import type { StudyArtifactInput } from '@agentboard/shared'
+import { z } from 'zod'
 import { getDocumentAIConfig } from '../config'
 import type { AIRunner } from '../observability/posthogAI'
 
 const EMBEDDING_BATCH_SIZE = 50
+const embeddingResponseSchema = z.object({ data: z.array(z.array(z.number())) })
 
 /**
  * Adds accepted canvas text to the same embedding index as PDFs. Vector IDs are deterministic
@@ -17,6 +19,7 @@ export async function indexStudyArtifacts(
 	const config = getDocumentAIConfig(env)
 	for (let offset = 0; offset < artifacts.length; offset += EMBEDDING_BATCH_SIZE) {
 		const batch = artifacts.slice(offset, offset + EMBEDDING_BATCH_SIZE)
+		// SAFETY: Env.AI implements this JSON subset through Cloudflare's model overloads.
 		const response = await (env.AI as AIRunner).run(
 			config.embeddingModel,
 			{ text: batch.map(({ text, title }) => `${title}\n${text}`.slice(0, 8_000)) },
@@ -71,16 +74,8 @@ export async function createArtifactVectorID(boardID: string, shapeID: string) {
 	return `artifact:${encoded}`
 }
 
-function readEmbeddings(value: unknown): number[][] {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
-	if (
-		!Array.isArray(data) ||
-		!data.every((embedding) =>
-			Array.isArray(embedding) && embedding.every((entry) => typeof entry === 'number')
-		)
-	) {
-		throw new Error('Embedding response did not contain vectors')
-	}
-	return data
+function readEmbeddings<Value>(value: Value): number[][] {
+	const parsed = embeddingResponseSchema.safeParse(value)
+	if (!parsed.success) throw new Error('Embedding response did not contain vectors')
+	return parsed.data.data
 }
