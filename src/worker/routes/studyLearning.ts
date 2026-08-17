@@ -11,6 +11,7 @@ import {
 } from '@agentboard/shared'
 import type { FlashcardAnswerAttemptRequest } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import { getBoardAccess } from '../db/boards'
 import { createDatabase } from '../db/client'
@@ -39,6 +40,16 @@ import {
 import { observeAIRunner, type AIRunner } from '../observability/posthogAI'
 
 const DEFAULT_FLASHCARD_GRADING_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'
+const AIErrorSchema = z.looseObject({
+	code: z.union([z.number(), z.string()]).optional(),
+})
+const flashcardReviewInputSchema = z.object({ rating: flashcardReviewRatingSchema })
+
+interface AIErrorLog {
+	code?: number | string
+	message: string
+	name: string
+}
 
 export async function handleFlashcardRegistration(request: IRequest, env: Env) {
 	const authorized = await authorizeBoard(request, env)
@@ -86,6 +97,7 @@ export async function handleFlashcardAnswerAttempt(
 			}
 		: await gradeFlashcardAnswer({
 				acceptedAnswers: [card.review.back, ...card.review.alternateAnswers],
+				// SAFETY: Env.AI implements this JSON subset through Cloudflare's model overloads.
 				ai: observeAIRunner(env.AI as AIRunner, env, {
 					defer: (capture) => ctx.waitUntil(capture),
 					distinctID: userID,
@@ -132,14 +144,14 @@ export async function handleFlashcardAnswerAttempt(
 	return Response.json(result, { status: 201 })
 }
 
-function getAIErrorLog(error: unknown) {
-	const code = error && typeof error === 'object' ? Reflect.get(error, 'code') : null
-	const message = error instanceof Error ? error.message : String(error)
-	return {
-		...(typeof code === 'number' || typeof code === 'string' ? { code } : {}),
-		message: message.slice(0, 500),
-		name: error instanceof Error ? error.name : 'UnknownError',
+function getAIErrorLog(error: Error) {
+	const parsed = AIErrorSchema.safeParse(error)
+	const log: AIErrorLog = {
+		message: error.message.slice(0, 500),
+		name: error.name,
 	}
+	if (parsed.success && parsed.data.code !== undefined) log.code = parsed.data.code
+	return log
 }
 
 export async function handleFlashcardAnswerAttemptComplete(request: IRequest, env: Env) {
@@ -320,15 +332,13 @@ export async function handleFlashcardReview(request: IRequest, env: Env) {
 	const authentication = await requireSession(request, env)
 	if ('response' in authentication) return authentication.response
 	const body: unknown = await request.json().catch(() => null)
-	const rating = flashcardReviewRatingSchema.safeParse(
-		body && typeof body === 'object' ? Reflect.get(body, 'rating') : undefined
-	)
-	if (!rating.success) return Response.json({ error: 'Invalid review rating' }, { status: 400 })
+	const input = flashcardReviewInputSchema.safeParse(body)
+	if (!input.success) return Response.json({ error: 'Invalid review rating' }, { status: 400 })
 	const schedule = await reviewFlashcard(
 		createDatabase(env),
 		authentication.session.user.id,
 		request.params.reviewID,
-		rating.data
+		input.data.rating
 	)
 	if (!schedule) return Response.json({ error: 'Review not found' }, { status: 404 })
 	return Response.json({ schedule })
