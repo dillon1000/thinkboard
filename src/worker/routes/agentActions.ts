@@ -3,6 +3,7 @@ import {
 	agentActionUndoResultSchema,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import {
 	claimAgentActionUndo,
@@ -85,9 +86,9 @@ async function authorizeEditor(request: IRequest, env: Env) {
 	return { database, userID }
 }
 
-function parseJSON(value: string): unknown {
+function parseJSON(value: string): z.infer<ReturnType<typeof z.json>> | null {
 	try {
-		return JSON.parse(value) as unknown
+		return z.json().parse(JSON.parse(value))
 	} catch {
 		return null
 	}

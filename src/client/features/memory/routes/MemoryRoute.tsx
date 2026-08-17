@@ -30,12 +30,12 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 	year: 'numeric',
 })
 
-const memoryKindLabels: Record<AgentMemoryKind, string> = {
+const memoryKindLabels = {
 	background: 'Background',
 	goal: 'Goal',
 	'learning-pattern': 'Learning pattern',
 	preference: 'Preference',
-}
+} satisfies Record<AgentMemoryKind, string>
 
 const personalities: Array<{
 	description: string
@@ -69,11 +69,7 @@ const personalities: Array<{
 	},
 ]
 
-const promptSourceCopy: Record<keyof AgentPromptSources, {
-	description: string
-	label: string
-	promptLocation: string
-}> = {
+const promptSourceCopy = {
 	aboutUser: {
 		description: 'The background you write below.',
 		label: 'About you',
@@ -99,7 +95,11 @@ const promptSourceCopy: Record<keyof AgentPromptSources, {
 		label: 'Saved memories',
 		promptLocation: '<user-memory>',
 	},
-}
+} satisfies Record<keyof AgentPromptSources, {
+	description: string
+	label: string
+	promptLocation: string
+}>
 
 const emptyMemory: ManualAgentMemory = {
 	content: '',

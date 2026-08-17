@@ -4,12 +4,12 @@ import type {
 	AgentProfile,
 } from '@agentboard/shared'
 
-const PERSONALITY_INSTRUCTIONS: Record<Exclude<AgentPersonality, 'custom'>, string> = {
+const PERSONALITY_INSTRUCTIONS = {
 	balanced: 'Be calm, concise, curious, and academically rigorous.',
 	encouraging: 'Be warm and patient. Name real progress, then give the next useful challenge.',
 	precise: 'Be compact and exact. Lead with the answer or correction, then show the reasoning.',
 	challenging: 'Be candid and demanding. Test assumptions and ask the student to defend their reasoning.',
-}
+} satisfies Record<Exclude<AgentPersonality, 'custom'>, string>
 
 /**
  * Builds the user-controlled system-prompt layers. JSON string encoding keeps

@@ -99,14 +99,14 @@ import {
 
 const ZOOM_ANIMATION = { animation: { duration: 140 } } as const
 
-const MENU_LABELS: Record<RibbonMenuID, string> = {
+const MENU_LABELS = {
 	board: 'Space',
 	colour: 'Colour',
 	edit: 'Edit',
 	style: 'Stroke & size',
 	tools: 'More tools',
 	view: 'View',
-}
+} satisfies Record<RibbonMenuID, string>
 
 interface RibbonTool {
 	icon: ReactNode

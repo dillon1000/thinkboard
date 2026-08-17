@@ -14,12 +14,12 @@ import { apiRequest } from '../../../lib/api'
 import { studyMarkdownPlugins } from '../lib/studyMath'
 import './flashcardAnswerPanel.css'
 
-const ratingLabels: Record<FlashcardReviewRating, string> = {
+const ratingLabels = {
 	again: 'Again',
 	hard: 'Hard',
 	good: 'Good',
 	easy: 'Easy',
-}
+} satisfies Record<FlashcardReviewRating, string>
 
 interface FlashcardAnswerPanelProps {
 	className?: string

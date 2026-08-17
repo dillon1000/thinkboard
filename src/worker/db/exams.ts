@@ -9,6 +9,7 @@ import {
 	type StudyArtifactInput,
 } from '@agentboard/shared'
 import { and, asc, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm'
+import { z } from 'zod'
 import type { Database } from './client'
 import {
 	board,
@@ -413,9 +414,9 @@ function startOfUTCDay(value: Date) {
 	return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()))
 }
 
-function parseJSON(value: string): unknown {
+function parseJSON(value: string): z.infer<ReturnType<typeof z.json>> | null {
 	try {
-		return JSON.parse(value)
+		return z.json().parse(JSON.parse(value))
 	} catch {
 		return null
 	}
