@@ -1,4 +1,5 @@
 import type { ModelMessage, UserModelMessage } from 'ai'
+import { z } from 'zod'
 import { getDocumentAIConfig } from '../config'
 import type { Database } from '../db/client'
 import { isBoardActive } from '../db/boards'
@@ -8,6 +9,32 @@ import {
 } from '../observability/posthogAI'
 
 const MAX_RETRIEVAL_RESULTS = 6
+
+const vectorMatchEnvelopeSchema = z.object({
+	matches: z.array(z.looseObject({
+		metadata: z.looseObject({}),
+		score: z.number().optional(),
+	})),
+})
+const lectureMetadataSchema = z.object({
+	boardId: z.string(),
+	chunkText: z.string(),
+	endSecond: z.number(),
+	lectureId: z.string(),
+	lectureTitle: z.string(),
+	resultKind: z.literal('lecture'),
+	startSecond: z.number(),
+})
+const PDFMetadataSchema = z.object({
+	boardId: z.string(),
+	chunkText: z.string(),
+	documentId: z.string(),
+	documentTitle: z.string(),
+	pageNumber: z.number(),
+})
+const embeddingResponseSchema = z.object({
+	data: z.array(z.array(z.number())),
+})
 
 interface DocumentRetrievalTelemetry {
 	defer: (capture: Promise<void>) => void
@@ -22,7 +49,8 @@ interface VectorQueryOptions {
 	topK: number
 }
 
-type VectorQuery = (vector: number[], options: VectorQueryOptions) => Promise<unknown>
+type VectorQueryResponse = VectorizeMatches | z.input<typeof vectorMatchEnvelopeSchema>
+type VectorQuery = (vector: number[], options: VectorQueryOptions) => Promise<VectorQueryResponse>
 
 export interface PDFRetrievalResult {
 	chunkText: string
@@ -54,6 +82,8 @@ export async function retrieveBoardDocuments(
 ) {
 	if (!queryText.trim() || !(await isBoardActive(database, boardID))) return []
 	const config = getDocumentAIConfig(env)
+	// SAFETY: Env.AI supplies the same model, input, options, and JSON result contract through
+	// Cloudflare's model-specific overloads; this adapter erases only those overload names.
 	const baseAI = env.AI as AIRunner
 	const ai = telemetry
 		? observeAIRunner(baseAI, env, {
@@ -91,53 +121,30 @@ export async function queryBoardDocumentVectors(
 		returnMetadata: 'all',
 		topK: MAX_RETRIEVAL_RESULTS,
 	})
-	if (!response || typeof response !== 'object') return []
-	const matches = Reflect.get(response, 'matches')
-	if (!Array.isArray(matches)) return []
-	return matches.flatMap((match): DocumentRetrievalResult[] => {
-		if (!match || typeof match !== 'object') return []
-		const metadata = Reflect.get(match, 'metadata')
-		const score = Reflect.get(match, 'score')
-		if (!metadata || typeof metadata !== 'object') return []
-		const matchBoardID = Reflect.get(metadata, 'boardId')
-		const chunkText = Reflect.get(metadata, 'chunkText')
-		const resultKind = Reflect.get(metadata, 'resultKind')
-		if (matchBoardID !== boardID || typeof chunkText !== 'string') return []
-		if (resultKind === 'lecture') {
-			const lectureID = Reflect.get(metadata, 'lectureId')
-			const lectureTitle = Reflect.get(metadata, 'lectureTitle')
-			const startSecond = Reflect.get(metadata, 'startSecond')
-			const endSecond = Reflect.get(metadata, 'endSecond')
-			if (
-				typeof lectureID !== 'string' ||
-				typeof lectureTitle !== 'string' ||
-				typeof startSecond !== 'number' ||
-				typeof endSecond !== 'number'
-			) return []
+	const parsed = vectorMatchEnvelopeSchema.safeParse(response)
+	if (!parsed.success) return []
+	return parsed.data.matches.flatMap((match): DocumentRetrievalResult[] => {
+		const lecture = lectureMetadataSchema.safeParse(match.metadata)
+		if (lecture.success) {
+			if (lecture.data.boardId !== boardID) return []
 			return [{
-				chunkText: chunkText.slice(0, 4_000),
-				endSecond,
-				lectureID,
-				lectureTitle,
-				score: typeof score === 'number' ? score : 0,
+				chunkText: lecture.data.chunkText.slice(0, 4_000),
+				endSecond: lecture.data.endSecond,
+				lectureID: lecture.data.lectureId,
+				lectureTitle: lecture.data.lectureTitle,
+				score: match.score ?? 0,
 				sourceKind: 'lecture',
-				startSecond,
+				startSecond: lecture.data.startSecond,
 			}]
 		}
-		const documentID = Reflect.get(metadata, 'documentId')
-		const documentTitle = Reflect.get(metadata, 'documentTitle')
-		const pageNumber = Reflect.get(metadata, 'pageNumber')
-		if (
-			typeof documentID !== 'string' ||
-			typeof documentTitle !== 'string' ||
-			typeof pageNumber !== 'number'
-		) return []
+		const PDF = PDFMetadataSchema.safeParse(match.metadata)
+		if (!PDF.success || PDF.data.boardId !== boardID) return []
 		return [{
-			chunkText: chunkText.slice(0, 4_000),
-			documentID,
-			documentTitle,
-			pageNumber,
-			score: typeof score === 'number' ? score : 0,
+			chunkText: PDF.data.chunkText.slice(0, 4_000),
+			documentID: PDF.data.documentId,
+			documentTitle: PDF.data.documentTitle,
+			pageNumber: PDF.data.pageNumber,
+			score: match.score ?? 0,
 			sourceKind: 'pdf',
 		}]
 	})
@@ -150,10 +157,11 @@ export function attachDocumentRetrieval(
 	if (!results.length) return messages
 	const userMessageIndex = messages.findLastIndex(({ role }) => role === 'user')
 	if (userMessageIndex < 0) return messages
-	const userMessage = messages[userMessageIndex] as UserModelMessage
-	const content = typeof userMessage.content === 'string'
-		? [{ type: 'text' as const, text: userMessage.content }]
-		: userMessage.content
+	const userMessage = messages[userMessageIndex]
+	if (userMessage.role !== 'user') return messages
+	const content: Exclude<UserModelMessage['content'], string> = Array.isArray(userMessage.content)
+		? userMessage.content
+		: [{ type: 'text', text: userMessage.content }]
 	const sources = results.map((result, index) => {
 		if (result.sourceKind === 'lecture') {
 			const href = `#lecture=${encodeURIComponent(result.lectureID)}&t=${Math.floor(result.startSecond)}`
@@ -185,11 +193,10 @@ function formatTimestamp(value: number) {
 	return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-function readFirstEmbedding(value: unknown) {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
-	const first = Array.isArray(data) ? data[0] : null
-	if (!Array.isArray(first) || !first.every((entry) => typeof entry === 'number')) {
+function readFirstEmbedding<Value>(value: Value) {
+	const parsed = embeddingResponseSchema.safeParse(value)
+	const first = parsed.success ? parsed.data.data[0] : undefined
+	if (!first) {
 		throw new Error('Embedding response did not contain a vector')
 	}
 	return first

@@ -1,4 +1,5 @@
 import type { LectureSegment } from '@agentboard/shared'
+import { z } from 'zod'
 import { getDocumentAIConfig } from '../config'
 import { createDatabase } from '../db/client'
 import {
@@ -17,6 +18,24 @@ const TRANSCRIPTION_MODEL = '@cf/openai/whisper-large-v3-turbo'
 const EMBEDDING_BATCH_SIZE = 50
 const MAX_TRANSCRIPT_CHARACTERS = 600_000
 const CHUNK_TARGET_CHARACTERS = 1_800
+
+const transcriptionEnvelopeSchema = z.looseObject({})
+const transcriptionSegmentSchema = z.object({
+	end: z.number(),
+	start: z.number(),
+	text: z.string(),
+}).refine(({ end, start }) => end >= start)
+const transcriptionWordSchema = z.object({
+	end: z.number(),
+	start: z.number(),
+	word: z.string(),
+})
+const transcriptionInfoSchema = z.object({
+	duration: z.number().nonnegative(),
+})
+const embeddingResponseSchema = z.object({
+	data: z.array(z.array(z.number())),
+})
 
 interface TranscriptChunk {
 	endSecond: number
@@ -43,6 +62,8 @@ export async function processLecture(
 		if (!object) throw new Error('Stored lecture audio is missing')
 		const bytes = await object.arrayBuffer()
 		const config = getDocumentAIConfig(env)
+		// SAFETY: Env.AI supplies this JSON-returning runner through model-specific overloads; the
+		// observer keeps the same call arguments and result while adding capture side effects.
 		const ai = observeAIRunner(env.AI as AIRunner, env, {
 			defer: (capture) => {
 				if (ctx) ctx.waitUntil(capture)
@@ -126,14 +147,15 @@ export async function processLecture(
 	}
 }
 
-export function parseLectureTranscription(value: unknown) {
-	if (!value || typeof value !== 'object') throw new Error('Transcription response was invalid')
-	const textValue = Reflect.get(value, 'text')
-	const text = typeof textValue === 'string'
-		? textValue.trim().slice(0, MAX_TRANSCRIPT_CHARACTERS)
+export function parseLectureTranscription<Value>(value: Value) {
+	const parsed = transcriptionEnvelopeSchema.safeParse(value)
+	if (!parsed.success) throw new Error('Transcription response was invalid')
+	const textValue = z.string().safeParse(parsed.data.text)
+	const text = textValue.success
+		? textValue.data.trim().slice(0, MAX_TRANSCRIPT_CHARACTERS)
 		: ''
-	const segments = parseSegments(Reflect.get(value, 'segments'))
-	const duration = readDuration(Reflect.get(value, 'transcription_info')) ??
+	const segments = parseSegments(parsed.data.segments)
+	const duration = readDuration(parsed.data.transcription_info) ??
 		segments.at(-1)?.end ??
 		null
 	if (segments.length) {
@@ -143,7 +165,7 @@ export function parseLectureTranscription(value: unknown) {
 			transcript: text || segments.map((segment) => segment.text).join(' '),
 		}
 	}
-	const wordSegments = groupWords(Reflect.get(value, 'words'))
+	const wordSegments = groupWords(parsed.data.words)
 	if (wordSegments.length) {
 		return {
 			durationSeconds: duration ?? wordSegments.at(-1)?.end ?? null,
@@ -189,34 +211,29 @@ export function buildTranscriptChunks(
 	return chunks
 }
 
-function parseSegments(value: unknown): LectureSegment[] {
+function parseSegments<Value>(value: Value): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	return value.flatMap((entry): LectureSegment[] => {
-		if (!entry || typeof entry !== 'object') return []
-		const start = Reflect.get(entry, 'start')
-		const end = Reflect.get(entry, 'end')
-		const text = Reflect.get(entry, 'text')
-		if (
-			typeof start !== 'number' ||
-			typeof end !== 'number' ||
-			end < start ||
-			typeof text !== 'string' ||
-			!text.trim()
-		) return []
-		return [{ end, start, text: text.trim().slice(0, 4_000) }]
+		const segment = transcriptionSegmentSchema.safeParse(entry)
+		if (!segment.success || !segment.data.text.trim()) return []
+		return [{
+			end: segment.data.end,
+			start: segment.data.start,
+			text: segment.data.text.trim().slice(0, 4_000),
+		}]
 	})
 }
 
-function groupWords(value: unknown): LectureSegment[] {
+function groupWords<Value>(value: Value): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	const words = value.flatMap((entry) => {
-		if (!entry || typeof entry !== 'object') return []
-		const word = Reflect.get(entry, 'word')
-		const start = Reflect.get(entry, 'start')
-		const end = Reflect.get(entry, 'end')
-		return typeof word === 'string' && typeof start === 'number' && typeof end === 'number'
-			? [{ end, start, word: word.trim() }]
-			: []
+		const word = transcriptionWordSchema.safeParse(entry)
+		if (!word.success) return []
+		return [{
+			end: word.data.end,
+			start: word.data.start,
+			word: word.data.word.trim(),
+		}]
 	})
 	const groups: LectureSegment[] = []
 	for (let offset = 0; offset < words.length; offset += 30) {
@@ -231,22 +248,15 @@ function groupWords(value: unknown): LectureSegment[] {
 	return groups
 }
 
-function readDuration(value: unknown) {
-	if (!value || typeof value !== 'object') return null
-	const duration = Reflect.get(value, 'duration')
-	return typeof duration === 'number' && duration >= 0 ? duration : null
+function readDuration<Value>(value: Value) {
+	const parsed = transcriptionInfoSchema.safeParse(value)
+	return parsed.success ? parsed.data.duration : null
 }
 
-function readEmbeddings(value: unknown): number[][] {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
-	if (
-		!Array.isArray(data) ||
-		!data.every((embedding) =>
-			Array.isArray(embedding) && embedding.every((entry) => typeof entry === 'number')
-		)
-	) throw new Error('Embedding response did not contain vectors')
-	return data
+function readEmbeddings<Value>(value: Value): number[][] {
+	const parsed = embeddingResponseSchema.safeParse(value)
+	if (!parsed.success) throw new Error('Embedding response did not contain vectors')
+	return parsed.data.data
 }
 
 function arrayBufferToBase64(value: ArrayBuffer) {
