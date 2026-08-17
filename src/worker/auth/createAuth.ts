@@ -21,10 +21,10 @@ export interface SpotifyConfiguration {
 	clientSecret: string
 }
 
-export type AuthConfigurationEnvironment = Partial<Pick<Env,
+export type AuthConfigurationEnvironment = Partial<Record<
 	| 'OAUTH_CLIENT_ID' | 'OAUTH_CLIENT_SECRET' | 'OAUTH_DISCOVERY_URL'
 	| 'OAUTH_PROVIDER_ID' | 'OAUTH_PROVIDER_NAME' | 'OAUTH_SCOPES'
-	| 'SPOTIFY_CLIENT_ID' | 'SPOTIFY_CLIENT_SECRET'
+	| 'SPOTIFY_CLIENT_ID' | 'SPOTIFY_CLIENT_SECRET', string
 >>
 
 export function getOAuthConfiguration(env: AuthConfigurationEnvironment): OAuthConfiguration | null {
