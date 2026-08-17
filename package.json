@@ -9,6 +9,7 @@
 	},
 	"scripts": {
 		"dev": "vite --host",
+		"lint": "oxlint .",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to .wrangler/state --config infra/cloudflare/wrangler.jsonc",
 		"db:migrate:remote": "wrangler d1 migrations apply DB --remote --config infra/cloudflare/wrangler.jsonc",
@@ -57,12 +58,14 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.48.0",
 		"@cloudflare/workers-types": "^5.20260729.1",
+		"@oxlint/plugins": "1.78.0",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^26.1.2",
 		"@types/react": "^19.2.17",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.4",
 		"drizzle-kit": "^0.31.10",
+		"oxlint": "1.78.0",
 		"typescript": "^5.9.3",
 		"vite": "^8.1.5",
 		"vitest": "^4.1.10",
