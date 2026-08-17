@@ -35,7 +35,13 @@ const documentMetadataSchema = vectorMetadataBaseSchema.extend({
 	documentId: z.string(),
 	documentTitle: z.string(),
 	pageNumber: z.number(),
+	resultKind: z.literal('document').optional(),
 })
+const vectorMetadataSchema = z.union([
+	lectureMetadataSchema,
+	shapeMetadataSchema,
+	documentMetadataSchema,
+])
 const embeddingResponseSchema = z.object({ data: z.array(z.array(z.number())) })
 
 /**
@@ -153,50 +159,45 @@ export function parseGlobalSearchMatches(
 	return value.matches.flatMap((match): GlobalSearchResult[] => {
 		const parsed = vectorMatchSchema.safeParse(match)
 		if (!parsed.success) return []
+		const metadata = vectorMetadataSchema.safeParse(parsed.data.metadata)
+		if (!metadata.success) return []
+		const { data } = metadata
+		const boardTitle = boardTitles.get(data.boardId)
+		if (!boardTitle) return []
 		const score = parsed.data.score ?? 0
-		const lecture = lectureMetadataSchema.safeParse(parsed.data.metadata)
-		if (lecture.success) {
-			const boardTitle = boardTitles.get(lecture.data.boardId)
-			if (!boardTitle) return []
+		if (data.resultKind === 'lecture') {
 			return [{
-				boardID: lecture.data.boardId,
+				boardID: data.boardId,
 				boardTitle,
 				kind: 'lecture-segment',
-				lectureID: lecture.data.lectureId,
+				lectureID: data.lectureId,
 				score,
-				snippet: lecture.data.chunkText.slice(0, 260),
-				startSecond: lecture.data.startSecond,
-				title: lecture.data.lectureTitle,
+				snippet: data.chunkText.slice(0, 260),
+				startSecond: data.startSecond,
+				title: data.lectureTitle,
 			}]
 		}
-		const shape = shapeMetadataSchema.safeParse(parsed.data.metadata)
-		if (shape.success) {
-			const boardTitle = boardTitles.get(shape.data.boardId)
-			if (!boardTitle) return []
+		if (data.resultKind === 'shape') {
 			return [{
-				artifactKind: shape.data.artifactKind,
-				boardID: shape.data.boardId,
+				artifactKind: data.artifactKind,
+				boardID: data.boardId,
 				boardTitle,
 				kind: 'shape',
 				score,
-				shapeID: shape.data.shapeId,
-				snippet: shape.data.chunkText.slice(0, 260),
-				title: shape.data.title,
+				shapeID: data.shapeId,
+				snippet: data.chunkText.slice(0, 260),
+				title: data.title,
 			}]
 		}
-		const document = documentMetadataSchema.safeParse(parsed.data.metadata)
-		if (!document.success) return []
-		const boardTitle = boardTitles.get(document.data.boardId)
-		if (!boardTitle) return []
 		return [{
-			boardID: document.data.boardId,
+			boardID: data.boardId,
 			boardTitle,
-			documentID: document.data.documentId,
+			documentID: data.documentId,
 			kind: 'document-page',
-			pageNumber: document.data.pageNumber,
+			pageNumber: data.pageNumber,
 			score,
-			snippet: document.data.chunkText.slice(0, 260),
-			title: document.data.documentTitle,
+			snippet: data.chunkText.slice(0, 260),
+			title: data.documentTitle,
 		}]
 	})
 }
