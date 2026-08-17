@@ -136,84 +136,22 @@ export const craftWhiteboardSaveInputSchema = z.object({
 	}
 })
 
-export interface CraftConnectionStatus {
-	connected: boolean
-	connectedAt: string | null
-	spaceName: string | null
-}
-
-export interface CraftDocumentCandidate {
-	documentID: string
-	lastModifiedAt: string | null
-	title: string
-}
-
-export interface CraftDocumentLink {
-	canEdit: boolean
-	createdAt: string
-	documentID: string
-	id: string
-	title: string
-}
-
-export interface CraftDocumentPreview {
-	markdown: string
-	title: string
-}
-
-export interface CraftDocumentAppendOutput {
-	added: boolean
-	title: string
-}
-
 export type CraftDocumentBlockUpdate =
 	z.infer<typeof craftDocumentBlocksUpdateInputSchema>['blocks'][number]
 
-export interface CraftDocumentBlocksUpdateOutput {
-	title: string
-	updated: number
-}
-
-export interface CraftWhiteboardCandidate {
-	documentID: string
-	title: string
-	whiteboardBlockID: string
-}
-
-export type CraftWhiteboardElement =
-	z.infer<typeof craftWhiteboardElementSchema>
-
-export interface CraftWhiteboardImport {
-	appState: CraftWhiteboardRecord
-	assets: CraftWhiteboardRecord
-	connectionOwnerID?: string
-	documentID: string
-	elements: CraftWhiteboardElement[]
-	revision: string
-	title: string
-	whiteboardBlockID: string
-}
-
-export interface CraftWhiteboardSaveOutput {
-	added: number
-	deleted: number
-	revision: string
-	updated: number
-}
-
-export const craftConnectionStatusSchema: z.ZodType<CraftConnectionStatus> = z.object({
+export const craftConnectionStatusSchema = z.object({
 	connected: z.boolean(),
 	connectedAt: z.string().nullable(),
 	spaceName: z.string().nullable(),
 })
 
-export const craftDocumentCandidateSchema: z.ZodType<CraftDocumentCandidate> = z.object({
+export const craftDocumentCandidateSchema = z.object({
 	documentID: z.string(),
 	lastModifiedAt: z.string().nullable(),
 	title: z.string(),
 })
 
-export const craftDocumentLinkSchema: z.ZodType<CraftDocumentLink> = z.object({
+export const craftDocumentLinkSchema = z.object({
 	canEdit: z.boolean(),
 	createdAt: z.string(),
 	documentID: z.string(),
@@ -221,26 +159,28 @@ export const craftDocumentLinkSchema: z.ZodType<CraftDocumentLink> = z.object({
 	title: z.string(),
 })
 
-export const craftDocumentPreviewSchema: z.ZodType<CraftDocumentPreview> = z.object({
+export const craftDocumentPreviewSchema = z.object({
 	markdown: z.string(),
 	title: z.string(),
 })
 
-export const craftDocumentAppendOutputSchema: z.ZodType<CraftDocumentAppendOutput> = z.object({
+export const craftDocumentAppendOutputSchema = z.object({
 	added: z.boolean(),
 	title: z.string(),
 })
 
-export const craftDocumentBlocksUpdateOutputSchema: z.ZodType<CraftDocumentBlocksUpdateOutput> =
-	z.object({ title: z.string(), updated: z.number().int().nonnegative() })
+export const craftDocumentBlocksUpdateOutputSchema = z.object({
+	title: z.string(),
+	updated: z.number().int().nonnegative(),
+})
 
-export const craftWhiteboardCandidateSchema: z.ZodType<CraftWhiteboardCandidate> = z.object({
+export const craftWhiteboardCandidateSchema = z.object({
 	documentID: z.string(),
 	title: z.string(),
 	whiteboardBlockID: z.string(),
 })
 
-export const craftWhiteboardImportSchema: z.ZodType<CraftWhiteboardImport> = z.object({
+export const craftWhiteboardImportSchema = z.object({
 	appState: craftWhiteboardRecordSchema,
 	assets: craftWhiteboardRecordSchema,
 	connectionOwnerID: z.string().optional(),
@@ -251,12 +191,23 @@ export const craftWhiteboardImportSchema: z.ZodType<CraftWhiteboardImport> = z.o
 	whiteboardBlockID: z.string(),
 })
 
-export const craftWhiteboardSaveOutputSchema: z.ZodType<CraftWhiteboardSaveOutput> = z.object({
+export const craftWhiteboardSaveOutputSchema = z.object({
 	added: z.number().int().nonnegative(),
 	deleted: z.number().int().nonnegative(),
 	revision: z.string(),
 	updated: z.number().int().nonnegative(),
 })
+
+export type CraftConnectionStatus = z.infer<typeof craftConnectionStatusSchema>
+export type CraftDocumentAppendOutput = z.infer<typeof craftDocumentAppendOutputSchema>
+export type CraftDocumentBlocksUpdateOutput = z.infer<typeof craftDocumentBlocksUpdateOutputSchema>
+export type CraftDocumentCandidate = z.infer<typeof craftDocumentCandidateSchema>
+export type CraftDocumentLink = z.infer<typeof craftDocumentLinkSchema>
+export type CraftDocumentPreview = z.infer<typeof craftDocumentPreviewSchema>
+export type CraftWhiteboardCandidate = z.infer<typeof craftWhiteboardCandidateSchema>
+export type CraftWhiteboardElement = z.infer<typeof craftWhiteboardElementSchema>
+export type CraftWhiteboardImport = z.infer<typeof craftWhiteboardImportSchema>
+export type CraftWhiteboardSaveOutput = z.infer<typeof craftWhiteboardSaveOutputSchema>
 
 export const craftAPIRoutes = {
 	connection: '/api/integrations/craft',
