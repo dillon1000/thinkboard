@@ -79,10 +79,17 @@ export async function captureCanvasContext(
 	const contextShapeIDs = new Set(contextShapes.map(({ id }) => id))
 	const relatedShapes = getRelatedShapes(editor, relationships, contextShapeIDs)
 	const documentClockPromise = getDocumentClock(boardID)
-	const pdfPageRegions = getOverlappingPDFPageRegions(editor, selectedShapes)
+	const pdfPageRegions = getOverlappingPDFPageRegions({
+		getCurrentPageShapesSorted: () => editor.getCurrentPageShapesSorted(),
+		getSelectionPageBounds: () => editor.getSelectionPageBounds() ?? null,
+		getShapePageBounds: (shape: TLShape) => editor.getShapePageBounds(shape) ?? null,
+	}, selectedShapes)
 	const [documentClock, selectionImage] = await Promise.all([
 		documentClockPromise,
-		isSinglePDFFrameSelection(editor, selectedShapes)
+		isSinglePDFFrameSelection({
+			getShape: (id: TLShapeId) => editor.getShape(id),
+			getSortedChildIdsForParent: (id: TLShapeId) => editor.getSortedChildIdsForParent(id),
+		}, selectedShapes)
 			? Promise.resolve(undefined)
 			: renderSelectionImage(editor, selectedShapes.map(({ id }) => id)),
 	])
@@ -108,9 +115,12 @@ export async function captureCanvasContext(
 	}
 }
 
-export function isSinglePDFFrameSelection(
-	editor: Editor,
-	selectedShapes: readonly TLShape[]
+export function isSinglePDFFrameSelection<ID extends string, Shape extends { id: ID; type: string }>(
+	editor: {
+		getShape(id: ID): Shape | undefined
+		getSortedChildIdsForParent(id: ID): readonly ID[]
+	},
+	selectedShapes: readonly Shape[]
 ) {
 	const frame = selectedShapes.length === 1 ? selectedShapes[0] : undefined
 	if (frame?.type !== 'frame') return false
@@ -119,9 +129,15 @@ export function isSinglePDFFrameSelection(
 		.some((shapeID) => editor.getShape(shapeID)?.type === PDF_PAGE_SHAPE_TYPE)
 }
 
-export function getOverlappingPDFPageRegions(
-	editor: Editor,
-	selectedShapes: readonly TLShape[]
+export function getOverlappingPDFPageRegions<Shape extends {
+	id: string; props: object; type: string
+}>(
+	editor: {
+		getCurrentPageShapesSorted(): readonly Shape[]
+		getSelectionPageBounds(): { h: number; w: number; x: number; y: number } | null
+		getShapePageBounds(shape: Shape): { h: number; w: number; x: number; y: number } | null
+	},
+	selectedShapes: readonly object[]
 ) {
 	if (!selectedShapes.length) return []
 	const selectionBounds = editor.getSelectionPageBounds()
