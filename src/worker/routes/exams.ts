@@ -3,6 +3,7 @@ import {
 	registerStudyArtifactsSchema,
 } from '@agentboard/shared'
 import type { IRequest } from 'itty-router'
+import { z } from 'zod'
 import { requireSession } from '../auth/session'
 import { getBoardAccess } from '../db/boards'
 import { createDatabase } from '../db/client'
@@ -130,8 +131,9 @@ async function authorizeEditableBoard(request: IRequest, env: Env) {
 	return { database }
 }
 
-async function readBody(request: Request): Promise<unknown> {
-	return request.json().catch(() => null)
+async function readBody(request: Request) {
+	const body = await request.json().catch(() => null)
+	return z.json().catch(null).parse(body)
 }
 
 function invalidInput(message = 'Invalid request') {
