@@ -5,12 +5,15 @@ import {
 	createCraftWhiteboardRevision,
 	type CraftWhiteboardElement,
 	type CraftWhiteboardImport,
+	type CraftWhiteboardRecord,
 	type CraftWhiteboardSaveOutput,
 } from '@agentboard/shared'
+import { z } from 'zod'
 import {
 	Box,
 	b64Vecs,
 	createShapeId,
+	isShapeId,
 	renderPlaintextFromRichText,
 	type Editor,
 	type JsonObject,
@@ -39,6 +42,8 @@ import {
 
 const CRAFT_WHITEBOARD_META_KEY = 'agentboardCraftWhiteboard'
 const CRAFT_WHITEBOARD_FRAME_PADDING = 48
+const craftRecordSchema = z.record(z.string(), z.json())
+const JSONPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
 const SAVABLE_TLDRAW_TYPES = new Set([
 	'arrow',
 	'draw',
@@ -53,7 +58,7 @@ const SAVABLE_TLDRAW_TYPES = new Set([
 ])
 
 interface CraftWhiteboardFrameMetadata {
-	appState: Record<string, unknown>
+	appState: CraftWhiteboardRecord
 	connectionOwnerID: string | null
 	documentID: string
 	framePadding: number
@@ -66,6 +71,19 @@ interface CraftWhiteboardFrameMetadata {
 	sourceOriginY: number
 	title: string
 	whiteboardBlockID: string
+}
+
+interface CraftShapeByType {
+	arrow: TLArrowShape
+	draw: TLDrawShape
+	embed: TLEmbedShape
+	frame: TLFrameShape
+	geo: TLGeoShape
+	image: TLImageShape
+	line: TLLineShape
+	note: TLNoteShape
+	text: TLTextShape
+	video: TLVideoShape
 }
 
 export interface ImportedCraftWhiteboard extends CraftWhiteboardFrameMetadata {
@@ -510,11 +528,11 @@ function serializeShape(
 	let generated: CraftWhiteboardElement[]
 	switch (shape.type) {
 		case 'geo':
-			generated = serializeGeo(editor, shape as TLGeoShape, position, angle)
+			generated = serializeGeo(editor, getCraftShape(shape, 'geo'), position, angle)
 			break
 		case 'text':
 			generated = [createTextElement(
-				renderPlaintextFromRichText(editor, (shape as TLTextShape).props.richText),
+				renderPlaintextFromRichText(editor, getCraftShape(shape, 'text').props.richText),
 				position.x,
 				position.y,
 				Math.max(1, bounds.w),
@@ -526,7 +544,7 @@ function serializeShape(
 		case 'note':
 			generated = serializeNote(
 				editor,
-				shape as TLNoteShape,
+				getCraftShape(shape, 'note'),
 				position,
 				bounds.w,
 				bounds.h,
@@ -534,30 +552,43 @@ function serializeShape(
 			)
 			break
 		case 'arrow':
-			generated = serializeArrow(editor, shape as TLArrowShape, position, angle)
+			generated = serializeArrow(editor, getCraftShape(shape, 'arrow'), position, angle)
 			break
 		case 'line':
-			generated = [serializeLine(shape as TLLineShape, position, angle)]
+			generated = [serializeLine(getCraftShape(shape, 'line'), position, angle)]
 			break
 		case 'draw':
-			generated = serializeDraw(shape as TLDrawShape, position, angle)
+			generated = serializeDraw(getCraftShape(shape, 'draw'), position, angle)
 			break
 		case 'frame':
-			generated = [serializeFrame(shape as TLFrameShape, position, angle)]
+			generated = [serializeFrame(getCraftShape(shape, 'frame'), position, angle)]
 			break
 		case 'embed':
-			generated = [serializeEmbed(shape as TLEmbedShape, position, angle)]
+			generated = [serializeEmbed(getCraftShape(shape, 'embed'), position, angle)]
 			break
 		case 'image':
-			generated = [serializeMedia(editor, shape as TLImageShape, position, angle)]
+			generated = [serializeMedia(editor, getCraftShape(shape, 'image'), position, angle)]
 			break
 		case 'video':
-			generated = [serializeMedia(editor, shape as TLVideoShape, position, angle)]
+			generated = [serializeMedia(editor, getCraftShape(shape, 'video'), position, angle)]
 			break
 		default:
 			return []
 	}
 	return mergeCraftElementIdentity(editor, shape, generated, metadata)
+}
+
+/**
+ * Restores tldraw's concrete built-in shape type after checking its registry discriminator. The
+ * generic TLShape union does not retain that mapping for application-augmented shape registries.
+ */
+function getCraftShape<Type extends keyof CraftShapeByType>(
+	shape: TLShape,
+	type: Type
+): CraftShapeByType[Type] {
+	if (shape.type !== type) throw new Error(`Expected a ${type} shape.`)
+	// SAFETY: The runtime discriminator above matches the built-in tldraw shape registry mapping.
+	return shape as CraftShapeByType[Type]
 }
 
 function serializeFrame(
@@ -947,9 +978,7 @@ function mergeCraftElementIdentity(
 						: value
 				})
 			: element.boundElements,
-		containerId: typeof element.containerId === 'string'
-			? IDMap.get(element.containerId) ?? element.containerId
-			: element.containerId,
+		containerId: remapElementID(element.containerId, IDMap),
 		frameId,
 		groupIds,
 	}))
@@ -977,8 +1006,8 @@ function mergeCraftElementIdentity(
 function getCraftGroupIDs(editor: Editor, shape: TLShape) {
 	const groupIDs: string[] = []
 	let parentID = shape.parentId
-	while (typeof parentID === 'string' && parentID.startsWith('shape:')) {
-		const parent = editor.getShape(parentID as TLShapeId)
+	while (isShapeId(parentID)) {
+		const parent = editor.getShape(parentID)
 		if (!parent) break
 		if (parent.type === 'group') {
 			groupIDs.push(readCraftGroupID(parent.meta) ?? getStableContainerID(parent.id))
@@ -988,10 +1017,15 @@ function getCraftGroupIDs(editor: Editor, shape: TLShape) {
 	return groupIDs
 }
 
+function remapElementID<Value>(value: Value, IDMap: ReadonlyMap<string, string>): Value | string {
+	const id = z.string().safeParse(value)
+	return id.success ? IDMap.get(id.data) ?? id.data : value
+}
+
 function getCraftFrameElementID(editor: Editor, shape: TLShape) {
 	let parentID = shape.parentId
-	while (typeof parentID === 'string' && parentID.startsWith('shape:')) {
-		const parent = editor.getShape(parentID as TLShapeId)
+	while (isShapeId(parentID)) {
+		const parent = editor.getShape(parentID)
 		if (!parent) break
 		if (parent.type === 'frame') {
 			if (readCraftWhiteboardMetadata(parent.meta)) return null
@@ -1043,7 +1077,7 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 	const framePadding = readNumber(record, 'framePadding')
 	const sourceOriginX = readNumber(record, 'sourceOriginX')
 	const sourceOriginY = readNumber(record, 'sourceOriginY')
-	const sourceElementIDs = record?.sourceElementIDs
+	const sourceElementIDs = z.array(z.string()).safeParse(record?.sourceElementIDs)
 	const sourceElements = Array.isArray(record?.sourceElements)
 		? record.sourceElements.flatMap((value): CraftWhiteboardElement[] => {
 				const element = readRecord(value)
@@ -1059,8 +1093,7 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 		framePadding === null ||
 		sourceOriginX === null ||
 		sourceOriginY === null ||
-		!Array.isArray(sourceElementIDs) ||
-		!sourceElementIDs.every((value) => typeof value === 'string')
+		!sourceElementIDs.success
 	) return null
 	return {
 		appState,
@@ -1070,7 +1103,7 @@ function readCraftWhiteboardMetadata(meta: JsonObject): CraftWhiteboardFrameMeta
 		localRevision: readString(record, 'localRevision'),
 		remoteRevision: readString(record, 'remoteRevision'),
 		schemaVersion: readNumber(record, 'schemaVersion') ?? 1,
-		sourceElementIDs,
+		sourceElementIDs: sourceElementIDs.data,
 		sourceElements,
 		sourceOriginX,
 		sourceOriginY,
@@ -1097,13 +1130,9 @@ function toMetadataJSON(metadata: CraftWhiteboardFrameMetadata): JsonObject {
 	}
 }
 
-function toJSONValue(value: unknown): JsonValue {
-	if (
-		value === null ||
-		typeof value === 'string' ||
-		typeof value === 'number' ||
-		typeof value === 'boolean'
-	) return value
+function toJSONValue<Value>(value: Value): JsonValue {
+	const primitive = JSONPrimitiveSchema.safeParse(value)
+	if (primitive.success) return primitive.data
 	if (Array.isArray(value)) return value.map(toJSONValue)
 	const record = readRecord(value)
 	if (!record) return null
@@ -1118,42 +1147,35 @@ function normalizePoints(points: readonly { x: number; y: number }[]) {
 }
 
 function getShapeColor(shape: TLShape) {
-	if ('color' in shape.props && typeof shape.props.color === 'string') {
-		return getExcalidrawColor(shape.props.color)
-	}
-	return '#1b1b1f'
+	const color = z.string().safeParse('color' in shape.props ? shape.props.color : undefined)
+	return color.success ? getExcalidrawColor(color.data) : '#1b1b1f'
 }
 
 function getShapeLabelColor(shape: TLShape) {
-	if ('labelColor' in shape.props && typeof shape.props.labelColor === 'string') {
-		return getExcalidrawColor(shape.props.labelColor)
-	}
-	return getShapeColor(shape)
+	const color = z.string().safeParse(
+		'labelColor' in shape.props ? shape.props.labelColor : undefined
+	)
+	return color.success ? getExcalidrawColor(color.data) : getShapeColor(shape)
 }
 
 function getShapeDash(shape: TLShape) {
-	if ('dash' in shape.props && typeof shape.props.dash === 'string') {
-		return getExcalidrawStrokeStyle(shape.props.dash)
-	}
-	return 'solid'
+	const dash = z.string().safeParse('dash' in shape.props ? shape.props.dash : undefined)
+	return dash.success ? getExcalidrawStrokeStyle(dash.data) : 'solid'
 }
 
 function getShapeStrokeWidth(shape: TLShape) {
-	if ('size' in shape.props && typeof shape.props.size === 'string') {
-		return getExcalidrawStrokeWidth(shape.props.size)
-	}
-	return 2
+	const size = z.string().safeParse('size' in shape.props ? shape.props.size : undefined)
+	return size.success ? getExcalidrawStrokeWidth(size.data) : 2
 }
 
 function getShapeFont(shape: TLShape) {
-	return 'font' in shape.props && typeof shape.props.font === 'string'
-		? shape.props.font
-		: 'sans'
+	const font = z.string().safeParse('font' in shape.props ? shape.props.font : undefined)
+	return font.success ? font.data : 'sans'
 }
 
 function getShapeFontSize(shape: TLShape) {
-	if (!('size' in shape.props) || typeof shape.props.size !== 'string') return 20
-	return { l: 28, m: 20, s: 16, xl: 36 }[shape.props.size] ?? 20
+	const size = z.string().safeParse('size' in shape.props ? shape.props.size : undefined)
+	return size.success ? { l: 28, m: 20, s: 16, xl: 36 }[size.data] ?? 20 : 20
 }
 
 function getShapeTextAlign(shape: TLShape) {
@@ -1211,18 +1233,17 @@ function createSeed() {
 	return crypto.getRandomValues(new Uint32Array(1))[0] & 0x7fffffff
 }
 
-function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
-		? value as Record<string, unknown>
-		: null
+function readRecord<Value>(value: Value): CraftWhiteboardRecord | null {
+	const parsed = craftRecordSchema.safeParse(value)
+	return parsed.success ? parsed.data : null
 }
 
-function readString(record: Record<string, unknown> | null, key: string) {
-	const value = record?.[key]
-	return typeof value === 'string' && value.trim() ? value : null
+function readString(record: CraftWhiteboardRecord | null, key: string) {
+	const value = z.string().safeParse(record?.[key])
+	return value.success && value.data.trim() ? value.data : null
 }
 
-function readNumber(record: Record<string, unknown> | null, key: string) {
-	const value = record?.[key]
-	return typeof value === 'number' && Number.isFinite(value) ? value : null
+function readNumber(record: CraftWhiteboardRecord | null, key: string) {
+	const value = z.number().finite().safeParse(record?.[key])
+	return value.success ? value.data : null
 }

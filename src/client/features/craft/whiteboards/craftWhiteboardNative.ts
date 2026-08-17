@@ -1,11 +1,14 @@
 import type {
 	CraftWhiteboardElement,
 	CraftWhiteboardImport,
+	CraftWhiteboardRecord,
 } from '@agentboard/shared'
+import { z } from 'zod'
 import {
 	AssetRecordType,
 	Box,
 	createShapeId,
+	isShapeId,
 	putExcalidrawContent,
 	toRichText,
 	type Editor,
@@ -34,6 +37,8 @@ const EXCALIDRAW_NATIVE_TYPES = new Set([
 const FRAME_TYPES = new Set(['frame', 'magicframe'])
 const NOTE_TYPES = new Set(['note', 'sticky', 'sticky-note'])
 const EMBED_TYPES = new Set(['embed', 'embeddable'])
+const craftRecordSchema = z.record(z.string(), z.json())
+const scaleSchema = z.tuple([z.number(), z.number()])
 
 interface CraftElementMetadata {
 	elementIDs: string[]
@@ -95,7 +100,7 @@ export async function putNativeCraftWhiteboardContent(
 	const importedIDs = new Set(shapes.map(({ id }) => id))
 	const rootShapeIDs = shapes
 		.filter(({ id, parentId }) =>
-			importedIDs.has(id) && !importedIDs.has(parentId as TLShapeId)
+			importedIDs.has(id) && (!isShapeId(parentId) || !importedIDs.has(parentId))
 		)
 		.map(({ id }) => id)
 
@@ -112,11 +117,10 @@ export async function putNativeCraftWhiteboardContent(
 
 export function readCraftElementMetadata(meta: JsonObject): CraftElementMetadata | null {
 	const record = readRecord(meta[CRAFT_ELEMENT_META_KEY])
-	const elementIDs = record?.elementIDs
+	const elementIDs = z.array(z.string()).safeParse(record?.elementIDs)
 	const sourceElements = record?.sourceElements
 	if (
-		!Array.isArray(elementIDs) ||
-		!elementIDs.every((value) => typeof value === 'string') ||
+		!elementIDs.success ||
 		!Array.isArray(sourceElements)
 	) return null
 
@@ -127,7 +131,7 @@ export function readCraftElementMetadata(meta: JsonObject): CraftElementMetadata
 		return element && id && type ? [{ ...element, id, type }] : []
 	})
 	return elements.length === sourceElements.length
-		? { elementIDs, sourceElements: elements }
+		? { elementIDs: elementIDs.data, sourceElements: elements }
 		: null
 }
 
@@ -157,7 +161,7 @@ export function addCraftWhiteboardBackground(
 	editor: Editor,
 	frameID: TLShapeId,
 	frameBounds: { h: number; w: number },
-	appState: Record<string, unknown>,
+	appState: CraftWhiteboardRecord,
 	padding: number
 ) {
 	const backgroundColor = readString(readRecord(appState), 'viewBackgroundColor')
@@ -448,10 +452,10 @@ function applyCraftGroups(
 			if (shapeIDs.length < 2) continue
 			editor.groupShapes(shapeIDs)
 			const first = editor.getShape(shapeIDs[0])
-			if (!first || typeof first.parentId !== 'string' || !first.parentId.startsWith('shape:')) {
+			if (!first || !isShapeId(first.parentId)) {
 				continue
 			}
-			const group = editor.getShape(first.parentId as TLShapeId)
+			const group = editor.getShape(first.parentId)
 			if (!group || group.type !== 'group') continue
 			editor.updateShape({
 				id: group.id,
@@ -632,10 +636,9 @@ function getHighestGroupAncestor(editor: Editor, shapeID: TLShapeId) {
 		const shape = editor.getShape(currentID)
 		if (
 			!shape ||
-			typeof shape.parentId !== 'string' ||
-			!shape.parentId.startsWith('shape:')
+			!isShapeId(shape.parentId)
 		) return currentID
-		const parent = editor.getShape(shape.parentId as TLShapeId)
+		const parent = editor.getShape(shape.parentId)
 		if (!parent || parent.type !== 'group') return currentID
 		currentID = parent.id
 	}
@@ -663,12 +666,8 @@ function getElementURL(element: CraftWhiteboardElement) {
 }
 
 function readScale(element: CraftWhiteboardElement): [number, number] {
-	const scale = element.scale
-	return Array.isArray(scale) &&
-		typeof scale[0] === 'number' &&
-		typeof scale[1] === 'number'
-		? [scale[0], scale[1]]
-		: [1, 1]
+	const scale = scaleSchema.safeParse(element.scale)
+	return scale.success ? scale.data : [1, 1]
 }
 
 function readImageCrop(
@@ -719,7 +718,7 @@ function mapOpacity(value: number): .1 | .25 | .5 | .75 | 1 {
 	return 1
 }
 
-const EXCALIDRAW_COLORS: Record<string, TLDefaultColorStyle> = {
+const EXCALIDRAW_COLORS = new Map(Object.entries({
 	'#000000': 'black',
 	'#099268': 'green',
 	'#0c8599': 'blue',
@@ -740,10 +739,10 @@ const EXCALIDRAW_COLORS: Record<string, TLDefaultColorStyle> = {
 	'#ffd43b': 'yellow',
 	'#ffec99': 'yellow',
 	'#ffffff': 'white',
-}
+} satisfies Record<string, TLDefaultColorStyle>))
 
 function mapColor(value: string): TLDefaultColorStyle {
-	return EXCALIDRAW_COLORS[value.toLowerCase()] ?? 'black'
+	return EXCALIDRAW_COLORS.get(value.toLowerCase()) ?? 'black'
 }
 
 function mapFont(value: number | null): TLDefaultFontStyle {
@@ -752,29 +751,27 @@ function mapFont(value: number | null): TLDefaultFontStyle {
 	return 'sans'
 }
 
-function readRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
-		? value as Record<string, unknown>
-		: null
+function readRecord<Value>(value: Value): CraftWhiteboardRecord | null {
+	const parsed = craftRecordSchema.safeParse(value)
+	return parsed.success ? parsed.data : null
 }
 
-function readString(record: Record<string, unknown> | null, key: string) {
-	const value = record?.[key]
-	return typeof value === 'string' ? value : null
+function readString(record: CraftWhiteboardRecord | null, key: string) {
+	const value = z.string().safeParse(record?.[key])
+	return value.success ? value.data : null
 }
 
-function readNumber(record: Record<string, unknown> | null, key: string) {
-	const value = record?.[key]
-	return typeof value === 'number' && Number.isFinite(value) ? value : null
+function readNumber(record: CraftWhiteboardRecord | null, key: string) {
+	const value = z.number().finite().safeParse(record?.[key])
+	return value.success ? value.data : null
 }
 
-function readBoolean(record: Record<string, unknown> | null, key: string) {
-	const value = record?.[key]
-	return typeof value === 'boolean' ? value : null
+function readBoolean(record: CraftWhiteboardRecord | null, key: string) {
+	const value = z.boolean().safeParse(record?.[key])
+	return value.success ? value.data : null
 }
 
-function readStringArray(value: unknown) {
-	return Array.isArray(value)
-		? value.filter((entry): entry is string => typeof entry === 'string')
-		: []
+function readStringArray<Value>(value: Value) {
+	const entries = z.array(z.string()).safeParse(value)
+	return entries.success ? entries.data : []
 }
