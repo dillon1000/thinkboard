@@ -218,6 +218,15 @@ type StudyTools = {
 }
 
 type StudyUIMessage = UIMessage<StudyMessageMetadata, Record<string, never>, StudyTools>
+const legacyMessageSchema = z.object({
+	id: z.string(),
+	parts: z.array(z.unknown()),
+	role: z.enum(['system', 'user', 'assistant']),
+})
+const legacyTextPartSchema = z.object({
+	text: z.string(),
+	type: z.literal('text'),
+})
 
 const chatRequestSchema = z.object({
 	canvasContext: canvasContextSchema.optional(),
@@ -444,11 +453,11 @@ The student invoked you directly on the canvas rather than in the chat panel, so
 		const generationStartedAt = performance.now()
 		let firstTokenAt: number | undefined
 		let telemetryCaptured = false
-		const captureGeneration = (
-			output: unknown,
+		const captureGeneration = <Output, Failure>(
+			output: Output,
 			usage: { inputTokens?: number; outputTokens?: number },
 			stopReason?: string,
-			error?: unknown
+			error?: Failure
 		) => {
 			if (telemetryCaptured) return
 			telemetryCaptured = true
@@ -620,32 +629,20 @@ function extractLatestUserText(messages: readonly StudyUIMessage[]) {
 	const message = messages.findLast(({ role }) => role === 'user')
 	if (!message) return ''
 	return message.parts.flatMap((part) => {
-		if (!part || typeof part !== 'object' || Reflect.get(part, 'type') !== 'text') return []
-		const text = Reflect.get(part, 'text')
-		return typeof text === 'string' ? [text] : []
+		return part.type === 'text' ? [part.text] : []
 	}).join('\n').trim()
 }
 
 function migrateLegacyTextMessages(messages: unknown[]): StudyUIMessage[] {
 	return messages.flatMap((message) => {
-		if (!message || typeof message !== 'object') return []
-		const id = Reflect.get(message, 'id')
-		const role = Reflect.get(message, 'role')
-		const parts = Reflect.get(message, 'parts')
-		if (
-			typeof id !== 'string' ||
-			(role !== 'system' && role !== 'user' && role !== 'assistant') ||
-			!Array.isArray(parts)
-		) return []
-
-		const textParts = parts.flatMap((part) => {
-			if (!part || typeof part !== 'object') return []
-			const type = Reflect.get(part, 'type')
-			const text = Reflect.get(part, 'text')
-			return type === 'text' && typeof text === 'string'
-				? [{ type: 'text' as const, text }]
-				: []
+		const parsed = legacyMessageSchema.safeParse(message)
+		if (!parsed.success) return []
+		const textParts = parsed.data.parts.flatMap((part) => {
+			const text = legacyTextPartSchema.safeParse(part)
+			return text.success ? [text.data] : []
 		})
-		return textParts.length > 0 ? [{ id, role, parts: textParts }] : []
+		return textParts.length > 0
+			? [{ id: parsed.data.id, role: parsed.data.role, parts: textParts }]
+			: []
 	})
 }
