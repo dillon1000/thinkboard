@@ -11,6 +11,7 @@ import {
 	type StudyArtifactKind,
 } from '@agentboard/shared'
 import { useEffect } from 'react'
+import { z } from 'zod'
 import type { Editor, TLShape } from 'tldraw'
 import { apiRequest } from '../../../lib/api'
 
@@ -26,6 +27,22 @@ const INDEXED_KINDS = [
 	'teach-back',
 	'walkthrough',
 ] as const satisfies readonly StudyArtifactKind[]
+const artifactPropsSchema = z.looseObject({
+	alternateAnswers: z.array(z.string()).optional(),
+	back: z.string().optional(),
+	correctIndex: z.number().optional(),
+	explanation: z.string().optional(),
+	front: z.string().optional(),
+	options: z.array(z.string()).optional(),
+	question: z.string().optional(),
+	title: z.string().optional(),
+	topic: z.string().optional(),
+})
+
+interface ArtifactIndexRequest {
+	artifacts: StudyArtifactInput[]
+	replaceKinds?: readonly StudyArtifactKind[]
+}
 
 /**
  * Mirrors text-bearing canvas shapes into the search index after edits settle. The Worker replaces
@@ -47,11 +64,12 @@ export function useCanvasArtifactIndex(
 			timer = window.setTimeout(() => {
 				timer = undefined
 				const snapshot = collectCanvasArtifacts(editor)
+				const body: ArtifactIndexRequest = {
+					artifacts: snapshot.artifacts,
+				}
+				if (!snapshot.truncated) body.replaceKinds = INDEXED_KINDS
 				void apiRequest(apiRoutes.boardArtifacts(boardID), {
-					body: JSON.stringify({
-						artifacts: snapshot.artifacts,
-						...(!snapshot.truncated ? { replaceKinds: INDEXED_KINDS } : {}),
-					}),
+					body: JSON.stringify(body),
 					method: 'POST',
 				}).catch(() => undefined)
 			}, INDEX_DELAY_MS)
@@ -98,24 +116,24 @@ export function collectCanvasArtifacts(editor: Editor) {
 function toArtifact(editor: Editor, shape: TLShape): StudyArtifactInput | null {
 	const text = (editor.getShapeUtil(shape).getText(shape) ?? '').trim().slice(0, 8_000)
 	if (!text) return null
-	const props = shape.props
+	const props = artifactPropsSchema.parse(shape.props)
 	if (shape.type === 'note' || shape.type === 'text') {
 		return artifact('note', shape, firstLine(text), text)
 	}
 	if (shape.type === FLASHCARD_SHAPE_TYPE) {
-		const front = readString(props, 'front')
-		const back = readString(props, 'back')
+		const front = props.front ?? ''
+		const back = props.back ?? ''
 		return artifact('flashcard', shape, front || firstLine(text), text, {
-			alternateAnswers: readStringArray(props, 'alternateAnswers'),
+			alternateAnswers: props.alternateAnswers ?? [],
 			back,
 			front,
 		})
 	}
 	if (shape.type === QUIZ_SHAPE_TYPE) {
-		const question = readString(props, 'question')
-		const options = readStringArray(props, 'options')
-		const correctIndex = readNumber(props, 'correctIndex')
-		const explanation = readString(props, 'explanation')
+		const question = props.question ?? ''
+		const options = props.options ?? []
+		const correctIndex = props.correctIndex ?? 0
+		const explanation = props.explanation ?? ''
 		return artifact('quiz', shape, question || firstLine(text), text, {
 			correctIndex,
 			explanation,
@@ -124,13 +142,13 @@ function toArtifact(editor: Editor, shape: TLShape): StudyArtifactInput | null {
 		})
 	}
 	if (shape.type === REVIEW_SHAPE_TYPE) {
-		return artifact('review-note', shape, readString(props, 'title') || firstLine(text), text)
+		return artifact('review-note', shape, props.title || firstLine(text), text)
 	}
 	if (shape.type === WALKTHROUGH_SHAPE_TYPE) {
-		return artifact('walkthrough', shape, readString(props, 'title') || firstLine(text), text)
+		return artifact('walkthrough', shape, props.title || firstLine(text), text)
 	}
 	if (shape.type === CONCEPT_MAP_SHAPE_TYPE) {
-		return artifact('concept-map', shape, readString(props, 'title') || firstLine(text), text)
+		return artifact('concept-map', shape, props.title || firstLine(text), text)
 	}
 	if (shape.type === MATH_SHAPE_TYPE) {
 		return artifact('equation', shape, 'Equation', text)
@@ -139,7 +157,7 @@ function toArtifact(editor: Editor, shape: TLShape): StudyArtifactInput | null {
 		return artifact(
 			'teach-back',
 			shape,
-			readString(props, 'topic') || firstLine(text),
+			props.topic || firstLine(text),
 			text
 		)
 	}
@@ -151,7 +169,7 @@ function artifact(
 	shape: TLShape,
 	title: string,
 	text: string,
-	payload?: unknown
+	payload?: StudyArtifactInput['payload']
 ): StudyArtifactInput {
 	return {
 		kind,
@@ -164,21 +182,4 @@ function artifact(
 
 function firstLine(value: string) {
 	return value.split(/\r?\n/, 1)[0].slice(0, 160) || 'Canvas note'
-}
-
-function readString(value: object, key: string) {
-	const field = Reflect.get(value, key)
-	return typeof field === 'string' ? field : ''
-}
-
-function readNumber(value: object, key: string) {
-	const field = Reflect.get(value, key)
-	return typeof field === 'number' ? field : 0
-}
-
-function readStringArray(value: object, key: string) {
-	const field = Reflect.get(value, key)
-	return Array.isArray(field)
-		? field.filter((entry): entry is string => typeof entry === 'string')
-		: []
 }

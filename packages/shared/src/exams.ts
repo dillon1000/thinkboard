@@ -25,7 +25,7 @@ export const quizArtifactPayloadSchema = z.object({
 
 export const studyArtifactInputSchema = z.object({
 	kind: studyArtifactKindSchema,
-	payload: z.unknown().optional(),
+	payload: z.json().optional(),
 	shapeID: z.string().trim().min(1).max(120),
 	text: z.string().trim().min(1).max(8_000),
 	title: z.string().trim().min(1).max(160),
@@ -92,18 +92,11 @@ export interface ExamPlan {
 	updatedAt: string
 }
 
-export interface StudyArtifactInput {
-	kind: StudyArtifactKind
-	payload?: unknown
-	shapeID: string
-	text: string
-	title: string
-}
-
 export interface ExamPracticeSet {
 	boardID: string
 	proposal: PracticeSetProposal
 }
 
 export type ExamPlanInput = z.infer<typeof examPlanInputSchema>
+export type StudyArtifactInput = z.infer<typeof studyArtifactInputSchema>
 export type StudyArtifactKind = z.infer<typeof studyArtifactKindSchema>
