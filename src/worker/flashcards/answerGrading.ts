@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isString } from '@agentboard/shared'
 import type {
 	FlashcardAnswerVerdict,
@@ -194,7 +193,7 @@ function parseAIGrade(value: unknown) {
 function readGeneratedResponse(value: unknown) {
 	if (isString(value)) return value
 	if (!value || !hasObjectType(value)) return null
-	return readProperty(value, 'response')
+	return Reflect.get(value, 'response')
 }
 
 function correctGrade(

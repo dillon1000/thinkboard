@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType } from '@agentboard/shared'
 import {
 	FLASHCARD_SHAPE_TYPE,
@@ -1214,7 +1213,7 @@ function isAppliedOutput(output: unknown) {
 	return Boolean(
 		output &&
 		hasObjectType(output) &&
-		readProperty(output, 'applied') === true
+		Reflect.get(output, 'applied') === true
 	)
 }
 

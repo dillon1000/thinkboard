@@ -40,7 +40,7 @@ export function hasObjectType<Value>(value: Value): value is Value & (object | n
 /** Return whether an untrusted value is callable. */
 export function isFunction<Value>(
 	value: Value
-): value is Value & ((...args: UntrustedInput[]) => UntrustedInput) {
+): value is Value & ((...args: never[]) => never) {
 	return typeof value === 'function'
 }
 
@@ -52,22 +52,4 @@ export function isBigInt<Value>(value: Value): value is Value & bigint {
 /** Return whether an untrusted value uses JavaScript's symbol representation. */
 export function isSymbol<Value>(value: Value): value is Value & symbol {
 	return typeof value === 'symbol'
-}
-
-/**
- * Read an unvalidated property without claiming an owner contract.
- * The function walks the prototype chain to match normal property access.
- */
-export function readProperty<Value>(value: Value, key: PropertyKey): UntrustedInput {
-	if (!hasObjectType(value) || value === null) return undefined
-	let owner: object | null = value
-	while (owner) {
-		const descriptor = Object.getOwnPropertyDescriptor(owner, key)
-		if (descriptor) {
-			if ('value' in descriptor) return descriptor.value
-			return descriptor.get?.call(value)
-		}
-		owner = Object.getPrototypeOf(owner)
-	}
-	return undefined
 }

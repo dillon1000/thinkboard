@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import type { ModelMessage, UserModelMessage } from 'ai'
 import { getDocumentAIConfig } from '../config'
@@ -94,22 +93,22 @@ export async function queryBoardDocumentVectors(
 		topK: MAX_RETRIEVAL_RESULTS,
 	})
 	if (!response || !hasObjectType(response)) return []
-	const matches = readProperty(response, 'matches')
+	const matches = Reflect.get(response, 'matches')
 	if (!Array.isArray(matches)) return []
 	return matches.flatMap((match): DocumentRetrievalResult[] => {
 		if (!match || !hasObjectType(match)) return []
-		const metadata = readProperty(match, 'metadata')
-		const score = readProperty(match, 'score')
+		const metadata = Reflect.get(match, 'metadata')
+		const score = Reflect.get(match, 'score')
 		if (!metadata || !hasObjectType(metadata)) return []
-		const matchBoardID = readProperty(metadata, 'boardId')
-		const chunkText = readProperty(metadata, 'chunkText')
-		const resultKind = readProperty(metadata, 'resultKind')
+		const matchBoardID = Reflect.get(metadata, 'boardId')
+		const chunkText = Reflect.get(metadata, 'chunkText')
+		const resultKind = Reflect.get(metadata, 'resultKind')
 		if (matchBoardID !== boardID || !isString(chunkText)) return []
 		if (resultKind === 'lecture') {
-			const lectureID = readProperty(metadata, 'lectureId')
-			const lectureTitle = readProperty(metadata, 'lectureTitle')
-			const startSecond = readProperty(metadata, 'startSecond')
-			const endSecond = readProperty(metadata, 'endSecond')
+			const lectureID = Reflect.get(metadata, 'lectureId')
+			const lectureTitle = Reflect.get(metadata, 'lectureTitle')
+			const startSecond = Reflect.get(metadata, 'startSecond')
+			const endSecond = Reflect.get(metadata, 'endSecond')
 			if (
 				!isString(lectureID) ||
 				!isString(lectureTitle) ||
@@ -126,9 +125,9 @@ export async function queryBoardDocumentVectors(
 				startSecond,
 			}]
 		}
-		const documentID = readProperty(metadata, 'documentId')
-		const documentTitle = readProperty(metadata, 'documentTitle')
-		const pageNumber = readProperty(metadata, 'pageNumber')
+		const documentID = Reflect.get(metadata, 'documentId')
+		const documentTitle = Reflect.get(metadata, 'documentTitle')
+		const pageNumber = Reflect.get(metadata, 'pageNumber')
 		if (
 			!isString(documentID) ||
 			!isString(documentTitle) ||
@@ -189,7 +188,7 @@ function formatTimestamp(value: number) {
 
 function readFirstEmbedding(value: unknown) {
 	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
-	const data = readProperty(value, 'data')
+	const data = Reflect.get(value, 'data')
 	const first = Array.isArray(data) ? data[0] : null
 	if (!Array.isArray(first) || !first.every((entry) => isNumber(entry))) {
 		throw new Error('Embedding response did not contain a vector')

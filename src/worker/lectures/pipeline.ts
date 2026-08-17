@@ -1,4 +1,3 @@
-import { readProperty } from '@agentboard/shared'
 import { hasObjectType, isNumber, isString } from '@agentboard/shared'
 import type { LectureSegment } from '@agentboard/shared'
 import { getDocumentAIConfig } from '../config'
@@ -130,12 +129,12 @@ export async function processLecture(
 
 export function parseLectureTranscription(value: unknown) {
 	if (!value || !hasObjectType(value)) throw new Error('Transcription response was invalid')
-	const textValue = readProperty(value, 'text')
+	const textValue = Reflect.get(value, 'text')
 	const text = isString(textValue)
 		? textValue.trim().slice(0, MAX_TRANSCRIPT_CHARACTERS)
 		: ''
-	const segments = parseSegments(readProperty(value, 'segments'))
-	const duration = readDuration(readProperty(value, 'transcription_info')) ??
+	const segments = parseSegments(Reflect.get(value, 'segments'))
+	const duration = readDuration(Reflect.get(value, 'transcription_info')) ??
 		segments.at(-1)?.end ??
 		null
 	if (segments.length) {
@@ -145,7 +144,7 @@ export function parseLectureTranscription(value: unknown) {
 			transcript: text || segments.map((segment) => segment.text).join(' '),
 		}
 	}
-	const wordSegments = groupWords(readProperty(value, 'words'))
+	const wordSegments = groupWords(Reflect.get(value, 'words'))
 	if (wordSegments.length) {
 		return {
 			durationSeconds: duration ?? wordSegments.at(-1)?.end ?? null,
@@ -195,9 +194,9 @@ function parseSegments(value: unknown): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	return value.flatMap((entry): LectureSegment[] => {
 		if (!entry || !hasObjectType(entry)) return []
-		const start = readProperty(entry, 'start')
-		const end = readProperty(entry, 'end')
-		const text = readProperty(entry, 'text')
+		const start = Reflect.get(entry, 'start')
+		const end = Reflect.get(entry, 'end')
+		const text = Reflect.get(entry, 'text')
 		if (
 			!isNumber(start) ||
 			!isNumber(end) ||
@@ -213,9 +212,9 @@ function groupWords(value: unknown): LectureSegment[] {
 	if (!Array.isArray(value)) return []
 	const words = value.flatMap((entry) => {
 		if (!entry || !hasObjectType(entry)) return []
-		const word = readProperty(entry, 'word')
-		const start = readProperty(entry, 'start')
-		const end = readProperty(entry, 'end')
+		const word = Reflect.get(entry, 'word')
+		const start = Reflect.get(entry, 'start')
+		const end = Reflect.get(entry, 'end')
 		return isString(word) && isNumber(start) && isNumber(end)
 			? [{ end, start, word: word.trim() }]
 			: []
@@ -235,13 +234,13 @@ function groupWords(value: unknown): LectureSegment[] {
 
 function readDuration(value: unknown) {
 	if (!value || !hasObjectType(value)) return null
-	const duration = readProperty(value, 'duration')
+	const duration = Reflect.get(value, 'duration')
 	return isNumber(duration) && duration >= 0 ? duration : null
 }
 
 function readEmbeddings(value: unknown): number[][] {
 	if (!value || !hasObjectType(value)) throw new Error('Embedding response was invalid')
-	const data = readProperty(value, 'data')
+	const data = Reflect.get(value, 'data')
 	if (
 		!Array.isArray(data) ||
 		!data.every((embedding) =>

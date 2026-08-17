@@ -8,7 +8,6 @@ export {
 	isString,
 	isSymbol,
 	isUndefined,
-	readProperty,
 } from './untrusted'
 export type { UntrustedInput } from './untrusted'
 export {
