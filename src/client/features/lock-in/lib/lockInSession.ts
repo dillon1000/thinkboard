@@ -2,10 +2,27 @@ import {
 	DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,
 	LOCK_IN_REVIEW_INTERVAL_OPTIONS,
 } from '@agentboard/shared'
-import type { TLShapeId } from 'tldraw'
+import { isShapeId, type TLShapeId } from 'tldraw'
+import { z } from 'zod'
 
 export const LOCK_IN_DURATION_OPTIONS = [25, 45, 60, 90] as const
 export { LOCK_IN_REVIEW_INTERVAL_OPTIONS }
+
+const storedLockInSessionSchema = z.object({
+	durationMinutes: z.number(),
+	elapsedMS: z.number(),
+	finishLine: z.string(),
+	goal: z.string(),
+	id: z.string(),
+	playlistEnabled: z.boolean().default(false),
+	redirectWhenDrifting: z.boolean().default(true),
+	reviewIntervalSeconds: z.number().optional(),
+	runningSince: z.number().nullable(),
+	scopeShapeIDs: z.array(z.custom<TLShapeId>((value) => {
+		const parsed = z.string().safeParse(value)
+		return parsed.success && isShapeId(parsed.data)
+	})),
+})
 
 export interface LockInConfig {
 	durationMinutes: number
@@ -66,16 +83,9 @@ export function readLockInSession(boardID: string): LockInSession | null {
 	try {
 		const value = window.sessionStorage.getItem(lockInStorageKey(boardID))
 		if (!value) return null
-		const session = JSON.parse(value) as Partial<LockInSession>
-		if (
-			typeof session.id !== 'string'
-			|| typeof session.goal !== 'string'
-			|| typeof session.finishLine !== 'string'
-			|| typeof session.durationMinutes !== 'number'
-			|| typeof session.elapsedMS !== 'number'
-			|| (typeof session.runningSince !== 'number' && session.runningSince !== null)
-			|| !Array.isArray(session.scopeShapeIDs)
-		) return null
+		const parsed = storedLockInSessionSchema.safeParse(JSON.parse(value))
+		if (!parsed.success) return null
+		const session = parsed.data
 		return {
 			durationMinutes: session.durationMinutes,
 			elapsedMS: session.elapsedMS,
@@ -84,12 +94,12 @@ export function readLockInSession(boardID: string): LockInSession | null {
 			id: session.id,
 			playlistEnabled: session.playlistEnabled === true,
 			redirectWhenDrifting: session.redirectWhenDrifting !== false,
-			reviewIntervalSeconds: typeof session.reviewIntervalSeconds === 'number'
+			reviewIntervalSeconds: session.reviewIntervalSeconds !== undefined
 				&& LOCK_IN_REVIEW_INTERVAL_OPTIONS.some((value) => value === session.reviewIntervalSeconds)
 				? session.reviewIntervalSeconds
 				: DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS,
 			runningSince: session.runningSince,
-			scopeShapeIDs: session.scopeShapeIDs as TLShapeId[],
+			scopeShapeIDs: session.scopeShapeIDs,
 		}
 	} catch {
 		return null
