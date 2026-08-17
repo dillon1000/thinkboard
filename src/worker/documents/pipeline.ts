@@ -15,6 +15,7 @@ import {
 	type AIRunner,
 } from '../observability/posthogAI'
 import type { DocumentPipelineMessage } from './types'
+import { processOfficeConversion } from './officeConversion'
 
 const DEFAULT_DAILY_PDF_PAGE_QUOTA = 1_000
 const MIN_USEFUL_TEXT_CHARACTERS = 40
@@ -35,14 +36,20 @@ export async function processDocumentBatch(
 ) {
 	for (const message of batch.messages) {
 		try {
-			await processDocument(message.body, env, ctx)
+			if (message.body.kind === 'office-conversion') {
+				await processOfficeConversion(message.body, env)
+			} else {
+				await processDocument(message.body, env, ctx)
+			}
 			message.ack()
 		} catch (error) {
 			const reason = getErrorMessage(error).slice(0, 500)
 			console.error(JSON.stringify({
 				documentID: message.body.documentID,
 				error: reason,
-				pipelineStage: 'failed',
+				pipelineStage: message.body.kind === 'office-conversion'
+					? 'office-conversion-failed'
+					: 'failed',
 			}))
 			await setPipelineStatus(env, message.body, 'failed', reason)
 			message.retry()

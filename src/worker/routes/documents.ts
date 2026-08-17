@@ -1,4 +1,5 @@
 import {
+	MAX_OFFICE_BYTES,
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,
@@ -22,6 +23,7 @@ import {
 	toDocumentPageSummary,
 	toDocumentSummary,
 	upsertDocumentPage,
+	type DocumentSourceFormat,
 } from '../db/documents'
 import type { DocumentPipelineMessage } from '../documents/types'
 
@@ -56,7 +58,7 @@ export async function handleDocumentCreate(
 ) {
 	const contentType = request.headers.get('content-type')?.split(';')[0]?.trim()
 	if (contentType !== 'application/pdf') {
-		return documentError(400, 'INVALID_PDF', 'Choose a PDF file to import.')
+		return handleOfficeDocumentCreate(request, env, authorization, contentType)
 	}
 
 	const declaredBytes = parsePositiveInteger(request.headers.get('content-length'))
@@ -236,11 +238,14 @@ export async function handleDocumentComplete(
 	request: IRequest,
 	env: Env,
 	_context: ExecutionContext,
-	authorization: AuthorizedBoardContext
+	_authorization: AuthorizedBoardContext
 ) {
 	const database = createDatabase(env)
 	const documentRow = await getDocumentRow(database, request.params.boardID, request.params.documentID)
 	if (!documentRow) return documentError(404, 'DOCUMENT_NOT_FOUND', 'Document not found.')
+	if (documentRow.pageCount === 0) {
+		return documentError(409, 'IMPORT_INCOMPLETE', 'Office conversion is still in progress.')
+	}
 	const uploadedPageCount = await countUploadedDocumentPages(database, documentRow.id)
 	if (uploadedPageCount !== documentRow.pageCount) {
 		return documentError(
@@ -253,7 +258,8 @@ export async function handleDocumentComplete(
 	const message: DocumentPipelineMessage = {
 		boardID: documentRow.boardID,
 		documentID: documentRow.id,
-		ownerID: authorization.userID,
+		kind: 'document-index',
+		ownerID: documentRow.ownerID,
 	}
 	await env.DOCUMENT_PIPELINE.send(message)
 	const pages = await listDocumentPageRows(database, documentRow.id)
@@ -270,11 +276,21 @@ export async function handleDocumentRetry(
 	request: IRequest,
 	env: Env,
 	_context: ExecutionContext,
-	authorization: AuthorizedBoardContext
+	_authorization: AuthorizedBoardContext
 ) {
 	const database = createDatabase(env)
 	const documentRow = await getDocumentRow(database, request.params.boardID, request.params.documentID)
 	if (!documentRow) return documentError(404, 'DOCUMENT_NOT_FOUND', 'Document not found.')
+	if (documentRow.sourceFormat !== 'pdf' && documentRow.pageCount === 0) {
+		await setDocumentStatus(database, documentRow.id, 'processing')
+		await env.DOCUMENT_PIPELINE.send({
+			boardID: documentRow.boardID,
+			documentID: documentRow.id,
+			kind: 'office-conversion',
+			ownerID: documentRow.ownerID,
+		} satisfies DocumentPipelineMessage)
+		return Response.json({ ok: true }, { status: 202 })
+	}
 	if (await countUploadedDocumentPages(database, documentRow.id) !== documentRow.pageCount) {
 		return documentError(409, 'IMPORT_INCOMPLETE', 'Upload every PDF page before retrying processing.')
 	}
@@ -282,7 +298,8 @@ export async function handleDocumentRetry(
 	await env.DOCUMENT_PIPELINE.send({
 		boardID: documentRow.boardID,
 		documentID: documentRow.id,
-		ownerID: authorization.userID,
+		kind: 'document-index',
+		ownerID: documentRow.ownerID,
 	} satisfies DocumentPipelineMessage)
 	return Response.json({ ok: true }, { status: 202 })
 }
@@ -298,6 +315,9 @@ export async function handleDocumentOriginalDownload(
 		request.params.documentID
 	)
 	if (!documentRow) return documentError(404, 'DOCUMENT_NOT_FOUND', 'Document not found.')
+	if (documentRow.pageCount === 0) {
+		return documentError(409, 'IMPORT_INCOMPLETE', 'Office conversion is still in progress.')
+	}
 	const downloadDisposition = getOriginalPDFDownloadDisposition(request.url, documentRow.title)
 	return serveAuthorizedR2Object(
 		request,
@@ -407,7 +427,7 @@ function documentError(
 	return Response.json({ code, error, ...(limit === undefined ? {} : { limit }) }, { status })
 }
 
-function getOriginalPDFKey(boardID: string, documentID: string) {
+export function getOriginalPDFKey(boardID: string, documentID: string) {
 	return `boards/${safeKeyPart(boardID)}/documents/${safeKeyPart(documentID)}/original.pdf`
 }
 
@@ -463,12 +483,200 @@ function readDocumentTitle(value: string | null) {
 	return decoded.trim().replace(/[\r\n]+/g, ' ').slice(0, 180) || 'Imported PDF'
 }
 
-function safeFilename(title: string) {
+export function safeFilename(title: string) {
 	const normalized = title
 		.normalize('NFKD')
 		.replace(/[^\x20-\x7e]/g, '_')
 		.replace(/["\\/\r\n]+/g, '_')
 	return normalized.toLowerCase().endsWith('.pdf') ? normalized : `${normalized}.pdf`
+}
+
+async function handleOfficeDocumentCreate(
+	request: IRequest,
+	env: Env,
+	authorization: AuthorizedBoardContext,
+	contentType: string | undefined
+) {
+	const title = readDocumentTitle(request.headers.get('x-document-title'))
+	const sourceFormat = readOfficeSourceFormat(
+		contentType,
+		title,
+		request.headers.get('x-document-source-format')
+	)
+	if (!sourceFormat) {
+		return documentError(400, 'INVALID_OFFICE', 'Choose a DOCX, PPTX, or PDF file to import.')
+	}
+	const declaredBytes = parsePositiveInteger(request.headers.get('content-length'))
+	if (!declaredBytes) {
+		return documentError(411, 'INVALID_OFFICE', 'The Office file size is required.')
+	}
+	if (declaredBytes > MAX_OFFICE_BYTES) {
+		return documentError(
+			413,
+			'OFFICE_TOO_LARGE',
+			'Office files must be 50 MB or smaller.',
+			MAX_OFFICE_BYTES
+		)
+	}
+	if (!request.body) {
+		return documentError(400, 'INVALID_OFFICE', 'The Office file is empty.')
+	}
+
+	const requestedID = request.headers.get('x-document-import-id')?.trim()
+	const documentID = requestedID && isUUID(requestedID) ? requestedID : crypto.randomUUID()
+	const database = createDatabase(env)
+	const existing = await getDocumentRow(database, request.params.boardID, documentID)
+	if (existing) {
+		if (existing.ownerID !== authorization.userID) {
+			return documentError(409, 'INVALID_OFFICE', 'That import identifier is already in use.')
+		}
+		const pages = await listDocumentPageRows(database, existing.id)
+		return {
+			document: toDocumentSummary(existing, pages.length),
+			pages: pages.map(toDocumentPageSummary),
+		}
+	}
+
+	const storedBytesQuota = readPositiveEnvNumber(
+		env.PDF_STORED_BYTES_QUOTA,
+		DEFAULT_STORED_PDF_BYTES_QUOTA
+	)
+	const usage = await getUserDocumentUsage(database, authorization.userID, startOfUTCDay())
+	if (usage.storedBytes + declaredBytes > storedBytesQuota) {
+		return documentError(
+			429,
+			'STORED_BYTES_QUOTA_EXCEEDED',
+			'Delete an older document before importing this one.',
+			storedBytesQuota
+		)
+	}
+
+	const inspectedBody = await inspectStreamPrefix(request.body, 4)
+	const signature = inspectedBody.prefix
+	if (!hasZIPSignature(signature)) {
+		await inspectedBody.body.cancel()
+		return documentError(400, 'INVALID_OFFICE', 'The selected Office file is not readable.')
+	}
+	const sourceR2Key = getOfficeSourceKey(request.params.boardID, documentID, sourceFormat)
+	const fixedLengthBody = inspectedBody.body.pipeThrough(new FixedLengthStream(declaredBytes))
+	await env.TLDRAW_BUCKET.put(sourceR2Key, fixedLengthBody, {
+		httpMetadata: {
+			contentDisposition: `attachment; filename="${safeSourceFilename(title, sourceFormat)}"`,
+			contentType: getOfficeContentType(sourceFormat),
+		},
+	})
+	try {
+		await createDocument(database, {
+			boardID: request.params.boardID,
+			byteSize: declaredBytes,
+			id: documentID,
+			ownerID: authorization.userID,
+			pageCount: 0,
+			r2Key: sourceR2Key,
+			sourceFormat,
+			title,
+		})
+	} catch (error) {
+		await env.TLDRAW_BUCKET.delete(sourceR2Key)
+		throw error
+	}
+	try {
+		await env.DOCUMENT_PIPELINE.send({
+			boardID: request.params.boardID,
+			documentID,
+			kind: 'office-conversion',
+			ownerID: authorization.userID,
+		} satisfies DocumentPipelineMessage)
+	} catch (error) {
+		await setDocumentStatus(database, documentID, 'failed', 'Office conversion could not be queued')
+		throw error
+	}
+	const created = await getDocumentRow(database, request.params.boardID, documentID)
+	if (!created) throw new Error('Office document metadata was not created')
+	return Response.json({ document: toDocumentSummary(created, 0), pages: [] }, { status: 202 })
+}
+
+export function readOfficeSourceFormat(
+	contentType: string | undefined,
+	title: string,
+	declaredFormat: string | null
+): Exclude<DocumentSourceFormat, 'pdf'> | null {
+	const normalizedTitle = title.toLowerCase()
+	if (
+		declaredFormat === 'docx' &&
+		(contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+			normalizedTitle.endsWith('.docx'))
+	) return 'docx'
+	if (
+		declaredFormat === 'pptx' &&
+		(contentType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+			normalizedTitle.endsWith('.pptx'))
+	) return 'pptx'
+	return null
+}
+
+async function inspectStreamPrefix(stream: ReadableStream<Uint8Array>, length: number) {
+	const reader = stream.getReader()
+	const prefix = new Uint8Array(length)
+	const bufferedChunks: Uint8Array[] = []
+	let written = 0
+	while (written < length) {
+		const chunk = await reader.read()
+		if (chunk.done) break
+		bufferedChunks.push(chunk.value)
+		const copyLength = Math.min(chunk.value.length, length - written)
+		prefix.set(chunk.value.subarray(0, copyLength), written)
+		written += copyLength
+	}
+	let bufferedOffset = 0
+	const body = new ReadableStream<Uint8Array>({
+		async cancel(reason) {
+			await reader.cancel(reason)
+		},
+		async pull(controller) {
+			if (bufferedOffset < bufferedChunks.length) {
+				controller.enqueue(bufferedChunks[bufferedOffset])
+				bufferedOffset += 1
+				return
+			}
+			const chunk = await reader.read()
+			if (chunk.done) controller.close()
+			else controller.enqueue(chunk.value)
+		},
+	})
+	return { body, prefix: prefix.subarray(0, written) }
+}
+
+function hasZIPSignature(bytes: Uint8Array) {
+	return bytes.length === 4 &&
+		bytes[0] === 0x50 &&
+		bytes[1] === 0x4b &&
+		bytes[2] === 0x03 &&
+		bytes[3] === 0x04
+}
+
+function getOfficeSourceKey(
+	boardID: string,
+	documentID: string,
+	sourceFormat: Exclude<DocumentSourceFormat, 'pdf'>
+) {
+	return `boards/${safeKeyPart(boardID)}/documents/${safeKeyPart(documentID)}/source.${sourceFormat}`
+}
+
+function getOfficeContentType(sourceFormat: Exclude<DocumentSourceFormat, 'pdf'>) {
+	return sourceFormat === 'docx'
+		? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+		: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+}
+
+function safeSourceFilename(title: string, sourceFormat: Exclude<DocumentSourceFormat, 'pdf'>) {
+	const normalized = title
+		.normalize('NFKD')
+		.replace(/[^\x20-\x7e]/g, '_')
+		.replace(/["\\/\r\n]+/g, '_')
+	return normalized.toLowerCase().endsWith(`.${sourceFormat}`)
+		? normalized
+		: `${normalized}.${sourceFormat}`
 }
 
 export function getOriginalPDFDownloadDisposition(requestURL: string, title: string) {

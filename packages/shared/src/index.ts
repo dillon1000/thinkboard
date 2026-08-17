@@ -23,6 +23,7 @@ export type {
 	AgentActionUndoPayload,
 } from './agentActions'
 export {
+	MAX_OFFICE_BYTES,
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,

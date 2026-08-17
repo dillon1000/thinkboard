@@ -3,13 +3,16 @@ import { z } from 'zod'
 export const MAX_PDF_BYTES = 50 * 1_024 * 1_024
 export const MAX_PDF_PAGES = 200
 export const MAX_PDF_PAGE_IMAGE_BYTES = 12 * 1_024 * 1_024
+export const MAX_OFFICE_BYTES = 50 * 1_024 * 1_024
 
 export const documentStatusSchema = z.enum(['processing', 'ready', 'failed'])
 
 export const documentErrorCodeSchema = z.enum([
 	'DOCUMENT_NOT_FOUND',
 	'INVALID_PDF',
+	'INVALID_OFFICE',
 	'INVALID_PAGE',
+	'OFFICE_TOO_LARGE',
 	'PDF_TOO_LARGE',
 	'PDF_TOO_MANY_PAGES',
 	'PAGE_IMAGE_TOO_LARGE',

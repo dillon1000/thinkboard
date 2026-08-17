@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getOriginalPDFDownloadDisposition } from './documents'
+import { getOriginalPDFDownloadDisposition, readOfficeSourceFormat } from './documents'
 
 describe('getOriginalPDFDownloadDisposition', () => {
 	it('serves explicit downloads as PDF attachments with a safe filename', () => {
@@ -14,5 +14,21 @@ describe('getOriginalPDFDownloadDisposition', () => {
 			'https://board.example/api/document/original',
 			'Course notes.pdf'
 		)).toBeNull()
+	})
+})
+
+describe('readOfficeSourceFormat', () => {
+	it('accepts DOCX and PPTX only when the declared format matches the file metadata', () => {
+		expect(readOfficeSourceFormat(
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			'notes.docx',
+			'docx'
+		)).toBe('docx')
+		expect(readOfficeSourceFormat(
+			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			'lecture.pptx',
+			'pptx'
+		)).toBe('pptx')
+		expect(readOfficeSourceFormat('application/octet-stream', 'lecture.pptx', 'docx')).toBeNull()
 	})
 })
