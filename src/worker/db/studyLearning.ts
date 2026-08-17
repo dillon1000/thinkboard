@@ -58,20 +58,24 @@ export async function registerFlashcards(
 		const existing = await database.select().from(flashcardReview).where(scope)
 		const materialChange = existing.some((review) => isMaterialFlashcardChange(review, card))
 		if (existing.length) {
-			await database.update(flashcardReview).set({
+			const values = materialChange ? {
 				alternateAnswers: card.alternateAnswers,
-				front: card.front,
 				back: card.back,
-				...(materialChange ? {
-					easeFactor: 2.5,
-					intervalDays: 0,
-					lastReviewedAt: null,
-					nextReviewAt: now,
-					repetition: 0,
-					reviewCount: 0,
-				} : {}),
+				easeFactor: 2.5,
+				front: card.front,
+				intervalDays: 0,
+				lastReviewedAt: null,
+				nextReviewAt: now,
+				repetition: 0,
+				reviewCount: 0,
 				updatedAt: now,
-			}).where(scope)
+			} : {
+				alternateAnswers: card.alternateAnswers,
+				back: card.back,
+				front: card.front,
+				updatedAt: now,
+			}
+			await database.update(flashcardReview).set(values).where(scope)
 		}
 		if (!existing.some((review) => review.userID === userID)) {
 			await database.insert(flashcardReview).values({

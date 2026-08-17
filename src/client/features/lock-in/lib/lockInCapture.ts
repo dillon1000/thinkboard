@@ -32,11 +32,12 @@ export async function captureLockInReviewImages(
 			: Promise.resolve(undefined),
 	])
 
-	return {
+	const capture: LockInCapture = {
 		canvasImage,
 		changedShapeCount: changedShapeIDs.length,
-		...(changesImage ? { changesImage } : {}),
 	}
+	if (changesImage) capture.changesImage = changesImage
+	return capture
 }
 
 export function getLockInExportScale(

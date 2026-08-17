@@ -50,13 +50,7 @@ export function buildContextReceipt(input: ContextReceiptInput): StudyContextRec
 		profileFields.push('custom-instructions')
 	}
 
-	return {
-		...(input.canvasContext ? {
-			board: {
-				selectedShapeTypes: input.canvasContext.selection.map(({ type }) => type).slice(0, 30),
-				visibleShapeCount: input.canvasContext.viewport?.shapes.length ?? 0,
-			},
-		} : {}),
+	const receipt: StudyContextReceipt = {
 		craftDocuments: input.craftContext.map(({ title }) => title).slice(0, 10),
 		memories: Math.min(input.memories.length, 40),
 		lectureSources: [...lectureSources.values()].slice(0, 12),
@@ -66,6 +60,13 @@ export function buildContextReceipt(input: ContextReceiptInput): StudyContextRec
 			? getSpotifyReceipt(input.spotifyPlayback)
 			: { state: 'excluded' },
 	}
+	if (input.canvasContext) {
+		receipt.board = {
+				selectedShapeTypes: input.canvasContext.selection.map(({ type }) => type).slice(0, 30),
+				visibleShapeCount: input.canvasContext.viewport?.shapes.length ?? 0,
+		}
+	}
+	return receipt
 }
 
 function addPDFSource(

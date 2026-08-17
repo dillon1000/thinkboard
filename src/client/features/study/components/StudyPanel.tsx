@@ -560,11 +560,9 @@ function StudyConversationChat({
 		setAttachmentError(null)
 		if (fileInputRef.current) fileInputRef.current.value = ''
 		onActivity(text || 'Image question')
-		void chat.sendMessage({
-			files: attachments,
-			text,
-			...(contextChips.length ? { metadata: { contextChips } } : {}),
-		})
+		void chat.sendMessage(contextChips.length
+			? { files: attachments, metadata: { contextChips }, text }
+			: { files: attachments, text })
 	}
 
 	async function attachImages(files: FileList) {

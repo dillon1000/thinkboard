@@ -704,7 +704,15 @@ function FanMenu({
 }) {
 	return (
 		<div className="ZenMenu-fan" role="group" aria-label="Quick actions">
-			{actions.map((action, index) => (
+			{actions.map((action, index) => {
+				const style: CSSProperties & { '--swatch'?: string } = getFanStyle(
+					index,
+					actions.length,
+					centerAngle,
+					spread
+				)
+				if (action.swatch) style['--swatch'] = action.swatch
+				return (
 				<button
 					aria-label={action.label}
 					aria-pressed={action.active}
@@ -714,10 +722,7 @@ function FanMenu({
 					disabled={action.disabled}
 					key={action.id}
 					onClick={action.onSelect}
-					style={{
-						...getFanStyle(index, actions.length, centerAngle, spread),
-						...(action.swatch ? { '--swatch': action.swatch } : {}),
-					} as CSSProperties}
+					style={style}
 					type="button"
 				>
 					<span aria-hidden="true">{action.swatch
@@ -725,7 +730,8 @@ function FanMenu({
 						: action.icon}</span>
 					<span>{action.label}</span>
 				</button>
-			))}
+				)
+			})}
 		</div>
 	)
 }

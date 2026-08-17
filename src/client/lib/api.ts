@@ -1,10 +1,9 @@
 export async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+	const headers = new Headers(init?.headers)
+	if (init?.body && !headers.has('content-type')) headers.set('content-type', 'application/json')
 	const response = await fetch(input, {
 		...init,
-		headers: {
-			...(init?.body ? { 'content-type': 'application/json' } : {}),
-			...init?.headers,
-		},
+		headers,
 	})
 
 	if (!response.ok) {
