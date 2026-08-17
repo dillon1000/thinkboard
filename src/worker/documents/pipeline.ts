@@ -1,4 +1,5 @@
 import type { DocumentStatus } from '@agentboard/shared'
+import { z } from 'zod'
 import { createDatabase } from '../db/client'
 import {
 	getDocumentRow,
@@ -22,11 +23,28 @@ const MIN_USEFUL_TEXT_CHARACTERS = 40
 const CHUNK_TARGET_CHARACTERS = 2_600
 const CHUNK_MAX_CHARACTERS = 3_200
 const EMBEDDING_BATCH_SIZE = 50
+const embeddingResponseSchema = z.object({ data: z.array(z.array(z.number())) })
+const generatedTextSchema = z.object({
+	response: z.string().optional(),
+	result: z.string().optional(),
+	text: z.string().optional(),
+})
 
 interface PipelineChunk {
 	pageNumber: number
 	text: string
 	vectorID: string
+}
+
+interface AIGatewayOptions {
+	gateway: {
+		id: string
+		metadata: {
+			boardID: string
+			documentID: string
+			pipeline: string
+		}
+	}
 }
 
 export async function processDocumentBatch(
@@ -78,7 +96,7 @@ export async function processDocument(
 	if (pages.length !== documentRow.pageCount) throw new Error('Document import is incomplete')
 
 	const aiConfig = getDocumentAIConfig(env)
-	const gatewayOptions = {
+	const gatewayOptions: AIGatewayOptions = {
 		gateway: {
 			id: aiConfig.gatewayID,
 			metadata: {
@@ -88,6 +106,7 @@ export async function processDocument(
 			},
 		},
 	}
+	// SAFETY: Env.AI implements this JSON-returning subset through Cloudflare's model overloads.
 	const ai = observeAIRunner(env.AI as AIRunner, env, {
 		defer: (capture) => {
 			if (ctx) ctx.waitUntil(capture)
@@ -184,7 +203,7 @@ async function extractPageTextWithOCR(
 	model: string,
 	bytes: ArrayBuffer,
 	mediaType: string,
-	gatewayOptions: unknown
+	gatewayOptions: AIGatewayOptions
 ) {
 	const response = await ai.run(model, {
 		image: `data:${mediaType};base64,${arrayBufferToBase64(bytes)}`,
@@ -247,26 +266,17 @@ function needsOCR(text: string) {
 	return text.replace(/[^\p{L}\p{N}]/gu, '').length < MIN_USEFUL_TEXT_CHARACTERS
 }
 
-function readEmbeddings(value: unknown): number[][] {
-	if (!value || typeof value !== 'object') throw new Error('Embedding response was invalid')
-	const data = Reflect.get(value, 'data')
-	if (!Array.isArray(data)) throw new Error('Embedding response did not contain vectors')
-	const embeddings = data.map((embedding) => {
-		if (!Array.isArray(embedding) || !embedding.every((entry) => typeof entry === 'number')) {
-			throw new Error('Embedding response contained an invalid vector')
-		}
-		return embedding
-	})
-	return embeddings
+function readEmbeddings<Value>(value: Value): number[][] {
+	const parsed = embeddingResponseSchema.safeParse(value)
+	if (!parsed.success) throw new Error('Embedding response did not contain vectors')
+	return parsed.data.data
 }
 
-function readGeneratedText(value: unknown) {
-	if (!value || typeof value !== 'object') return ''
-	for (const key of ['response', 'result', 'text']) {
-		const candidate = Reflect.get(value, key)
-		if (typeof candidate === 'string') return candidate
-	}
-	return ''
+function readGeneratedText<Value>(value: Value) {
+	const parsed = generatedTextSchema.safeParse(value)
+	return parsed.success
+		? parsed.data.response ?? parsed.data.result ?? parsed.data.text ?? ''
+		: ''
 }
 
 function arrayBufferToBase64(value: ArrayBuffer) {
@@ -303,6 +313,6 @@ function readPositiveNumber(value: string | undefined, fallback: number) {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage<Failure>(error: Failure) {
 	return error instanceof Error ? error.message : 'Unknown document pipeline failure'
 }
