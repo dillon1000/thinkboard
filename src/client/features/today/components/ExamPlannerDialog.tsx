@@ -1,7 +1,5 @@
 import {
 	apiRoutes,
-	boardSchema,
-	courseSchema,
 	documentSummarySchema,
 	examPlanSchema,
 	type Board,
@@ -10,18 +8,25 @@ import {
 	type ExamPlan,
 } from '@agentboard/shared'
 import { IconX } from '@tabler/icons-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 
 interface ExamPlannerDialogProps {
+	initialBoards: Board[]
+	initialCourses: Course[]
 	onClose: () => void
 	onCreated: (exam: ExamPlan) => void
 }
 
-export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps) {
-	const [boards, setBoards] = useState<Board[]>([])
-	const [courses, setCourses] = useState<Course[]>([])
+export function ExamPlannerDialog({
+	initialBoards,
+	initialCourses,
+	onClose,
+	onCreated,
+}: ExamPlannerDialogProps) {
+	const boards = initialBoards
+	const courses = initialCourses
 	const [documents, setDocuments] = useState<Record<string, DocumentSummary[]>>({})
 	const [boardIDs, setBoardIDs] = useState<string[]>([])
 	const [documentIDs, setDocumentIDs] = useState<string[]>([])
@@ -29,32 +34,7 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 	const [title, setTitle] = useState('')
 	const [examDate, setExamDate] = useState('')
 	const [error, setError] = useState<string | null>(null)
-	const [isLoading, setIsLoading] = useState(true)
 	const [isSaving, setIsSaving] = useState(false)
-
-	useEffect(() => {
-		const closeOnEscape = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', closeOnEscape)
-		void loadSources()
-		return () => window.removeEventListener('keydown', closeOnEscape)
-	}, [])
-
-	async function loadSources() {
-		try {
-			const [boardResponse, courseResponse] = await Promise.all([
-				apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
-				apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
-			])
-			setBoards(boardResponse.boards)
-			setCourses(courseResponse.courses)
-		} catch (loadError) {
-			setError(loadError instanceof Error ? loadError.message : 'Unable to load study sources')
-		} finally {
-			setIsLoading(false)
-		}
-	}
 
 	async function toggleBoard(selectedBoard: Board) {
 		const isSelected = boardIDs.includes(selectedBoard.id)
@@ -127,6 +107,9 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 			aria-labelledby="exam-planner-heading"
 			aria-modal="true"
 			className="ExamPlanner-backdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose()
+			}}
 			onMouseDown={(event) => {
 				if (event.target === event.currentTarget) onClose()
 			}}
@@ -145,10 +128,7 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 				</header>
 
 				{error ? <p className="FormError" role="alert">{error}</p> : null}
-				{isLoading ? <p className="ExamPlanner-loading" role="status">Loading sources…</p> : null}
-
-				{!isLoading ? (
-					<>
+				<>
 						<div className="ExamPlanner-fields">
 							<label>
 								<span>Exam name</span>
@@ -232,8 +212,7 @@ export function ExamPlannerDialog({ onClose, onCreated }: ExamPlannerDialogProps
 								{isSaving ? 'Building…' : 'Start countdown'}
 							</button>
 						</footer>
-					</>
-				) : null}
+				</>
 			</form>
 		</div>
 	)

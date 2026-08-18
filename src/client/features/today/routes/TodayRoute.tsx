@@ -1,7 +1,11 @@
 import {
 	apiRoutes,
 	appRoutes,
+	boardSchema,
+	courseSchema,
 	studyTodayDashboardSchema,
+	type Board,
+	type Course,
 	type FlashcardAnswerAttempt,
 	type ExamPlan,
 	type StudyTodayDashboard,
@@ -18,6 +22,7 @@ import {
 import { type ReactNode, useMemo, useState } from 'react'
 import { Link, useLoaderData } from 'react-router'
 import { Streamdown } from 'streamdown'
+import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import { cssVariables } from '../../../lib/styleTypes'
 import { WorkspaceShell } from '../../auth/components/WorkspaceShell'
@@ -27,6 +32,8 @@ import '../styles/today.css'
 import { ExamPlannerDialog } from '../components/ExamPlannerDialog'
 
 interface TodayLoaderData {
+	boards: Board[]
+	courses: Course[]
 	dashboard: StudyTodayDashboard | null
 	error: string | null
 }
@@ -34,12 +41,21 @@ interface TodayLoaderData {
 /** Loads the initial study dashboard before React renders the route. */
 export async function loader(): Promise<TodayLoaderData> {
 	try {
+		const [dashboard, boardResponse, courseResponse] = await Promise.all([
+			apiRequest(apiRoutes.studyToday, undefined, studyTodayDashboardSchema),
+			apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
+			apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
+		])
 		return {
-			dashboard: await apiRequest(apiRoutes.studyToday, undefined, studyTodayDashboardSchema),
+			boards: boardResponse.boards,
+			courses: courseResponse.courses,
+			dashboard,
 			error: null,
 		}
 	} catch (loadError) {
 		return {
+			boards: [],
+			courses: [],
 			dashboard: null,
 			error: loadError instanceof Error ? loadError.message : 'Unable to load today’s session',
 		}
@@ -264,6 +280,8 @@ export function Component() {
 				) : null}
 				{isExamPlannerOpen ? (
 					<ExamPlannerDialog
+						initialBoards={initial.boards}
+						initialCourses={initial.courses}
 						onClose={() => setIsExamPlannerOpen(false)}
 						onCreated={() => {
 							setIsExamPlannerOpen(false)
