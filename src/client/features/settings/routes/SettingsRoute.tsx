@@ -13,7 +13,8 @@ import {
 	IconFocusCentered,
 	IconLock,
 } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useLoaderData } from 'react-router'
 import { WorkspaceShell } from '../../auth/components/WorkspaceShell'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
@@ -35,45 +36,54 @@ import {
 } from '../../study/lib/boardFlashcardPreferences'
 import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
+interface SettingsLoaderData {
+	config: PublicConfig | null
+	error: string | null
+	isSpotifyConnected: boolean
+	spotifyScopes: string[]
+}
+
+/** Loads service configuration and linked accounts before React renders the route. */
+export async function loader(): Promise<SettingsLoaderData> {
+	try {
+		const [config, accountsResult] = await Promise.all([
+			apiRequest(apiRoutes.config, undefined, publicConfigSchema),
+			authClient.listAccounts(),
+		])
+		if (accountsResult.error) {
+			throw new Error(accountsResult.error.message ?? 'Unable to load connected accounts')
+		}
+		const spotifyAccount = accountsResult.data?.find(({ providerId }) => providerId === 'spotify')
+		return {
+			config,
+			error: null,
+			isSpotifyConnected: Boolean(spotifyAccount),
+			spotifyScopes: spotifyAccount?.scopes ?? [],
+		}
+	} catch (loadError) {
+		return {
+			config: null,
+			error: loadError instanceof Error ? loadError.message : 'Unable to load connections',
+			isSpotifyConnected: false,
+			spotifyScopes: [],
+		}
+	}
+}
+
 export function Component() {
-	const [config, setConfig] = useState<PublicConfig | null>(null)
-	const [isSpotifyConnected, setIsSpotifyConnected] = useState(false)
-	const [spotifyScopes, setSpotifyScopes] = useState<string[]>([])
+	const initial = useLoaderData<typeof loader>()
+	const config = initial.config
+	const [isSpotifyConnected, setIsSpotifyConnected] = useState(initial.isSpotifyConnected)
+	const [spotifyScopes, setSpotifyScopes] = useState(initial.spotifyScopes)
 	const [showSpotifyStatus, setShowSpotifyStatus] = useState(readSpotifyStatusVisibility)
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [radialMenuAlwaysOn, setRadialMenuAlwaysOn] = useState(readRadialMenuAlwaysOn)
 	const [boardFlashcardDirectReveal, setBoardFlashcardDirectReveal] = useState(
 		readBoardFlashcardDirectReveal
 	)
-	const [isLoading, setIsLoading] = useState(true)
 	const [isLinking, setIsLinking] = useState(false)
 	const [isUnlinking, setIsUnlinking] = useState(false)
-	const [error, setError] = useState<string | null>(getOAuthCallbackError)
-
-	useEffect(() => {
-		void loadConnections()
-	}, [])
-
-	async function loadConnections() {
-		setIsLoading(true)
-		try {
-			const [publicConfig, accountsResult] = await Promise.all([
-				apiRequest(apiRoutes.config, undefined, publicConfigSchema),
-				authClient.listAccounts(),
-			])
-			if (accountsResult.error) {
-				throw new Error(accountsResult.error.message ?? 'Unable to load connected accounts')
-			}
-			setConfig(publicConfig)
-			const spotifyAccount = accountsResult.data?.find(({ providerId }) => providerId === 'spotify')
-			setIsSpotifyConnected(Boolean(spotifyAccount))
-			setSpotifyScopes(spotifyAccount?.scopes ?? [])
-		} catch (loadError) {
-			setError(loadError instanceof Error ? loadError.message : 'Unable to load connections')
-		} finally {
-			setIsLoading(false)
-		}
-	}
+	const [error, setError] = useState<string | null>(initial.error ?? getOAuthCallbackError())
 
 	async function connectSpotify() {
 		setError(null)
@@ -109,9 +119,7 @@ export function Component() {
 	const spotifyConfigured = Boolean(config?.spotify.enabled)
 	const needsSpotifyScopeUpdate = isSpotifyConnected
 		&& SPOTIFY_SCOPES.some((scope) => !spotifyScopes.includes(scope))
-	const spotifyStatus = isLoading
-		? 'Checking…'
-		: !spotifyConfigured
+	const spotifyStatus = !spotifyConfigured
 			? 'Unavailable'
 			: needsSpotifyScopeUpdate
 				? 'Update needed'
@@ -190,7 +198,7 @@ export function Component() {
 								{isSpotifyConnected ? (
 									<>
 										{needsSpotifyScopeUpdate ? (
-											<button className="Button Button--spotify" disabled={isLinking || isLoading} onClick={() => void connectSpotify()} type="button">
+											<button className="Button Button--spotify" disabled={isLinking} onClick={() => void connectSpotify()} type="button">
 												{isLinking ? 'Opening Spotify…' : 'Update access'}
 											</button>
 										) : null}
@@ -199,7 +207,7 @@ export function Component() {
 										</button>
 									</>
 								) : (
-									<button className="Button Button--spotify" disabled={!spotifyConfigured || isLinking || isLoading} onClick={() => void connectSpotify()} type="button">
+									<button className="Button Button--spotify" disabled={!spotifyConfigured || isLinking} onClick={() => void connectSpotify()} type="button">
 										<IconBrandSpotify aria-hidden="true" size={16} stroke={2} />
 										{isLinking ? 'Opening Spotify…' : 'Connect'}
 									</button>
