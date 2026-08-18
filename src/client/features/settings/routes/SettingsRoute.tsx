@@ -2,7 +2,10 @@ import {
 	SPOTIFY_SCOPES,
 	apiRoutes,
 	appRoutes,
+	craftAPIRoutes,
+	craftConnectionStatusSchema,
 	publicConfigSchema,
+	type CraftConnectionStatus,
 	type PublicConfig,
 } from '@agentboard/shared'
 import {
@@ -38,6 +41,8 @@ import { CraftConnectionCard } from '../components/CraftConnectionCard'
 
 interface SettingsLoaderData {
 	config: PublicConfig | null
+	craftError: string | null
+	craftStatus: CraftConnectionStatus
 	error: string | null
 	isSpotifyConnected: boolean
 	spotifyScopes: string[]
@@ -46,9 +51,15 @@ interface SettingsLoaderData {
 /** Loads service configuration and linked accounts before React renders the route. */
 export async function loader(): Promise<SettingsLoaderData> {
 	try {
-		const [config, accountsResult] = await Promise.all([
+		const [config, accountsResult, craftResult] = await Promise.all([
 			apiRequest(apiRoutes.config, undefined, publicConfigSchema),
 			authClient.listAccounts(),
+			apiRequest(craftAPIRoutes.connection, undefined, craftConnectionStatusSchema)
+				.then((status) => ({ error: null, status }))
+				.catch((error) => ({
+					error: error instanceof Error ? error.message : 'Craft could not connect.',
+					status: { connected: false, connectedAt: null, spaceName: null },
+				})),
 		])
 		if (accountsResult.error) {
 			throw new Error(accountsResult.error.message ?? 'Unable to load connected accounts')
@@ -56,6 +67,8 @@ export async function loader(): Promise<SettingsLoaderData> {
 		const spotifyAccount = accountsResult.data?.find(({ providerId }) => providerId === 'spotify')
 		return {
 			config,
+			craftError: craftResult.error,
+			craftStatus: craftResult.status,
 			error: null,
 			isSpotifyConnected: Boolean(spotifyAccount),
 			spotifyScopes: spotifyAccount?.scopes ?? [],
@@ -63,6 +76,8 @@ export async function loader(): Promise<SettingsLoaderData> {
 	} catch (loadError) {
 		return {
 			config: null,
+			craftError: null,
+			craftStatus: { connected: false, connectedAt: null, spaceName: null },
 			error: loadError instanceof Error ? loadError.message : 'Unable to load connections',
 			isSpotifyConnected: false,
 			spotifyScopes: [],
@@ -215,7 +230,10 @@ export function Component() {
 							</div>
 						</article>
 
-						<CraftConnectionCard />
+						<CraftConnectionCard
+							initialError={initial.craftError}
+							initialStatus={initial.craftStatus}
+						/>
 					</div>
 
 					<a className="Settings-docLink" href="https://www.spotify.com/account/apps/" rel="noreferrer" target="_blank">
