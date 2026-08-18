@@ -1,7 +1,6 @@
 import {
 	createContext,
 	useContext,
-	useEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -33,20 +32,24 @@ const ZenModeContext = createContext<ZenModeContextValue | null>(null)
  * register a callback here rather than being lifted wholesale.
  */
 export function ZenModeProvider({ children }: { children: ReactNode }) {
-	const [enabled, setEnabled] = useState(false)
+	const [enabled, setEnabledState] = useState(false)
 	const [spotifyOpen, setSpotifyOpen] = useState(false)
 	const openChatRef = useRef<(() => void) | null>(null)
 	const importPDFRef = useRef<(() => void) | null>(null)
 
-	/* Leaving Zen puts the floating player away so it doesn't linger over the restored chrome. */
-	useEffect(() => {
-		if (!enabled) setSpotifyOpen(false)
-	}, [enabled])
+	function setEnabled(on: boolean) {
+		setEnabledState(on)
+		if (!on) setSpotifyOpen(false)
+	}
+
+	function toggle() {
+		setEnabled(!enabled)
+	}
 
 	const value = useMemo<ZenModeContextValue>(() => ({
 		enabled,
 		setEnabled,
-		toggle: () => setEnabled((current) => !current),
+		toggle,
 		spotifyOpen,
 		setSpotifyOpen,
 		openChat: () => openChatRef.current?.(),
