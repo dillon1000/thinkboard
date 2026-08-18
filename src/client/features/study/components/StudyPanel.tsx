@@ -73,7 +73,7 @@ import {
 import type { ChangeEvent, ClipboardEvent, ComponentPropsWithoutRef, FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Streamdown, type Components } from 'streamdown'
-import { Editor } from 'tldraw'
+import { Editor, useValue } from 'tldraw'
 import { z } from 'zod'
 import { ThinkingStatus } from '../../../components/ThinkingStatus'
 import { apiRequest } from '../../../lib/api'
@@ -154,7 +154,6 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [undoingActionID, setUndoingActionID] = useState<string | null>(null)
 	const [conversationError, setConversationError] = useState<string | null>(null)
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false)
-	const [selectionCount, setSelectionCount] = useState(0)
 	const [hasPDFTextSelection, setHasPDFTextSelection] = useState(false)
 	const [hiddenLockInSessionID, setHiddenLockInSessionID] = useState<string | null>(null)
 	const { session: lockInSession } = useLockIn()
@@ -162,6 +161,11 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		lockInSession && lockInSession.id !== hiddenLockInSessionID
 	)
 	const currentConversation = conversations?.find(({ id }) => id === currentConversationID) ?? null
+	const selectionCount = useValue(
+		'study panel selection count',
+		() => editor?.getSelectedShapeIds().length ?? 0,
+		[editor]
+	)
 
 	useEffect(() => {
 		let cancelled = false
@@ -186,16 +190,6 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 			cancelled = true
 		}
 	}, [boardID])
-
-	useEffect(() => {
-		if (!editor) return
-		const updateSelectionCount = () => setSelectionCount(editor.getSelectedShapes().length)
-		updateSelectionCount()
-		editor.on('change', updateSelectionCount)
-		return () => {
-			editor.off('change', updateSelectionCount)
-		}
-	}, [editor])
 
 	useEffect(() => {
 		const updatePDFTextSelection = () => {
