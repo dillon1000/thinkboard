@@ -66,8 +66,7 @@ import {
 	writeRadialMenuBindings,
 } from '../lib/radialMenuBindings'
 import {
-	RADIAL_MENU_PREFERENCE_EVENT,
-	readRadialMenuAlwaysOn,
+	useRadialMenuAlwaysOn,
 } from '../lib/radialMenuPreference'
 import { useZenMode } from '../lib/ZenModeProvider'
 
@@ -155,7 +154,7 @@ export function ZenRadialMenu() {
 	const editor = useEditor()
 	const zen = useZenMode()
 	const tools = useTools()
-	const [alwaysOn, setAlwaysOn] = useState(readRadialMenuAlwaysOn)
+	const alwaysOn = useRadialMenuAlwaysOn()
 	const [bindings, setBindings] = useState(readRadialMenuBindings)
 	const [menu, setMenu] = useState<MenuPosition | null>(null)
 	const [fan, setFan] = useState<FanID | null>(null)
@@ -190,16 +189,6 @@ export function ZenRadialMenu() {
 		const opacity = editor.getSharedOpacity()
 		return opacity.type === 'shared' ? opacity.value : null
 	}, [editor])
-
-	useEffect(() => {
-		const sync = () => setAlwaysOn(readRadialMenuAlwaysOn())
-		window.addEventListener('storage', sync)
-		window.addEventListener(RADIAL_MENU_PREFERENCE_EVENT, sync)
-		return () => {
-			window.removeEventListener('storage', sync)
-			window.removeEventListener(RADIAL_MENU_PREFERENCE_EVENT, sync)
-		}
-	}, [])
 
 	function closeMenu() {
 		setMenu(null)
