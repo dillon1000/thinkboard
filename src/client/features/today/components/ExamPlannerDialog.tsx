@@ -15,6 +15,7 @@ import { apiRequest } from '../../../lib/api'
 interface ExamPlannerDialogProps {
 	initialBoards: Board[]
 	initialCourses: Course[]
+	initialError: string | null
 	onClose: () => void
 	onCreated: (exam: ExamPlan) => void
 }
@@ -22,6 +23,7 @@ interface ExamPlannerDialogProps {
 export function ExamPlannerDialog({
 	initialBoards,
 	initialCourses,
+	initialError,
 	onClose,
 	onCreated,
 }: ExamPlannerDialogProps) {
@@ -33,7 +35,7 @@ export function ExamPlannerDialog({
 	const [primaryBoardID, setPrimaryBoardID] = useState('')
 	const [title, setTitle] = useState('')
 	const [examDate, setExamDate] = useState('')
-	const [error, setError] = useState<string | null>(null)
+	const [error, setError] = useState(initialError)
 	const [isSaving, setIsSaving] = useState(false)
 
 	async function toggleBoard(selectedBoard: Board) {
