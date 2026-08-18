@@ -1,6 +1,7 @@
 import { IconLayoutSidebarRightCollapse } from '@tabler/icons-react'
 import type { BoardRole } from '@agentboard/shared'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useOnlineStatus } from '../../../lib/browser/useOnlineStatus'
 import { BoardChromeProvider } from '../lib/BoardChromeProvider'
 import { useZenMode } from '../lib/ZenModeProvider'
 import { LockInSetup } from '../../lock-in/LockInSetup'
@@ -23,7 +24,7 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 	const [didCopy, setDidCopy] = useState(false)
 	const [isShareOpen, setIsShareOpen] = useState(false)
 	const [isStudyOpen, setIsStudyOpen] = useState(readStudyPanelPreference)
-	const [isOnline, setIsOnline] = useState(navigator.onLine)
+	const isOnline = useOnlineStatus()
 	const zen = useZenMode()
 	const projector = useProjectorMode()
 	const { session } = useLockIn()
@@ -34,16 +35,6 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 		const timeout = window.setTimeout(() => setDidCopy(false), 3000)
 		return () => window.clearTimeout(timeout)
 	}, [didCopy])
-
-	useEffect(() => {
-		const update = () => setIsOnline(navigator.onLine)
-		window.addEventListener('online', update)
-		window.addEventListener('offline', update)
-		return () => {
-			window.removeEventListener('online', update)
-			window.removeEventListener('offline', update)
-		}
-	}, [])
 
 	useEffect(() => {
 		if (session) setStudyPanelOpen(true)
