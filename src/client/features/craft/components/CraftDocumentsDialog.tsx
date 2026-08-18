@@ -20,7 +20,7 @@ import {
 	IconTrash,
 	IconX,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Streamdown } from 'streamdown'
 import type { Editor } from 'tldraw'
@@ -57,16 +57,6 @@ export function CraftDocumentsDialog({
 	const [pendingDocumentID, setPendingDocumentID] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
 	const [candidateError, setCandidateError] = useState<string | null>(null)
-	const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-	useEffect(() => {
-		closeButtonRef.current?.focus()
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [onClose])
 
 	useEffect(() => {
 		void loadBoardDocuments()
@@ -186,6 +176,9 @@ export function CraftDocumentsDialog({
 	return createPortal(
 		<div
 			className="CraftDocuments-backdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose()
+			}}
 			onMouseDown={(event) => {
 				if (event.target === event.currentTarget) onClose()
 			}}
@@ -211,8 +204,8 @@ export function CraftDocumentsDialog({
 						</button>
 						<button
 							aria-label="Close Craft documents"
+							autoFocus
 							onClick={onClose}
-							ref={closeButtonRef}
 							type="button"
 						>
 							<IconX aria-hidden="true" size={18} />
