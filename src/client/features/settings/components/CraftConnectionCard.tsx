@@ -8,7 +8,7 @@ import {
 	IconCheck,
 	IconExternalLink,
 } from '@tabler/icons-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { apiRequest } from '../../../lib/api'
 import './craftConnection.css'
 
@@ -18,20 +18,17 @@ const DISCONNECTED_STATUS: CraftConnectionStatus = {
 	spaceName: null,
 }
 
-export function CraftConnectionCard() {
-	const [status, setStatus] = useState<CraftConnectionStatus>(DISCONNECTED_STATUS)
+interface CraftConnectionCardProps {
+	initialError: string | null
+	initialStatus: CraftConnectionStatus
+}
+
+export function CraftConnectionCard({ initialError, initialStatus }: CraftConnectionCardProps) {
+	const [status, setStatus] = useState(initialStatus)
 	const [apiURL, setAPIURL] = useState('')
-	const [error, setError] = useState<string | null>(null)
-	const [isLoading, setIsLoading] = useState(true)
+	const [error, setError] = useState(initialError)
 	const [isSaving, setIsSaving] = useState(false)
 	const [isDisconnecting, setIsDisconnecting] = useState(false)
-
-	useEffect(() => {
-		void apiRequest(craftAPIRoutes.connection, undefined, craftConnectionStatusSchema)
-			.then(setStatus)
-			.catch((caught) => setError(getErrorMessage(caught)))
-			.finally(() => setIsLoading(false))
-	}, [])
 
 	async function connect(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()
@@ -65,9 +62,7 @@ export function CraftConnectionCard() {
 		}
 	}
 
-	const statusLabel = isLoading
-		? 'Checking…'
-		: status.connected
+	const statusLabel = status.connected
 			? 'Connected'
 			: 'Not connected'
 
@@ -97,7 +92,7 @@ export function CraftConnectionCard() {
 							<span className="sr-only">Craft API URL</span>
 							<input
 								autoComplete="off"
-								disabled={isLoading || isSaving}
+								disabled={isSaving}
 								onChange={(event) => setAPIURL(event.target.value)}
 								placeholder="https://connect.craft.do/link/…/api/v1"
 								spellCheck={false}
