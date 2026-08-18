@@ -20,6 +20,12 @@ interface BoardShellProps {
 	title: string
 }
 
+interface StudyPanelTriggers {
+	projectorEnabled: boolean
+	sessionID: string | null
+	zenEnabled: boolean
+}
+
 export function BoardShell({ boardID, children, role, studyPanel, title }: BoardShellProps) {
 	const [didCopy, setDidCopy] = useState(false)
 	const [isShareOpen, setIsShareOpen] = useState(false)
@@ -28,6 +34,29 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 	const zen = useZenMode()
 	const projector = useProjectorMode()
 	const { session } = useLockIn()
+	const triggers: StudyPanelTriggers = {
+		projectorEnabled: projector.enabled,
+		sessionID: session?.id ?? null,
+		zenEnabled: zen.enabled,
+	}
+	const [previousTriggers, setPreviousTriggers] = useState(triggers)
+	// Mode and session transitions adjust local panel state before React commits the next screen.
+	if (
+		triggers.projectorEnabled !== previousTriggers.projectorEnabled ||
+		triggers.sessionID !== previousTriggers.sessionID ||
+		triggers.zenEnabled !== previousTriggers.zenEnabled
+	) {
+		setPreviousTriggers(triggers)
+		if (triggers.sessionID && triggers.sessionID !== previousTriggers.sessionID) {
+			setIsStudyOpen(true)
+		}
+		if (
+			(triggers.projectorEnabled && !previousTriggers.projectorEnabled) ||
+			(triggers.zenEnabled && !previousTriggers.zenEnabled)
+		) {
+			setIsStudyOpen(false)
+		}
+	}
 
 	useEffect(() => {
 		if (!didCopy) return
@@ -36,25 +65,11 @@ export function BoardShell({ boardID, children, role, studyPanel, title }: Board
 		return () => window.clearTimeout(timeout)
 	}, [didCopy])
 
-	useEffect(() => {
-		if (session) setStudyPanelOpen(true)
-	}, [session?.id])
-
 	/* The radial menu's Chat petal opens the study pane through here — it can't reach this state. */
 	useEffect(() => {
 		zen.registerOpenChat(() => setStudyPanelOpen(true))
 		return () => zen.registerOpenChat(null)
 	}, [zen])
-
-	/* Entering Zen clears the canvas; the chat petal brings the study pane back when it's wanted. */
-	useEffect(() => {
-		if (zen.enabled) setStudyPanelOpen(false)
-	}, [zen.enabled])
-
-	/* Projector mode reserves the full screen for the followed canvas and its pairing status. */
-	useEffect(() => {
-		if (projector.enabled) setStudyPanelOpen(false)
-	}, [projector.enabled])
 
 	async function copyBoardLink() {
 		await navigator.clipboard.writeText(window.location.href)
