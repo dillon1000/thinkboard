@@ -18,26 +18,13 @@ import { Link } from 'react-router'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import {
-	SPOTIFY_STATUS_VISIBILITY_EVENT,
-	readSpotifyStatusVisibility,
+	useSpotifyStatusVisibility,
 } from '../lib/spotifyPreferences'
 
 const PLAYER_REFRESH_INTERVAL_MS = 12_000
 
 export function SpotifyPlayer() {
-	const [isVisible, setIsVisible] = useState(readSpotifyStatusVisibility)
-
-	useEffect(() => {
-		const updateVisibility = () => setIsVisible(readSpotifyStatusVisibility())
-		window.addEventListener('storage', updateVisibility)
-		window.addEventListener(SPOTIFY_STATUS_VISIBILITY_EVENT, updateVisibility)
-		return () => {
-			window.removeEventListener('storage', updateVisibility)
-			window.removeEventListener(SPOTIFY_STATUS_VISIBILITY_EVENT, updateVisibility)
-		}
-	}, [])
-
-	return isVisible ? <SpotifyPlayerContent /> : null
+	return useSpotifyStatusVisibility() ? <SpotifyPlayerContent /> : null
 }
 
 function SpotifyPlayerContent() {
