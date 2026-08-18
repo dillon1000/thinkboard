@@ -4,8 +4,10 @@ import {
 	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
 	boardSchema,
+	examPracticeSetSchema,
 	publicConfigSchema,
 	type BoardRole,
+	type ExamPracticeSet,
 	type PublicConfig,
 } from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
@@ -34,24 +36,40 @@ import { focusLectureCitation } from '../../study/lib/lectureCitation'
 
 interface BoardLoaderData {
 	configError: string | null
+	examPractice: ExamPracticeSet | null
+	examPracticeError: string | null
 	publicConfig: PublicConfig | null
 	role: BoardRole
 	title: string
 }
 
 /** Loads canvas configuration and board access before React renders the route. */
-export async function loader({ params }: LoaderFunctionArgs): Promise<BoardLoaderData> {
+export async function loader({ params, request }: LoaderFunctionArgs): Promise<BoardLoaderData> {
 	const boardID = params.boardID
 	if (!boardID) throw new Error('Missing space ID')
+	const examID = new URL(request.url).searchParams.get('examPlan')
 
 	try {
-		const [boardResponse, publicConfig] = await Promise.all([
+		const [boardResponse, publicConfig, examResult] = await Promise.all([
 			apiRequest(apiRoutes.board(boardID), undefined, z.object({ board: boardSchema }))
 				.catch(() => null),
 			apiRequest(apiRoutes.config, undefined, publicConfigSchema),
+			examID
+				? apiRequest(
+					apiRoutes.examPractice(examID),
+					{ method: 'POST' },
+					z.object({ practice: examPracticeSetSchema })
+				).then(({ practice }) => ({ error: null, practice }))
+					.catch((error) => ({
+						error: error instanceof Error ? error.message : 'Unable to assemble practice exam',
+						practice: null,
+					}))
+				: Promise.resolve({ error: null, practice: null }),
 		])
 		return {
 			configError: null,
+			examPractice: examResult.practice,
+			examPracticeError: examResult.error,
 			publicConfig,
 			role: boardResponse?.board.role ?? 'viewer',
 			title: boardResponse?.board.title ?? 'Study space',
@@ -59,6 +77,8 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BoardLoade
 	} catch (error) {
 		return {
 			configError: error instanceof Error ? error.message : 'Unable to load canvas configuration',
+			examPractice: null,
+			examPracticeError: null,
 			publicConfig: null,
 			role: 'viewer',
 			title: 'Study space',
@@ -218,7 +238,9 @@ export function Component() {
 						<ExamPracticeImport
 							boardID={boardID}
 							editor={editor}
-							examID={examID}
+							initialError={initial.examPracticeError}
+							initialPractice={initial.examPractice}
+							key={examID}
 							onClose={() => {
 								searchParameters.delete('examPlan')
 								setSearchParameters(searchParameters, { replace: true })

@@ -1,13 +1,9 @@
 import {
-	apiRoutes,
-	examPracticeSetSchema,
 	type ExamPracticeSet,
 } from '@agentboard/shared'
 import { IconClipboardCheck, IconX } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Editor } from 'tldraw'
-import { z } from 'zod'
-import { apiRequest } from '../../../lib/api'
 import {
 	applyProposal,
 	persistProposalEffect,
@@ -17,29 +13,21 @@ import './examPracticeImport.css'
 interface ExamPracticeImportProps {
 	boardID: string
 	editor: Editor
-	examID: string
+	initialError: string | null
+	initialPractice: ExamPracticeSet | null
 	onClose: () => void
 }
 
 export function ExamPracticeImport({
 	boardID,
 	editor,
-	examID,
+	initialError,
+	initialPractice,
 	onClose,
 }: ExamPracticeImportProps) {
-	const [practice, setPractice] = useState<ExamPracticeSet | null>(null)
-	const [error, setError] = useState<string | null>(null)
+	const practice = initialPractice
+	const [error, setError] = useState(initialError)
 	const [isAdding, setIsAdding] = useState(false)
-
-	useEffect(() => {
-		void apiRequest(apiRoutes.examPractice(examID), {
-			method: 'POST',
-		}, z.object({ practice: examPracticeSetSchema }))
-			.then((response) => setPractice(response.practice))
-			.catch((loadError) => {
-				setError(loadError instanceof Error ? loadError.message : 'Unable to assemble practice exam')
-			})
-	}, [examID])
 
 	async function addToCanvas() {
 		if (!practice || practice.boardID !== boardID) return
