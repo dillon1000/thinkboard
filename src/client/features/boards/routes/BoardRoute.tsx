@@ -9,10 +9,9 @@ import {
 	type PublicConfig,
 } from '@agentboard/shared'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router'
+import { useLoaderData, useParams, useSearchParams, type LoaderFunctionArgs } from 'react-router'
 import { Editor, Tldraw, isShapeId, type TLShape } from 'tldraw'
 import { z } from 'zod'
-import { ProgressBar } from '../../../components/ProgressBar'
 import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
 import { BoardShell } from '../components/BoardShell'
@@ -33,16 +32,48 @@ import { ExamPracticeImport } from '../components/ExamPracticeImport'
 import { useCanvasArtifactIndex } from '../../study/lib/useCanvasArtifactIndex'
 import { focusLectureCitation } from '../../study/lib/lectureCitation'
 
+interface BoardLoaderData {
+	configError: string | null
+	publicConfig: PublicConfig | null
+	role: BoardRole
+	title: string
+}
+
+/** Loads canvas configuration and board access before React renders the route. */
+export async function loader({ params }: LoaderFunctionArgs): Promise<BoardLoaderData> {
+	const boardID = params.boardID
+	if (!boardID) throw new Error('Missing space ID')
+
+	try {
+		const [boardResponse, publicConfig] = await Promise.all([
+			apiRequest(apiRoutes.board(boardID), undefined, z.object({ board: boardSchema }))
+				.catch(() => null),
+			apiRequest(apiRoutes.config, undefined, publicConfigSchema),
+		])
+		return {
+			configError: null,
+			publicConfig,
+			role: boardResponse?.board.role ?? 'viewer',
+			title: boardResponse?.board.title ?? 'Study space',
+		}
+	} catch (error) {
+		return {
+			configError: error instanceof Error ? error.message : 'Unable to load canvas configuration',
+			publicConfig: null,
+			role: 'viewer',
+			title: 'Study space',
+		}
+	}
+}
+
 export function Component() {
+	const initial = useLoaderData<typeof loader>()
 	const { boardID } = useParams<{ boardID: string }>()
 	const resolvedBoardID = boardID ?? ''
 	const session = authClient.useSession()
 	const { theme } = useTheme()
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const [publicConfig, setPublicConfig] = useState<PublicConfig | null>(null)
-	const [configError, setConfigError] = useState<string | null>(null)
-	const [title, setTitle] = useState('Study space')
-	const [role, setRole] = useState<BoardRole>('viewer')
+	const { configError, publicConfig, role, title } = initial
 	const [searchParameters, setSearchParameters] = useSearchParams()
 	const examID = searchParameters.get('examPlan')
 	const focusShapeID = searchParameters.get('focusShape')
@@ -60,24 +91,6 @@ export function Component() {
 		getUserPresence: getProjectorUserPresence,
 		shapeUtils: synchronizedShapeUtils,
 	})
-
-	useEffect(() => {
-		if (!resolvedBoardID) return
-		void apiRequest(apiRoutes.board(resolvedBoardID), undefined, z.object({ board: boardSchema }))
-			.then((response) => {
-				setRole(response.board.role)
-				setTitle(response.board.title)
-			})
-			.catch(() => undefined)
-	}, [resolvedBoardID])
-
-	useEffect(() => {
-		void apiRequest(apiRoutes.config, undefined, publicConfigSchema)
-			.then(setPublicConfig)
-			.catch((error) => {
-				setConfigError(error instanceof Error ? error.message : 'Unable to load canvas configuration')
-			})
-	}, [])
 
 	useEffect(() => {
 		if (!editor) return
@@ -173,7 +186,7 @@ export function Component() {
 
 	if (!boardID) throw new Error('Missing space ID')
 	if (configError) return <div className="RouteMessage" role="alert"><h1>Unable to open this space</h1><p>{configError}</p></div>
-	if (!publicConfig) return <div className="AppLoading"><ProgressBar label="Opening your space" /></div>
+	if (!publicConfig) return null
 
 	return (
 		<ProjectorModeProvider>
