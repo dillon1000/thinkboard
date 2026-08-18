@@ -69,8 +69,6 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 	const [input, setInput] = useState('')
 	const [preview, setPreview] = useState<InlinePreview | null>(null)
 	const [error, setError] = useState<string | null>(null)
-	const inputRef = useRef<HTMLInputElement>(null)
-	const acceptRef = useRef<HTMLButtonElement>(null)
 	const stagedToolCallIDs = useRef(new Set<string>())
 	const documentClockRef = useRef<number | undefined>(undefined)
 	const posthog = usePostHog()
@@ -101,14 +99,6 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 		const viewportBounds = editor.getViewportScreenBounds()
 		return { left: screenPoint.x - viewportBounds.x, top: screenPoint.y - viewportBounds.y }
 	}, [anchor, editor])
-
-	useEffect(() => {
-		inputRef.current?.focus()
-	}, [])
-
-	useEffect(() => {
-		if (preview) acceptRef.current?.focus()
-	}, [preview])
 
 	useEffect(() => {
 		for (const message of chat.messages) {
@@ -209,9 +199,9 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 				<input
 					aria-label="Ask the study agent here"
 					autoComplete="off"
+					autoFocus
 					onChange={(event) => setInput(event.target.value)}
 					placeholder={preview ? 'Ask again to replace it…' : 'Ask, or describe what to add here…'}
-					ref={inputRef}
 					type="text"
 					value={input}
 				/>
@@ -242,7 +232,7 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 						<span>{summarizeProposal(preview.toolName, preview.input)}</span>
 					</div>
 					<div className="InlinePrompt-previewActions">
-						<button className="Button Button--primary" onClick={() => void keepPreview()} ref={acceptRef} type="button">
+						<button autoFocus className="Button Button--primary" onClick={() => void keepPreview()} type="button">
 							<IconCheck aria-hidden="true" size={14} stroke={2} /> Keep
 						</button>
 						<button className="TextButton" onClick={dismiss} type="button">Discard</button>
