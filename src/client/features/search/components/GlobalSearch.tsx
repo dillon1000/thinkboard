@@ -20,6 +20,7 @@ import {
 	IconX,
 } from '@tabler/icons-react'
 import {
+	useCallback,
 	useEffect,
 	useMemo,
 	useRef,
@@ -48,7 +49,6 @@ export function GlobalSearch() {
 	const [error, setError] = useState<string | null>(null)
 	const requestID = useRef(0)
 	const inputRef = useRef<HTMLInputElement>(null)
-	const resultsRef = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
 	const location = useLocation()
 	const filteredResults = useMemo(
@@ -65,10 +65,6 @@ export function GlobalSearch() {
 		window.addEventListener('keydown', openSearch)
 		return () => window.removeEventListener('keydown', openSearch)
 	}, [])
-
-	useEffect(() => {
-		if (isOpen) window.requestAnimationFrame(() => inputRef.current?.focus())
-	}, [isOpen])
 
 	useEffect(() => {
 		if (query.trim().length < 2) {
@@ -108,10 +104,9 @@ export function GlobalSearch() {
 		return () => window.clearTimeout(timer)
 	}, [query])
 
-	useEffect(() => {
-		const activeResult = resultsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')
-		activeResult?.scrollIntoView({ block: 'nearest' })
-	}, [activeIndex, filter, filteredResults.length])
+	const scrollActiveResultIntoView = useCallback((element: HTMLButtonElement | null) => {
+		element?.scrollIntoView({ block: 'nearest' })
+	}, [])
 
 	function close() {
 		requestID.current += 1
@@ -196,6 +191,7 @@ export function GlobalSearch() {
 							<input
 								aria-label="Search notes, PDFs, flashcards, and review notes"
 								autoComplete="off"
+								autoFocus
 								onChange={(event) => setQuery(event.target.value)}
 								onKeyDown={handleInputKeyDown}
 								placeholder="Search notes, PDFs, flashcards…"
@@ -223,7 +219,7 @@ export function GlobalSearch() {
 								</button>
 							))}
 						</nav>
-						<div className="GlobalSearch-results" ref={resultsRef} role="listbox">
+						<div className="GlobalSearch-results" role="listbox">
 							{!isLoading ? filteredResults.map((result, index) => (
 								<button
 									aria-selected={index === activeIndex}
@@ -231,6 +227,7 @@ export function GlobalSearch() {
 									key={resultKey(result)}
 									onClick={() => openResult(result)}
 									onMouseEnter={() => setActiveIndex(index)}
+									ref={index === activeIndex ? scrollActiveResultIntoView : undefined}
 									role="option"
 									type="button"
 								>
