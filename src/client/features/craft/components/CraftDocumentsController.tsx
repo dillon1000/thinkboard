@@ -1,9 +1,6 @@
-import { apiRoutes, boardSchema } from '@agentboard/shared'
-import { z } from 'zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { isShapeId, type Editor } from 'tldraw'
-import { apiRequest } from '../../../lib/api'
 import {
 	CRAFT_DOCUMENT_PREVIEW_EVENT,
 	readCraftDocumentPreviewEvent,
@@ -22,16 +19,17 @@ import { CraftWhiteboardImportDialog } from './CraftWhiteboardImportDialog'
 
 export function CraftDocumentsController({
 	boardID,
+	boardTitle,
 	currentUserID,
 	editor,
 }: {
 	boardID: string
+	boardTitle: string
 	currentUserID: string | null
 	editor: Editor | null
 }) {
 	const [openDialog, setOpenDialog] = useState<'documents' | 'whiteboards' | null>(null)
 	const [initialLinkID, setInitialLinkID] = useState<string | null>(null)
-	const [boardTitle, setBoardTitle] = useState('Current space')
 	const [notice, setNotice] = useState<string | null>(null)
 	const handledImportRef = useRef<string | null>(null)
 	const noticeTimerRef = useRef<number | null>(null)
@@ -57,12 +55,6 @@ export function CraftDocumentsController({
 		window.addEventListener(CRAFT_DOCUMENT_PREVIEW_EVENT, openDocuments)
 		return () => window.removeEventListener(CRAFT_DOCUMENT_PREVIEW_EVENT, openDocuments)
 	}, [])
-
-	useEffect(() => {
-		void apiRequest(apiRoutes.board(boardID), undefined, z.object({ board: boardSchema }))
-			.then(({ board }) => setBoardTitle(board.title))
-			.catch(() => undefined)
-	}, [boardID])
 
 	useEffect(() => {
 		if (!editor) return

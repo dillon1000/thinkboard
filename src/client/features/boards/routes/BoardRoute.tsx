@@ -214,6 +214,7 @@ export function Component() {
 		<LockInProvider boardID={boardID} editor={editor} key={boardID}>
 			<CraftDocumentsController
 				boardID={boardID}
+				boardTitle={title}
 				currentUserID={session.data?.user.id ?? null}
 				editor={editor}
 			/>
