@@ -207,17 +207,7 @@ function PDFImportErrorModal({
 	onClose: () => void
 }) {
 	const [copied, setCopied] = useState(false)
-	const copyButtonRef = useRef<HTMLButtonElement>(null)
 	const detailsRef = useRef<HTMLTextAreaElement>(null)
-
-	useEffect(() => {
-		copyButtonRef.current?.focus()
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [onClose])
 
 	async function copyError() {
 		try {
@@ -231,7 +221,12 @@ function PDFImportErrorModal({
 	}
 
 	return (
-		<div className="PDFErrorModalBackdrop">
+		<div
+			className="PDFErrorModalBackdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose()
+			}}
+		>
 			<section
 				aria-describedby="pdf-error-summary"
 				aria-labelledby="pdf-error-title"
@@ -263,9 +258,9 @@ function PDFImportErrorModal({
 					<button className="PDFErrorModal-secondary" onClick={onClose} type="button">Close</button>
 					<button
 						aria-live="polite"
+						autoFocus
 						className="PDFErrorModal-primary"
 						onClick={() => void copyError()}
-						ref={copyButtonRef}
 						type="button"
 					>
 						{copied ? <IconCheck aria-hidden="true" size={17} /> : <IconCopy aria-hidden="true" size={17} />}
