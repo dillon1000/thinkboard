@@ -14,7 +14,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { isShapeId, type Editor, type TLShapeId } from 'tldraw'
+import { isShapeId, useValue, type Editor, type TLShapeId } from 'tldraw'
 import { apiRequest } from '../../lib/api'
 import { captureLockInReviewImages } from './lib/lockInCapture'
 import {
@@ -58,6 +58,7 @@ interface LockInContextValue {
 }
 
 const LockInContext = createContext<LockInContextValue | null>(null)
+const EMPTY_SHAPE_IDS: TLShapeId[] = []
 
 interface LockInProviderProps {
 	boardID: string
@@ -69,7 +70,11 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 	const posthog = usePostHog()
 	const [session, setSession] = useState<LockInSession | null>(() => readLockInSession(boardID))
 	const [isSetupOpen, setIsSetupOpen] = useState(false)
-	const [currentSelectionIDs, setCurrentSelectionIDs] = useState<TLShapeId[]>([])
+	const currentSelectionIDs = useValue(
+		'lock in selection IDs',
+		() => editor?.getSelectedShapeIds() ?? EMPTY_SHAPE_IDS,
+		[editor]
+	)
 	const [now, setNow] = useState(Date.now())
 	const [nextReviewAt, setNextReviewAt] = useState<number | null>(null)
 	const [review, setReview] = useState<LockInReviewResponse | null>(null)
@@ -84,19 +89,6 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 	useEffect(() => {
 		writeLockInSession(boardID, session)
 	}, [boardID, session])
-
-	useEffect(() => {
-		if (!editor) {
-			setCurrentSelectionIDs([])
-			return
-		}
-		const updateSelection = () => setCurrentSelectionIDs(editor.getSelectedShapeIds())
-		updateSelection()
-		editor.on('change', updateSelection)
-		return () => {
-			editor.off('change', updateSelection)
-		}
-	}, [editor])
 
 	useEffect(() => {
 		if (!editor) return
