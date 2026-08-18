@@ -79,20 +79,7 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 	const changedShapeIDsRef = useRef(new Set<TLShapeId>())
 	const reviewPendingRef = useRef(false)
 	const sessionRef = useRef(session)
-
-	useEffect(() => {
-		sessionRef.current = session
-	}, [session])
-
-	useEffect(() => {
-		setSession(readLockInSession(boardID))
-		setIsSetupOpen(false)
-		setReview(null)
-		setReviewError(null)
-		setReviewState('idle')
-		setCompletion(null)
-		changedShapeIDsRef.current.clear()
-	}, [boardID])
+	sessionRef.current = session
 
 	useEffect(() => {
 		writeLockInSession(boardID, session)
