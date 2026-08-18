@@ -157,18 +157,17 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false)
 	const [selectionCount, setSelectionCount] = useState(0)
 	const [hasPDFTextSelection, setHasPDFTextSelection] = useState(false)
-	const [showLockInPanel, setShowLockInPanel] = useState(true)
+	const [hiddenLockInSessionID, setHiddenLockInSessionID] = useState<string | null>(null)
 	const { session: lockInSession } = useLockIn()
+	const showLockInPanel = Boolean(
+		lockInSession && lockInSession.id !== hiddenLockInSessionID
+	)
 	const currentConversation = conversations?.find(({ id }) => id === currentConversationID) ?? null
 
 	useEffect(() => {
 		if (!actionLedgerOpen) return
 		void loadAgentActionLedger()
 	}, [actionLedgerOpen, actionLedgerVersion, boardID])
-
-	useEffect(() => {
-		if (lockInSession) setShowLockInPanel(true)
-	}, [lockInSession?.id])
 
 	useEffect(() => {
 		let cancelled = false
@@ -357,7 +356,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 				</div>
 				<div className="StudyPanel-actions">
 					{lockInSession && !showLockInPanel ? (
-						<button aria-label="Return to Lock In coach" onClick={() => setShowLockInPanel(true)} title="Return to Lock In coach" type="button"><IconLock aria-hidden="true" size={16} /></button>
+						<button aria-label="Return to Lock In coach" onClick={() => setHiddenLockInSessionID(null)} title="Return to Lock In coach" type="button"><IconLock aria-hidden="true" size={16} /></button>
 					) : null}
 					{!lockInSession || !showLockInPanel ? (
 						<>
@@ -370,7 +369,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 			</header>
 			<div className="StudyPanel-main">
 				{lockInSession && showLockInPanel ? (
-					<LockInPanel onOpenStudyChat={() => setShowLockInPanel(false)} />
+					<LockInPanel onOpenStudyChat={() => setHiddenLockInSessionID(lockInSession.id)} />
 				) : (
 					<>
 				{historyOpen ? (
