@@ -5,30 +5,42 @@ import {
 	type SpaceInvitationPreview,
 } from '@agentboard/shared'
 import { IconArrowRight, IconLink, IconUsers } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useState } from 'react'
+import { Link, useLoaderData, useNavigate, useParams, type LoaderFunctionArgs } from 'react-router'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
 import '../components/invitationRoute.css'
 
-export function Component() {
-	const { token = '' } = useParams<{ token: string }>()
-	const [invitation, setInvitation] = useState<SpaceInvitationPreview | null>(null)
-	const [error, setError] = useState<string | null>(null)
-	const [isAccepting, setIsAccepting] = useState(false)
-	const navigate = useNavigate()
+interface InvitationLoaderData {
+	error: string | null
+	invitation: SpaceInvitationPreview | null
+}
 
-	useEffect(() => {
-		void apiRequest(
+/** Loads an invitation preview for the token in the route path. */
+export async function loader({ params }: LoaderFunctionArgs): Promise<InvitationLoaderData> {
+	const token = params.token ?? ''
+	try {
+		const response = await apiRequest(
 			apiRoutes.invitation(token),
 			undefined,
 			z.object({ invitation: spaceInvitationPreviewSchema })
 		)
-			.then((response) => setInvitation(response.invitation))
-			.catch((loadError) => {
-				setError(loadError instanceof Error ? loadError.message : 'Unable to open invitation')
-			})
-	}, [token])
+		return { error: null, invitation: response.invitation }
+	} catch (loadError) {
+		return {
+			error: loadError instanceof Error ? loadError.message : 'Unable to open invitation',
+			invitation: null,
+		}
+	}
+}
+
+export function Component() {
+	const { token = '' } = useParams<{ token: string }>()
+	const initial = useLoaderData<typeof loader>()
+	const invitation = initial.invitation
+	const [error, setError] = useState(initial.error)
+	const [isAccepting, setIsAccepting] = useState(false)
+	const navigate = useNavigate()
 
 	async function acceptInvitation() {
 		setIsAccepting(true)
