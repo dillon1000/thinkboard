@@ -16,6 +16,7 @@ import {
 } from 'react'
 import { isShapeId, useValue, type Editor, type TLShapeId } from 'tldraw'
 import { apiRequest } from '../../lib/api'
+import { useCurrentTime } from '../../lib/browser/useCurrentTime'
 import { captureLockInReviewImages } from './lib/lockInCapture'
 import {
 	createLockInCompletion,
@@ -75,7 +76,7 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 		() => editor?.getSelectedShapeIds() ?? EMPTY_SHAPE_IDS,
 		[editor]
 	)
-	const [now, setNow] = useState(Date.now())
+	const now = useCurrentTime(1_000, Boolean(session?.runningSince))
 	const [nextReviewAt, setNextReviewAt] = useState<number | null>(null)
 	const [review, setReview] = useState<LockInReviewResponse | null>(null)
 	const [reviewError, setReviewError] = useState<string | null>(null)
@@ -85,6 +86,10 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 	const reviewPendingRef = useRef(false)
 	const sessionRef = useRef(session)
 	sessionRef.current = session
+	// Expiration adjusts the session before React commits a frame with no remaining time.
+	if (session?.runningSince && getLockInRemainingMS(session, now) === 0) {
+		setSession(pauseLockInSession(session, now))
+	}
 
 	useEffect(() => {
 		writeLockInSession(boardID, session)
@@ -104,20 +109,6 @@ export function LockInProvider({ boardID, children, editor }: LockInProviderProp
 			}
 		}, { scope: 'document', source: 'user' })
 	}, [editor])
-
-	useEffect(() => {
-		if (!session?.runningSince) return
-		const tick = () => {
-			const nextNow = Date.now()
-			setNow(nextNow)
-			if (getLockInRemainingMS(session, nextNow) === 0) {
-				setSession((current) => current ? pauseLockInSession(current, nextNow) : current)
-			}
-		}
-		tick()
-		const interval = window.setInterval(tick, 1_000)
-		return () => window.clearInterval(interval)
-	}, [session])
 
 	const requestReview = useCallback(async () => {
 		const activeSession = sessionRef.current
