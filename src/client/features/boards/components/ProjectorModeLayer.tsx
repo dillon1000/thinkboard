@@ -12,6 +12,7 @@ import {
 	useState,
 } from 'react'
 import { useEditor, useValue } from 'tldraw'
+import { useCurrentTime } from '../../../lib/browser/useCurrentTime'
 import { useBoardChrome } from '../lib/BoardChromeProvider'
 import { useProjectorMode } from '../lib/ProjectorModeProvider'
 import {
@@ -110,15 +111,10 @@ function ProjectorDisplay({
 	introVisible: boolean
 	onExit: () => void
 }) {
-	const [now, setNow] = useState(() => new Date())
+	const now = new Date(useCurrentTime(1_000))
 	const clockHandAngles = getProjectorClockHandAngles(now)
 	const holdTimerRef = useRef<number | null>(null)
 	const holdOriginRef = useRef<{ x: number; y: number } | null>(null)
-
-	useEffect(() => {
-		const interval = window.setInterval(() => setNow(new Date()), 1_000)
-		return () => window.clearInterval(interval)
-	}, [])
 
 	function cancelExitHold() {
 		if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current)
