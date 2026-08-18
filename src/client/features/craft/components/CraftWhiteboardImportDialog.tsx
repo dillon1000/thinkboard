@@ -77,14 +77,6 @@ export function CraftWhiteboardImportDialog({
 	const [error, setError] = useState<string | null>(null)
 
 	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [onClose])
-
-	useEffect(() => {
 		setSelectedDocumentID(null)
 		setWhiteboards([])
 		const timeout = window.setTimeout(() => void loadDocuments(), 250)
@@ -167,6 +159,9 @@ export function CraftWhiteboardImportDialog({
 	return createPortal(
 		<div
 			className="CraftWhiteboard-backdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose()
+			}}
 			onMouseDown={(event) => {
 				if (event.target === event.currentTarget) onClose()
 			}}
