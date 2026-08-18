@@ -43,7 +43,12 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 	const [pairingOpen, setPairingOpen] = useState(false)
 	const [projectorCode, setProjectorCode] = useState<string | null>(null)
 	const editorRef = useRef<Editor | null>(null)
+	const introTimeoutRef = useRef<number | null>(null)
 	const requestedFullscreenRef = useRef(false)
+	const clearIntroTimeout = useCallback(() => {
+		if (introTimeoutRef.current !== null) window.clearTimeout(introTimeoutRef.current)
+		introTimeoutRef.current = null
+	}, [])
 
 	const clearPresence = useCallback(() => {
 		if (editorRef.current) setProjectorPresenceMetadata(editorRef.current, null)
@@ -51,12 +56,13 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 
 	const exit = useCallback(() => {
 		clearPresence()
+		clearIntroTimeout()
 		setEnabled(false)
 		setIntroVisible(false)
 		setProjectorCode(null)
 		requestedFullscreenRef.current = false
 		if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
-	}, [clearPresence])
+	}, [clearIntroTimeout, clearPresence])
 
 	const enter = useCallback((editor: Editor) => {
 		editorRef.current = editor
@@ -67,6 +73,11 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 		setPairingOpen(false)
 		setProjectorCode(code)
 		setProjectorPresenceMetadata(editor, { code, mode: 'projector' })
+		clearIntroTimeout()
+		introTimeoutRef.current = window.setTimeout(() => {
+			setIntroVisible(false)
+			introTimeoutRef.current = null
+		}, PROJECTOR_INTRO_MS)
 
 		if (document.documentElement.requestFullscreen) {
 			requestedFullscreenRef.current = true
@@ -74,7 +85,7 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 				requestedFullscreenRef.current = false
 			})
 		}
-	}, [])
+	}, [clearIntroTimeout])
 
 	const setController = useCallback((editor: Editor, code: string) => {
 		editorRef.current = editor
@@ -89,12 +100,6 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 	}, [clearPresence])
 
 	useEffect(() => {
-		if (!introVisible) return
-		const timeout = window.setTimeout(() => setIntroVisible(false), PROJECTOR_INTRO_MS)
-		return () => window.clearTimeout(timeout)
-	}, [introVisible])
-
-	useEffect(() => {
 		const handleFullscreenChange = () => {
 			if (enabled && requestedFullscreenRef.current && !document.fullscreenElement) exit()
 		}
@@ -102,7 +107,10 @@ export function ProjectorModeProvider({ children }: { children: ReactNode }) {
 		return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
 	}, [enabled, exit])
 
-	useEffect(() => () => clearPresence(), [clearPresence])
+	useEffect(() => () => {
+		clearIntroTimeout()
+		clearPresence()
+	}, [clearIntroTimeout, clearPresence])
 
 	const value = useMemo<ProjectorModeContextValue>(() => ({
 		closePairing: () => setPairingOpen(false),
