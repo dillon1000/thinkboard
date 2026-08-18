@@ -36,28 +36,43 @@ interface TodayLoaderData {
 	courses: Course[]
 	dashboard: StudyTodayDashboard | null
 	error: string | null
+	examSourcesError: string | null
 }
 
 /** Loads the initial study dashboard before React renders the route. */
 export async function loader(): Promise<TodayLoaderData> {
+	const sourcesPromise = Promise.all([
+		apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
+		apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
+	]).then(([boardResponse, courseResponse]) => ({
+		boards: boardResponse.boards,
+		courses: courseResponse.courses,
+		error: null,
+	})).catch((loadError) => ({
+		boards: [],
+		courses: [],
+		error: loadError instanceof Error ? loadError.message : 'Unable to load study sources',
+	}))
 	try {
-		const [dashboard, boardResponse, courseResponse] = await Promise.all([
+		const [dashboard, sources] = await Promise.all([
 			apiRequest(apiRoutes.studyToday, undefined, studyTodayDashboardSchema),
-			apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
-			apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
+			sourcesPromise,
 		])
 		return {
-			boards: boardResponse.boards,
-			courses: courseResponse.courses,
+			boards: sources.boards,
+			courses: sources.courses,
 			dashboard,
 			error: null,
+			examSourcesError: sources.error,
 		}
 	} catch (loadError) {
+		const sources = await sourcesPromise
 		return {
-			boards: [],
-			courses: [],
+			boards: sources.boards,
+			courses: sources.courses,
 			dashboard: null,
 			error: loadError instanceof Error ? loadError.message : 'Unable to load today’s session',
+			examSourcesError: sources.error,
 		}
 	}
 }
@@ -282,6 +297,7 @@ export function Component() {
 					<ExamPlannerDialog
 						initialBoards={initial.boards}
 						initialCourses={initial.courses}
+						initialError={initial.examSourcesError}
 						onClose={() => setIsExamPlannerOpen(false)}
 						onCreated={() => {
 							setIsExamPlannerOpen(false)
