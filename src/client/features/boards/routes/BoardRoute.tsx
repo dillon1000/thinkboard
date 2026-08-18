@@ -118,12 +118,6 @@ export function Component() {
 	}, [editor, theme])
 
 	useEffect(() => {
-		if (!editor) return
-		// Viewer mode blocks shared canvas mutations while custom flashcard controls stay interactive.
-		editor.updateInstanceState({ isReadonly: role === 'viewer' })
-	}, [editor, role])
-
-	useEffect(() => {
 		if (
 			!editor ||
 			(!focusShapeID &&
@@ -232,6 +226,8 @@ export function Component() {
 						onMount={(editor) => {
 							setEditor(editor)
 							editor.user.updateUserPreferences({ colorScheme: theme })
+							// Viewer mode blocks shared canvas mutations while custom flashcard controls stay interactive.
+							editor.updateInstanceState({ isReadonly: role === 'viewer' })
 							editor.registerExternalAssetHandler('url', getBookmarkPreview)
 						}}
 					/>
