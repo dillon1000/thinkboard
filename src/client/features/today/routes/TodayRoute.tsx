@@ -15,8 +15,8 @@ import {
 	IconPlus,
 	IconTrash,
 } from '@tabler/icons-react'
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { type ReactNode, useMemo, useState } from 'react'
+import { Link, useLoaderData } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { apiRequest } from '../../../lib/api'
 import { cssVariables } from '../../../lib/styleTypes'
@@ -26,14 +26,31 @@ import { studyMarkdownPlugins } from '../../study/lib/studyMath'
 import '../styles/today.css'
 import { ExamPlannerDialog } from '../components/ExamPlannerDialog'
 
-export function Component() {
-	const [dashboard, setDashboard] = useState<StudyTodayDashboard | null>(null)
-	const [error, setError] = useState<string | null>(null)
-	const [isExamPlannerOpen, setIsExamPlannerOpen] = useState(false)
+interface TodayLoaderData {
+	dashboard: StudyTodayDashboard | null
+	error: string | null
+}
 
-	useEffect(() => {
-		void loadDashboard()
-	}, [])
+/** Loads the initial study dashboard before React renders the route. */
+export async function loader(): Promise<TodayLoaderData> {
+	try {
+		return {
+			dashboard: await apiRequest(apiRoutes.studyToday, undefined, studyTodayDashboardSchema),
+			error: null,
+		}
+	} catch (loadError) {
+		return {
+			dashboard: null,
+			error: loadError instanceof Error ? loadError.message : 'Unable to load today’s session',
+		}
+	}
+}
+
+export function Component() {
+	const initial = useLoaderData<typeof loader>()
+	const [dashboard, setDashboard] = useState(initial.dashboard)
+	const [error, setError] = useState(initial.error)
+	const [isExamPlannerOpen, setIsExamPlannerOpen] = useState(false)
 
 	async function loadDashboard() {
 		try {
