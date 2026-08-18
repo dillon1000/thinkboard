@@ -10,7 +10,7 @@ import {
 	IconSparkles,
 	IconX,
 } from '@tabler/icons-react'
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { useLockIn } from './LockInProvider'
 import {
 	LOCK_IN_DURATION_OPTIONS,
@@ -19,38 +19,31 @@ import {
 } from './lib/lockInSession'
 
 export function LockInSetup() {
+	const { isSetupOpen } = useLockIn()
+	return isSetupOpen ? <LockInSetupForm /> : null
+}
+
+function LockInSetupForm() {
 	const {
 		closeSetup,
 		currentSelectionIDs,
-		isSetupOpen,
 		session,
 		startSession,
 		updateSession,
 	} = useLockIn()
-	const [goal, setGoal] = useState('')
-	const [finishLine, setFinishLine] = useState('')
-	const [durationMinutes, setDurationMinutes] = useState(45)
-	const [useSelection, setUseSelection] = useState(false)
-	const [redirectWhenDrifting, setRedirectWhenDrifting] = useState(true)
-	const [reviewIntervalSeconds, setReviewIntervalSeconds] = useState(
-		DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS
+	const [goal, setGoal] = useState(session?.goal ?? '')
+	const [finishLine, setFinishLine] = useState(session?.finishLine ?? '')
+	const [durationMinutes, setDurationMinutes] = useState(session?.durationMinutes ?? 45)
+	const [useSelection, setUseSelection] = useState(
+		session ? session.scopeShapeIDs.length > 0 : currentSelectionIDs.length > 0
 	)
-	const [playlistEnabled, setPlaylistEnabled] = useState(false)
-
-	useEffect(() => {
-		if (!isSetupOpen) return
-		setGoal(session?.goal ?? '')
-		setFinishLine(session?.finishLine ?? '')
-		setDurationMinutes(session?.durationMinutes ?? 45)
-		setUseSelection(session ? session.scopeShapeIDs.length > 0 : currentSelectionIDs.length > 0)
-		setRedirectWhenDrifting(session?.redirectWhenDrifting ?? true)
-		setReviewIntervalSeconds(
-			session?.reviewIntervalSeconds ?? DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS
-		)
-		setPlaylistEnabled(session?.playlistEnabled ?? false)
-	}, [currentSelectionIDs.length, isSetupOpen, session])
-
-	if (!isSetupOpen) return null
+	const [redirectWhenDrifting, setRedirectWhenDrifting] = useState(
+		session?.redirectWhenDrifting ?? true
+	)
+	const [reviewIntervalSeconds, setReviewIntervalSeconds] = useState(
+		session?.reviewIntervalSeconds ?? DEFAULT_LOCK_IN_REVIEW_INTERVAL_SECONDS
+	)
+	const [playlistEnabled, setPlaylistEnabled] = useState(session?.playlistEnabled ?? false)
 
 	const availableScopeIDs = currentSelectionIDs.length > 0
 		? currentSelectionIDs
