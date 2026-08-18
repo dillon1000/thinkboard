@@ -79,14 +79,6 @@ function LectureImportDialog({
 		void loadLectures()
 	}, [boardID])
 
-	useEffect(() => {
-		const closeOnEscape = (event: KeyboardEvent) => {
-			if (event.key === 'Escape' && !isRecording) onClose()
-		}
-		window.addEventListener('keydown', closeOnEscape)
-		return () => window.removeEventListener('keydown', closeOnEscape)
-	}, [isRecording, onClose])
-
 	useEffect(() => () => stopRecordingResources(), [])
 
 	async function loadLectures() {
@@ -230,6 +222,9 @@ function LectureImportDialog({
 			aria-labelledby="lecture-import-heading"
 			aria-modal="true"
 			className="LectureImport-backdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape' && !isRecording) onClose()
+			}}
 			onMouseDown={(event) => {
 				if (event.target === event.currentTarget && !isRecording) onClose()
 			}}
@@ -242,7 +237,7 @@ function LectureImportDialog({
 						<h2 id="lecture-import-heading">Add lecture audio</h2>
 						<p>Audio becomes a timestamped, searchable transcript on this canvas.</p>
 					</div>
-					<button aria-label="Close lecture import" disabled={isRecording} onClick={onClose} type="button">
+					<button aria-label="Close lecture import" autoFocus disabled={isRecording} onClick={onClose} type="button">
 						<IconX aria-hidden="true" size={18} />
 					</button>
 				</header>
