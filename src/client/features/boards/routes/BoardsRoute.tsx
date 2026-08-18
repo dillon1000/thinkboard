@@ -20,7 +20,7 @@ import {
 	IconSun,
 } from '@tabler/icons-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLoaderData, useNavigate } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { z } from 'zod'
 import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
@@ -43,14 +43,56 @@ import { CoursePlanner } from '../../workspace/components/CoursePlanner'
 
 const SIDEBAR_STORAGE_KEY = 'agentboard.dashboard-sidebar'
 
+interface BoardsLoaderData {
+	archivedBoards: Board[]
+	boards: Board[]
+	courses: Course[]
+	dueReviews: DueFlashcard[]
+	error: string | null
+}
+
+/** Loads the board library and optional due reviews before React renders the route. */
+export async function loader(): Promise<BoardsLoaderData> {
+	try {
+		const showDueReviews = readDueReviewVisibility()
+		const [activeResponse, archivedResponse, courseResponse, reviewResponse] = await Promise.all([
+			apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
+			apiRequest(apiRoutes.archivedBoards, undefined, z.object({ boards: z.array(boardSchema) })),
+			apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
+			showDueReviews
+				? apiRequest(
+					apiRoutes.studyReviews,
+					undefined,
+					z.object({ reviews: z.array(dueFlashcardSchema) })
+				)
+				: Promise.resolve({ reviews: [] }),
+		])
+		return {
+			archivedBoards: archivedResponse.boards,
+			boards: activeResponse.boards,
+			courses: courseResponse.courses,
+			dueReviews: reviewResponse.reviews,
+			error: null,
+		}
+	} catch (loadError) {
+		return {
+			archivedBoards: [],
+			boards: [],
+			courses: [],
+			dueReviews: [],
+			error: loadError instanceof Error ? loadError.message : 'Unable to load spaces',
+		}
+	}
+}
+
 export function Component() {
-	const [boards, setBoards] = useState<Board[]>([])
-	const [courses, setCourses] = useState<Course[]>([])
-	const [archivedBoards, setArchivedBoards] = useState<Board[]>([])
-	const [dueReviews, setDueReviews] = useState<DueFlashcard[]>([])
+	const initial = useLoaderData<typeof loader>()
+	const [boards, setBoards] = useState(initial.boards)
+	const [courses, setCourses] = useState(initial.courses)
+	const [archivedBoards, setArchivedBoards] = useState(initial.archivedBoards)
+	const [dueReviews, setDueReviews] = useState(initial.dueReviews)
 	const [title, setTitle] = useState('')
-	const [error, setError] = useState<string | null>(null)
-	const [isLoading, setIsLoading] = useState(true)
+	const [error, setError] = useState(initial.error)
 	const [isCreating, setIsCreating] = useState(false)
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
 	const [isListOpen, setIsListOpen] = useState(true)
@@ -59,25 +101,10 @@ export function Component() {
 	const [showDueReviews, setShowDueReviews] = useState(readDueReviewVisibility)
 	const [isDueReviewMenuOpen, setIsDueReviewMenuOpen] = useState(false)
 	const [isCraftWhiteboardImportOpen, setIsCraftWhiteboardImportOpen] = useState(false)
-	const composerInputRef = useRef<HTMLInputElement>(null)
 	const dueReviewMenuTriggerRef = useRef<HTMLButtonElement>(null)
-	const dueReviewHideButtonRef = useRef<HTMLButtonElement>(null)
 	const session = authClient.useSession()
 	const navigate = useNavigate()
 	const posthog = usePostHog()
-
-	useEffect(() => {
-		void loadBoards()
-		if (showDueReviews) void loadDueReviews()
-	}, [])
-
-	useEffect(() => {
-		if (isComposerOpen) composerInputRef.current?.focus()
-	}, [isComposerOpen])
-
-	useEffect(() => {
-		if (isDueReviewMenuOpen) dueReviewHideButtonRef.current?.focus()
-	}, [isDueReviewMenuOpen])
 
 	useEffect(() => {
 		const compactLayout = window.matchMedia('(max-width: 840px)')
@@ -88,37 +115,6 @@ export function Component() {
 		compactLayout.addEventListener('change', closeSidebar)
 		return () => compactLayout.removeEventListener('change', closeSidebar)
 	}, [])
-
-	async function loadBoards() {
-		setIsLoading(true)
-		try {
-			const [activeResponse, archivedResponse, courseResponse] = await Promise.all([
-				apiRequest(apiRoutes.boards, undefined, z.object({ boards: z.array(boardSchema) })),
-				apiRequest(apiRoutes.archivedBoards, undefined, z.object({ boards: z.array(boardSchema) })),
-				apiRequest(apiRoutes.courses, undefined, z.object({ courses: z.array(courseSchema) })),
-			])
-			setBoards(activeResponse.boards)
-			setArchivedBoards(archivedResponse.boards)
-			setCourses(courseResponse.courses)
-		} catch (loadError) {
-			setError(loadError instanceof Error ? loadError.message : 'Unable to load spaces')
-		} finally {
-			setIsLoading(false)
-		}
-	}
-
-	async function loadDueReviews() {
-		try {
-			const response = await apiRequest(
-				apiRoutes.studyReviews,
-				undefined,
-				z.object({ reviews: z.array(dueFlashcardSchema) })
-			)
-			setDueReviews(response.reviews)
-		} catch (loadError) {
-			setError(loadError instanceof Error ? loadError.message : 'Unable to load today’s reviews')
-		}
-	}
 
 	function setSidebarOpen(isOpen: boolean) {
 		setIsSidebarOpen(isOpen)
@@ -301,7 +297,7 @@ export function Component() {
 								</button>
 								{isDueReviewMenuOpen ? (
 									<div aria-label="Due Today actions" className="SectionHeading-menuContent" role="menu">
-										<button onClick={hideDueReviews} ref={dueReviewHideButtonRef} role="menuitem" type="button">
+										<button autoFocus onClick={hideDueReviews} role="menuitem" type="button">
 											<IconEyeOff aria-hidden="true" size={15} stroke={1.8} />
 											Hide Due Today
 										</button>
@@ -337,6 +333,7 @@ export function Component() {
 							<form className="NewBoard" onSubmit={(event) => void handleCreate(event)}>
 								<input
 									aria-label="Space title"
+									autoFocus
 									autoComplete="off"
 									maxLength={120}
 									name="board-title"
@@ -348,7 +345,6 @@ export function Component() {
 										}
 									}}
 									placeholder="Cell biology — midterm…"
-									ref={composerInputRef}
 									required
 									value={title}
 								/>
@@ -360,8 +356,7 @@ export function Component() {
 
 						{isListOpen ? (
 							<>
-								{isLoading ? <p className="EmptyState" role="status">Fetching your spaces…</p> : null}
-								{!isLoading && boards.length === 0 ? (
+								{boards.length === 0 ? (
 									<div className="EmptyState"><span><IconLayoutBoard aria-hidden="true" size={18} stroke={1.6} /></span><strong>No spaces yet</strong><p>Create your first space to get started.</p></div>
 								) : null}
 								{boards.length ? <div className="BoardList">
