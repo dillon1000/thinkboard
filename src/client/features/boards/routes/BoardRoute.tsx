@@ -191,7 +191,7 @@ export function Component() {
 	return (
 		<ProjectorModeProvider>
 		<ZenModeProvider>
-		<LockInProvider boardID={boardID} editor={editor}>
+		<LockInProvider boardID={boardID} editor={editor} key={boardID}>
 			<CraftDocumentsController
 				boardID={boardID}
 				currentUserID={session.data?.user.id ?? null}
