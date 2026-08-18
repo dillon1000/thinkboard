@@ -456,7 +456,9 @@ function StudyConversationSession({
 			undefined,
 			z.object({ messages: z.array(z.json()) })
 		).then(async ({ messages }) => {
-			const validated = await validateUIMessages<StudyUIMessage>({ messages })
+			const validated = messages.length
+				? await validateUIMessages<StudyUIMessage>({ messages })
+				: []
 			if (!cancelled) setInitialMessages(validated)
 		}).catch((error) => {
 			if (!cancelled) setLoadError(getErrorMessage(error))
