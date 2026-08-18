@@ -247,14 +247,6 @@ function FlashcardAnswerDialog({
 }) {
 	const chrome = useBoardChrome()
 
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [onClose])
-
 	return createPortal(
 		<div
 			className="FlashcardAnswerDialog-backdrop"
@@ -267,8 +259,13 @@ function FlashcardAnswerDialog({
 			<section
 				aria-labelledby="flashcard-answer-dialog-title"
 				aria-modal="true"
+				autoFocus
 				className="FlashcardAnswerDialog"
+				onKeyDown={(event) => {
+					if (event.key === 'Escape') onClose()
+				}}
 				role="dialog"
+				tabIndex={-1}
 			>
 				<header>
 					<div>
@@ -312,14 +309,6 @@ function FlashcardEditorDialog({
 		...Array.from({ length: Math.max(0, 5 - shape.props.alternateAnswers.length) }, () => ''),
 	])
 
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose()
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [onClose])
-
 	function save(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		const nextFront = front.trim()
@@ -341,6 +330,9 @@ function FlashcardEditorDialog({
 	return createPortal(
 		<div
 			className="FlashcardEditor-backdrop"
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose()
+			}}
 			onPointerDown={(event) => {
 				if (event.currentTarget === event.target) onClose()
 			}}
