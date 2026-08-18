@@ -4,12 +4,10 @@ import { useChat } from '@ai-sdk/react'
 import { IconArrowUp, IconCheck, IconPlayerStop, IconSparkles, IconX } from '@tabler/icons-react'
 import {
 	DefaultChatTransport,
-	getToolName,
-	isToolUIPart,
 	type UIMessage,
 } from 'ai'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useEditor, useValue, type Editor, type TLShapeId } from 'tldraw'
 import { TextShimmer } from '../../../components/TextShimmer'
 import { captureCanvasContext } from '../../study/lib/canvasContextCapture'
@@ -90,7 +88,18 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 			}
 		},
 	}), [anchor, boardID, editor])
-	const chat = useChat<UIMessage>({ id: sessionID, transport })
+	const chat = useChat<UIMessage>({
+		id: sessionID,
+		onToolCall: ({ toolCall }) => {
+			if (
+				!isStudyToolName(toolCall.toolName) ||
+				stagedToolCallIDs.current.has(toolCall.toolCallId)
+			) return
+			stagedToolCallIDs.current.add(toolCall.toolCallId)
+			stageProposal(toolCall.toolName, toolCall.input)
+		},
+		transport,
+	})
 
 	// The composer is screen-sized chrome pinned to a page point: it tracks the anchor through
 	// panning and zooming, but keeps its own type size rather than scaling with the canvas.
@@ -99,22 +108,6 @@ function InlinePromptComposer({ anchor, boardID, editor, sessionID }: InlineProm
 		const viewportBounds = editor.getViewportScreenBounds()
 		return { left: screenPoint.x - viewportBounds.x, top: screenPoint.y - viewportBounds.y }
 	}, [anchor, editor])
-
-	useEffect(() => {
-		for (const message of chat.messages) {
-			if (message.role !== 'assistant') continue
-			for (const part of message.parts) {
-				if (!isToolUIPart(part)) continue
-				if (part.state !== 'input-available' && part.state !== 'output-available') continue
-				const toolName = getToolName(part)
-				if (!isStudyToolName(toolName) || stagedToolCallIDs.current.has(part.toolCallId)) continue
-				stagedToolCallIDs.current.add(part.toolCallId)
-				stageProposal(toolName, part.input)
-				return
-			}
-		}
-		// An inline request produces one artifact; later tool calls in the same turn are ignored.
-	}, [chat.messages])
 
 	function stageProposal<Proposal>(toolName: StudyToolName, proposal: Proposal) {
 		try {
