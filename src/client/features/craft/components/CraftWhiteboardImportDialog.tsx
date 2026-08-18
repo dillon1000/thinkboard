@@ -18,7 +18,7 @@ import {
 	IconSearch,
 	IconX,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
@@ -64,7 +64,8 @@ export function CraftWhiteboardImportDialog({
 	onImport,
 	onSyncImported,
 }: CraftWhiteboardImportDialogProps) {
-	const [boardID, setBoardID] = useState(initialBoardID ?? boards[0]?.id ?? '')
+	const [selectedBoardID, setBoardID] = useState(initialBoardID ?? '')
+	const boardID = selectedBoardID || boards[0]?.id || ''
 	const [documents, setDocuments] = useState<CraftDocumentCandidate[]>([])
 	const [whiteboards, setWhiteboards] = useState<CraftWhiteboardCandidate[]>([])
 	const [selectedDocumentID, setSelectedDocumentID] = useState<string | null>(null)
@@ -74,20 +75,14 @@ export function CraftWhiteboardImportDialog({
 	const [pendingWhiteboardID, setPendingWhiteboardID] = useState<string | null>(null)
 	const [pendingFrameID, setPendingFrameID] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
-	const closeButtonRef = useRef<HTMLButtonElement>(null)
 
 	useEffect(() => {
-		closeButtonRef.current?.focus()
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') onClose()
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
 	}, [onClose])
-
-	useEffect(() => {
-		if (!boardID && boards[0]) setBoardID(boards[0].id)
-	}, [boardID, boards])
 
 	useEffect(() => {
 		setSelectedDocumentID(null)
@@ -192,8 +187,8 @@ export function CraftWhiteboardImportDialog({
 					</div>
 					<button
 						aria-label="Close Craft whiteboard import"
+						autoFocus
 						onClick={onClose}
-						ref={closeButtonRef}
 						type="button"
 					>
 						<IconX aria-hidden="true" size={18} />
