@@ -152,7 +152,6 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 	const [agentActions, setAgentActions] = useState<AgentActionSummary[] | null>(null)
 	const [agentActionError, setAgentActionError] = useState<string | null>(null)
 	const [undoingActionID, setUndoingActionID] = useState<string | null>(null)
-	const [actionLedgerVersion, setActionLedgerVersion] = useState(0)
 	const [conversationError, setConversationError] = useState<string | null>(null)
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false)
 	const [selectionCount, setSelectionCount] = useState(0)
@@ -163,11 +162,6 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		lockInSession && lockInSession.id !== hiddenLockInSessionID
 	)
 	const currentConversation = conversations?.find(({ id }) => id === currentConversationID) ?? null
-
-	useEffect(() => {
-		if (!actionLedgerOpen) return
-		void loadAgentActionLedger()
-	}, [actionLedgerOpen, actionLedgerVersion, boardID])
 
 	useEffect(() => {
 		let cancelled = false
@@ -293,6 +287,17 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 		}
 	}
 
+	function toggleAgentActionLedger() {
+		const nextOpen = !actionLedgerOpen
+		setActionLedgerOpen(nextOpen)
+		setHistoryOpen(false)
+		if (nextOpen) void loadAgentActionLedger()
+	}
+
+	function handleAgentAction() {
+		if (actionLedgerOpen) void loadAgentActionLedger()
+	}
+
 	async function undoAcceptedAction(action: AgentActionSummary) {
 		if (!editor || undoingActionID) return
 		setUndoingActionID(action.id)
@@ -361,7 +366,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 					{!lockInSession || !showLockInPanel ? (
 						<>
 							<button aria-label="New conversation" disabled={isCreatingConversation} onClick={() => void createConversation()} title="New conversation" type="button"><IconPlus aria-hidden="true" size={16} /></button>
-							<button aria-controls="study-action-ledger" aria-expanded={actionLedgerOpen} aria-label="AI change history" onClick={() => { setActionLedgerOpen((open) => !open); setHistoryOpen(false) }} title="AI change history" type="button"><IconVersions aria-hidden="true" size={16} /></button>
+							<button aria-controls="study-action-ledger" aria-expanded={actionLedgerOpen} aria-label="AI change history" onClick={toggleAgentActionLedger} title="AI change history" type="button"><IconVersions aria-hidden="true" size={16} /></button>
 							<button aria-controls="study-history" aria-expanded={historyOpen} aria-label="Conversation history" onClick={() => { setHistoryOpen((open) => !open); setActionLedgerOpen(false) }} title="Conversation history" type="button"><IconHistory aria-hidden="true" size={16} /></button>
 						</>
 					) : null}
@@ -412,7 +417,7 @@ export function StudyPanel({ boardID, editor }: StudyPanelProps) {
 						editor={editor}
 						key={currentConversation.agentName}
 						onActivity={updateConversation}
-						onAgentAction={() => setActionLedgerVersion((version) => version + 1)}
+						onAgentAction={handleAgentAction}
 						hasPDFTextSelection={hasPDFTextSelection}
 						selectionCount={selectionCount}
 					/>
