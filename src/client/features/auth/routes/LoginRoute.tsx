@@ -7,28 +7,38 @@ import {
 	IconLock,
 	IconSettings,
 } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { useState } from 'react'
+import { Navigate, useLoaderData, useLocation } from 'react-router'
 import { z } from 'zod'
 import { ThinkspaceWordmark } from '../../../components/ThinkspaceWordmark'
 import { apiRequest } from '../../../lib/api'
 import { authClient } from '../../../lib/authClient'
 import { ThemeToggle } from '../../theme/ThemeToggle'
 
+interface LoginLoaderData {
+	config: PublicConfig | null
+	configError: boolean
+}
+
+/** Loads public sign-in configuration before React renders the route. */
+export async function loader(): Promise<LoginLoaderData> {
+	try {
+		return {
+			config: await apiRequest(apiRoutes.config, undefined, publicConfigSchema),
+			configError: false,
+		}
+	} catch {
+		return { config: null, configError: true }
+	}
+}
+
 export function Component() {
-	const [config, setConfig] = useState<PublicConfig | null>(null)
-	const [configError, setConfigError] = useState(false)
+	const { config, configError } = useLoaderData<typeof loader>()
 	const [error, setError] = useState<string | null>(null)
 	const [isStarting, setIsStarting] = useState(false)
 	const session = authClient.useSession()
 	const location = useLocation()
 	const posthog = usePostHog()
-
-	useEffect(() => {
-		void apiRequest(apiRoutes.config, undefined, publicConfigSchema)
-			.then(setConfig)
-			.catch(() => setConfigError(true))
-	}, [])
 
 	if (!session.isPending && session.data) return <Navigate replace to={appRoutes.home} />
 
@@ -49,8 +59,6 @@ export function Component() {
 			setIsStarting(false)
 		}
 	}
-
-	const isLoading = !config && !configError
 
 	return (
 		<main className="AuthPage">
@@ -77,8 +85,6 @@ export function Component() {
 						<span>{isStarting ? 'Opening Secure Sign-In…' : `Continue with ${config.oAuth.providerName}`}</span>
 						<IconArrowRight aria-hidden="true" size={18} stroke={1.8} />
 					</button>
-				) : isLoading ? (
-					<div className="AuthLoading" role="status"><span /> Loading Sign-In…</div>
 				) : configError ? (
 					<div className="AuthSetup" role="alert">
 						<IconSettings aria-hidden="true" size={19} stroke={1.8} />
