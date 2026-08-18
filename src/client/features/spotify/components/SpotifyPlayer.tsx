@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { z } from 'zod'
 import { apiRequest } from '../../../lib/api'
+import { useCurrentTime } from '../../../lib/browser/useCurrentTime'
 import {
 	useSpotifyStatusVisibility,
 } from '../lib/spotifyPreferences'
@@ -32,7 +33,7 @@ function SpotifyPlayerContent() {
 	const [error, setError] = useState<string | null>(null)
 	const [isActing, setIsActing] = useState(false)
 	const [lastSyncedAt, setLastSyncedAt] = useState(Date.now())
-	const [now, setNow] = useState(Date.now())
+	const now = useCurrentTime(1_000, Boolean(player?.playback?.isPlaying))
 
 	useEffect(() => {
 		let isActive = true
@@ -66,12 +67,6 @@ function SpotifyPlayerContent() {
 			document.removeEventListener('visibilitychange', refreshWhenVisible)
 		}
 	}, [])
-
-	useEffect(() => {
-		if (!player?.playback?.isPlaying) return
-		const progressInterval = window.setInterval(() => setNow(Date.now()), 1_000)
-		return () => window.clearInterval(progressInterval)
-	}, [player?.playback?.isPlaying])
 
 	async function sendAction(action: SpotifyPlaybackAction) {
 		if (isActing) return
