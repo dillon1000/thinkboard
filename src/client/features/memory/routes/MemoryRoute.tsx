@@ -13,7 +13,8 @@ import {
 	type ManualAgentMemory,
 } from '@agentboard/shared'
 import { IconCheck, IconPlus, IconTrash } from '@tabler/icons-react'
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useState } from 'react'
+import { useLoaderData } from 'react-router'
 import { z } from 'zod'
 import { ProgressBar } from '../../../components/ProgressBar'
 import { apiRequest } from '../../../lib/api'
@@ -107,25 +108,49 @@ const emptyMemory: ManualAgentMemory = {
 	topic: '',
 }
 
+interface MemoryLoaderData {
+	loadError: string | null
+	memories: AgentMemory[]
+	profile: AgentProfile
+}
+
+/** Loads the agent profile and memories before React renders the route. */
+export async function loader(): Promise<MemoryLoaderData> {
+	try {
+		const [memoryResponse, profileResponse] = await Promise.all([
+			apiRequest(apiRoutes.studyMemory, undefined, studyMemoryResponseSchema),
+			apiRequest(apiRoutes.studyAgentProfile, undefined, agentProfileResponseSchema),
+		])
+		return {
+			loadError: null,
+			memories: memoryResponse.memories,
+			profile: profileResponse.profile,
+		}
+	} catch (error) {
+		return {
+			loadError: error instanceof Error ? error.message : 'Unable to load agent settings',
+			memories: [],
+			profile: DEFAULT_AGENT_PROFILE,
+		}
+	}
+}
+
 export function Component() {
-	const [memories, setMemories] = useState<AgentMemory[]>([])
-	const [profile, setProfile] = useState<AgentProfile>(DEFAULT_AGENT_PROFILE)
-	const [savedProfile, setSavedProfile] = useState<AgentProfile>(DEFAULT_AGENT_PROFILE)
+	const initial = useLoaderData<typeof loader>()
+	const [memories, setMemories] = useState(initial.memories)
+	const [profile, setProfile] = useState(initial.profile)
+	const [savedProfile, setSavedProfile] = useState(initial.profile)
 	const [newMemory, setNewMemory] = useState<ManualAgentMemory>(emptyMemory)
-	const [loadError, setLoadError] = useState<string | null>(null)
+	const [loadError, setLoadError] = useState(initial.loadError)
 	const [memoryError, setMemoryError] = useState<string | null>(null)
 	const [profileError, setProfileError] = useState<string | null>(null)
-	const [isLoading, setIsLoading] = useState(true)
+	const [isLoading, setIsLoading] = useState(false)
 	const [isAddingMemory, setIsAddingMemory] = useState(false)
 	const [isMemoryFormOpen, setIsMemoryFormOpen] = useState(false)
 	const [isSavingProfile, setIsSavingProfile] = useState(false)
 	const [profileSaved, setProfileSaved] = useState(false)
 	const [pendingRemoveKey, setPendingRemoveKey] = useState<string | null>(null)
 	const [removingKey, setRemovingKey] = useState<string | null>(null)
-
-	useEffect(() => {
-		void loadPage()
-	}, [])
 
 	async function loadPage() {
 		setLoadError(null)
