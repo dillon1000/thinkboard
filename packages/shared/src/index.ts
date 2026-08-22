@@ -271,10 +271,11 @@ export type {
 export {
 	boardNoteModeSchema,
 	boardSchema,
+	pageTextureSchema,
 	publicConfigSchema,
 	studyConversationSchema,
 } from './types'
-export type { Board, BoardNoteMode, PublicConfig, StudyConversation } from './types'
+export type { Board, BoardNoteMode, PageTexture, PublicConfig, StudyConversation } from './types'
 export {
 	boardCourseUpdateSchema,
 	boardRoleSchema,

@@ -1,4 +1,4 @@
-import type { BoardNoteMode } from '@agentboard/shared'
+import type { BoardNoteMode, PageTexture } from '@agentboard/shared'
 import type { TLComponents } from 'tldraw'
 import { CanvasRibbon } from '../components/CanvasRibbon'
 import { InlinePrompt } from '../components/InlinePrompt'
@@ -17,7 +17,11 @@ import { NotePageSurface, PageCanvasBackground } from './pageNoteMode'
  * Built per board because the ribbon and the cursor-side agent both need to know which board
  * they are acting on.
  */
-export function createCanvasComponents(boardID: string, noteMode: BoardNoteMode): TLComponents {
+export function createCanvasComponents(
+	boardID: string,
+	noteMode: BoardNoteMode,
+	pageTexture: PageTexture
+): TLComponents {
 	const components: TLComponents = {
 		HelpMenu: null,
 		InFrontOfTheCanvas: () => (
@@ -37,7 +41,7 @@ export function createCanvasComponents(boardID: string, noteMode: BoardNoteMode)
 	}
 	if (noteMode === 'pages') {
 		components.Background = PageCanvasBackground
-		components.OnTheCanvas = NotePageSurface
+		components.OnTheCanvas = () => <NotePageSurface texture={pageTexture} />
 	}
 	return components
 }

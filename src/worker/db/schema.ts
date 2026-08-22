@@ -92,6 +92,9 @@ export const board = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
 		noteMode: text('noteMode', { enum: ['canvas', 'pages'] }).notNull().default('canvas'),
+		pageTexture: text('pageTexture', { enum: ['blank', 'lined', 'grid', 'dots'] })
+			.notNull()
+			.default('blank'),
 		courseID: text('courseID').references(() => course.id, { onDelete: 'set null' }),
 		ownerID: text('ownerID')
 			.notNull()

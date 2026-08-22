@@ -4,12 +4,17 @@ import { readBoardCreateInput } from './boards'
 describe('readBoardCreateInput', () => {
 	it('accepts page-based note-taking spaces', async () => {
 		const request = new Request('https://example.com/api/boards', {
-			body: JSON.stringify({ noteMode: 'pages', title: '  Biology   notes  ' }),
+			body: JSON.stringify({
+				noteMode: 'pages',
+				pageTexture: 'grid',
+				title: '  Biology   notes  ',
+			}),
 			method: 'POST',
 		})
 
 		await expect(readBoardCreateInput(request)).resolves.toEqual({
 			noteMode: 'pages',
+			pageTexture: 'grid',
 			title: 'Biology notes',
 		})
 	})
@@ -22,6 +27,7 @@ describe('readBoardCreateInput', () => {
 
 		await expect(readBoardCreateInput(request)).resolves.toEqual({
 			noteMode: 'canvas',
+			pageTexture: 'blank',
 			title: 'Physics',
 		})
 	})

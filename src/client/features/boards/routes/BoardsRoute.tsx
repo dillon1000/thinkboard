@@ -1,4 +1,10 @@
-import type { Board, BoardNoteMode, Course, DueFlashcard } from '@agentboard/shared'
+import type {
+	Board,
+	BoardNoteMode,
+	Course,
+	DueFlashcard,
+	PageTexture,
+} from '@agentboard/shared'
 import { apiRoutes, appRoutes, boardSchema, courseSchema, dueFlashcardSchema } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
 import {
@@ -95,6 +101,7 @@ export function Component() {
 	const [dueReviews, setDueReviews] = useState(initial.dueReviews)
 	const [title, setTitle] = useState('')
 	const [noteMode, setNoteMode] = useState<BoardNoteMode>('canvas')
+	const [pageTexture, setPageTexture] = useState<PageTexture>('blank')
 	const [error, setError] = useState(initial.error)
 	const [isCreating, setIsCreating] = useState(false)
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
@@ -143,9 +150,12 @@ export function Component() {
 		try {
 			const response = await apiRequest(apiRoutes.boards, {
 				method: 'POST',
-				body: JSON.stringify({ noteMode, title }),
+				body: JSON.stringify({ noteMode, pageTexture, title }),
 			}, z.object({ board: boardSchema }))
-			posthog?.capture('board_created', { note_mode: noteMode })
+			posthog?.capture('board_created', {
+				note_mode: noteMode,
+				page_texture: noteMode === 'pages' ? pageTexture : null,
+			})
 			navigate(appRoutes.board(response.board.id))
 		} catch (createError) {
 			setError(createError instanceof Error ? createError.message : 'Unable to create space')
@@ -371,6 +381,24 @@ export function Component() {
 											selectedMode={noteMode}
 										/>
 									</fieldset>
+									{noteMode === 'pages' ? (
+										<fieldset className="NewBoard-texture">
+											<legend>Paper</legend>
+											{PAGE_TEXTURE_OPTIONS.map((option) => (
+												<label data-selected={pageTexture === option.value} key={option.value}>
+													<input
+														checked={pageTexture === option.value}
+														name="page-texture"
+														onChange={() => setPageTexture(option.value)}
+														type="radio"
+														value={option.value}
+													/>
+													<span aria-hidden="true" className="NewBoard-texturePreview" data-texture={option.value} />
+													<span>{option.label}</span>
+												</label>
+											))}
+										</fieldset>
+									) : null}
 								</div>
 								<button className="Button Button--primary" disabled={isCreating || !title.trim()} type="submit">
 									{isCreating ? 'Creating…' : 'Create'}
@@ -460,6 +488,13 @@ interface NoteModeOptionProps {
 	onChange: (mode: BoardNoteMode) => void
 	selectedMode: BoardNoteMode
 }
+
+const PAGE_TEXTURE_OPTIONS: { label: string; value: PageTexture }[] = [
+	{ label: 'Blank', value: 'blank' },
+	{ label: 'Ruled', value: 'lined' },
+	{ label: 'Graph', value: 'grid' },
+	{ label: 'Dots', value: 'dots' },
+]
 
 function NoteModeOption({
 	description,
