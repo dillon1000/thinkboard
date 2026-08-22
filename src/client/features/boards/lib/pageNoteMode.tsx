@@ -1,6 +1,7 @@
-import type { BoardNoteMode } from '@agentboard/shared'
+import type { BoardNoteMode, PageTexture } from '@agentboard/shared'
 import type { TldrawOptions } from 'tldraw'
 
+/** US Letter at 96 CSS pixels per inch; changing it changes every blank note sheet and camera. */
 export const NOTE_PAGE_SIZE = { h: 1_056, w: 816 } as const
 
 const pageCamera = {
@@ -28,11 +29,12 @@ export function PageCanvasBackground() {
 }
 
 /** Renders beneath tldraw shapes in page coordinates, so zooming and panning move the paper. */
-export function NotePageSurface() {
+export function NotePageSurface({ texture }: { texture: PageTexture }) {
 	return (
 		<div
 			aria-hidden="true"
 			className="NotePage-surface"
+			data-texture={texture}
 			style={{ height: NOTE_PAGE_SIZE.h, width: NOTE_PAGE_SIZE.w }}
 		/>
 	)

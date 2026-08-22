@@ -324,9 +324,22 @@ img { max-width: 100%; }
 .NewBoard-mode label > span:last-child { display: grid; min-width: 0; gap: 1px; }
 .NewBoard-mode strong { font-size: 11.5px; font-weight: 600; }
 .NewBoard-mode small { overflow: hidden; color: var(--faint); font-size: 10px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.NewBoard-texture { display: flex; align-items: center; gap: 4px; margin: 1px 0 0; border: 0; padding: 0 1px; }
+.NewBoard-texture legend { margin-right: 3px; color: var(--faint); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.NewBoard-texture label { display: flex; min-height: 27px; align-items: center; gap: 4px; border-radius: 5px; padding: 3px 6px 3px 4px; color: var(--faint); cursor: pointer; font-size: 10.5px; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift); }
+.NewBoard-texture label[data-selected='true'] { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.NewBoard-texture input { position: absolute; width: 1px; min-height: 1px; opacity: 0; pointer-events: none; }
+.NewBoard-texture label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.NewBoard-texturePreview { --paper-mark: color-mix(in srgb, var(--muted) 26%, transparent); display: block; width: 16px; height: 19px; flex: 0 0 auto; border-radius: 2px; background-color: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.NewBoard-texturePreview[data-texture='lined'] { background-image: repeating-linear-gradient(to bottom, transparent 0 4px, var(--paper-mark) 4px 5px); }
+.NewBoard-texturePreview[data-texture='grid'] { background-image: repeating-linear-gradient(to right, transparent 0 4px, var(--paper-mark) 4px 5px), repeating-linear-gradient(to bottom, transparent 0 4px, var(--paper-mark) 4px 5px); }
+.NewBoard-texturePreview[data-texture='dots'] { background-image: radial-gradient(circle, var(--paper-mark) .7px, transparent .8px); background-size: 4px 4px; }
 
 .PageCanvas-background { position: absolute; inset: 0; background: var(--surface); }
-.NotePage-surface { pointer-events: none; background: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
+.NotePage-surface { --page-rule: color-mix(in srgb, var(--muted) 19%, transparent); pointer-events: none; background-color: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
+.NotePage-surface[data-texture='lined'] { background-image: linear-gradient(to right, transparent 0 68px, color-mix(in srgb, var(--danger) 32%, transparent) 68px 69px, transparent 69px), repeating-linear-gradient(to bottom, transparent 0 31px, var(--page-rule) 31px 32px); background-position: 0, 0 56px; }
+.NotePage-surface[data-texture='grid'] { background-image: repeating-linear-gradient(to right, transparent 0 23px, var(--page-rule) 23px 24px), repeating-linear-gradient(to bottom, transparent 0 23px, var(--page-rule) 23px 24px); }
+.NotePage-surface[data-texture='dots'] { background-image: radial-gradient(circle, var(--page-rule) 1.25px, transparent 1.4px); background-position: 12px 12px; background-size: 24px 24px; }
 
 .BoardList { display: grid; margin: 2px -8px 0; }
 .BoardRow { position: relative; display: flex; min-width: 0; min-height: 38px; align-items: center; border-radius: 6px; animation: rise-in 300ms var(--ease-out) backwards; animation-delay: calc(var(--row-index, 0) * 24ms); transition: background-color 140ms var(--ease-swift); }
@@ -1885,6 +1898,7 @@ img { max-width: 100%; }
 	.NewBoard { align-items: stretch; }
 	.NewBoard-mode { grid-template-columns: 1fr; }
 	.NewBoard-mode small { white-space: normal; }
+	.NewBoard-texture { flex-wrap: wrap; }
 	.NewBoard .Button { padding-inline: 12px; }
 	.Ribbon-menuTrigger { padding-inline: 7px; }
 	.Ribbon-studyToggle { padding-inline: 7px; }

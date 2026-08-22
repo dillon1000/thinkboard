@@ -1,0 +1,1 @@
+ALTER TABLE `board` ADD `pageTexture` text DEFAULT 'blank' NOT NULL;

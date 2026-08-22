@@ -1,9 +1,11 @@
 import {
 	boardNoteModeSchema,
 	boardRoleSchema,
+	pageTextureSchema,
 	type Board,
 	type BoardNoteMode,
 	type BoardRole,
+	type PageTexture,
 } from '@agentboard/shared'
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import type { Database } from './client'
@@ -20,6 +22,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 			courseID: board.courseID,
 			id: board.id,
 			noteMode: board.noteMode,
+			pageTexture: board.pageTexture,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -33,6 +36,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 	return rows.map((row) => ({
 		...row,
 		noteMode: boardNoteModeSchema.parse(row.noteMode),
+		pageTexture: pageTextureSchema.parse(row.pageTexture),
 		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
@@ -46,6 +50,7 @@ export async function listArchivedBoards(database: Database, userID: string): Pr
 			courseID: board.courseID,
 			id: board.id,
 			noteMode: board.noteMode,
+			pageTexture: board.pageTexture,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -63,6 +68,7 @@ export async function listArchivedBoards(database: Database, userID: string): Pr
 	return rows.map((row) => ({
 		...row,
 		noteMode: boardNoteModeSchema.parse(row.noteMode),
+		pageTexture: pageTextureSchema.parse(row.pageTexture),
 		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
@@ -73,7 +79,8 @@ export async function createBoard(
 	database: Database,
 	userID: string,
 	title: string,
-	noteMode: BoardNoteMode
+	noteMode: BoardNoteMode,
+	pageTexture: PageTexture
 ): Promise<Board> {
 	const id = crypto.randomUUID()
 	const now = new Date()
@@ -82,6 +89,7 @@ export async function createBoard(
 		database.insert(board).values({
 			id,
 			noteMode,
+			pageTexture,
 			title,
 			ownerID: userID,
 			createdAt: now,
@@ -96,6 +104,7 @@ export async function createBoard(
 		courseID: null,
 		id,
 		noteMode,
+		pageTexture,
 		title,
 		role: 'owner',
 		createdAt: now.toISOString(),
@@ -128,6 +137,7 @@ export async function getBoard(database: Database, boardID: string, userID: stri
 			courseID: board.courseID,
 			id: board.id,
 			noteMode: board.noteMode,
+			pageTexture: board.pageTexture,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -142,6 +152,7 @@ export async function getBoard(database: Database, boardID: string, userID: stri
 		? {
 				...row,
 				noteMode: boardNoteModeSchema.parse(row.noteMode),
+				pageTexture: pageTextureSchema.parse(row.pageTexture),
 				role: boardRoleSchema.parse(row.role),
 				createdAt: row.createdAt.toISOString(),
 				updatedAt: row.updatedAt.toISOString(),

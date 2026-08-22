@@ -8,6 +8,7 @@ import {
 	publicConfigSchema,
 	type BoardRole,
 	type BoardNoteMode,
+	type PageTexture,
 	type ExamPracticeSet,
 	type PublicConfig,
 } from '@agentboard/shared'
@@ -41,6 +42,7 @@ interface BoardLoaderData {
 	examPractice: ExamPracticeSet | null
 	examPracticeError: string | null
 	noteMode: BoardNoteMode
+	pageTexture: PageTexture
 	publicConfig: PublicConfig | null
 	role: BoardRole
 	title: string
@@ -74,6 +76,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			examPractice: examResult.practice,
 			examPracticeError: examResult.error,
 			noteMode: boardResponse?.board.noteMode ?? 'canvas',
+			pageTexture: boardResponse?.board.pageTexture ?? 'blank',
 			publicConfig,
 			role: boardResponse?.board.role ?? 'viewer',
 			title: boardResponse?.board.title ?? 'Study space',
@@ -84,6 +87,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			examPractice: null,
 			examPracticeError: null,
 			noteMode: 'canvas',
+			pageTexture: 'blank',
 			publicConfig: null,
 			role: 'viewer',
 			title: 'Study space',
@@ -98,7 +102,7 @@ export function Component() {
 	const session = authClient.useSession()
 	const { theme } = useTheme()
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const { configError, noteMode, publicConfig, role, title } = initial
+	const { configError, noteMode, pageTexture, publicConfig, role, title } = initial
 	const [searchParameters, setSearchParameters] = useSearchParams()
 	const examID = searchParameters.get('examPlan')
 	const focusShapeID = searchParameters.get('focusShape')
@@ -108,8 +112,8 @@ export function Component() {
 	const focusTime = Number(searchParameters.get('focusTime'))
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
 	const components = useMemo(
-		() => createCanvasComponents(resolvedBoardID, noteMode),
-		[noteMode, resolvedBoardID]
+		() => createCanvasComponents(resolvedBoardID, noteMode, pageTexture),
+		[noteMode, pageTexture, resolvedBoardID]
 	)
 	const canvasOptions = useMemo(() => getCanvasOptions(noteMode), [noteMode])
 	useCanvasArtifactIndex(editor, resolvedBoardID, role !== 'viewer')
