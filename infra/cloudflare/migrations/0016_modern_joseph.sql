@@ -1,0 +1,1 @@
+ALTER TABLE `board` ADD `noteMode` text DEFAULT 'canvas' NOT NULL;

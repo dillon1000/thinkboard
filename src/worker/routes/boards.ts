@@ -12,6 +12,7 @@ import { createDatabase } from '../db/client'
 import { requireSession } from '../auth/session'
 import type { IRequest } from 'itty-router'
 import { z } from 'zod'
+import { boardNoteModeSchema } from '@agentboard/shared'
 
 const MAX_TITLE_LENGTH = 120
 
@@ -35,10 +36,15 @@ export async function handleBoardCreate(request: IRequest, env: Env) {
 	const authentication = await requireSession(request, env)
 	if ('response' in authentication) return authentication.response
 
-	const title = await readTitle(request)
-	if (!title) return Response.json({ error: 'A space title is required' }, { status: 400 })
+	const input = await readBoardCreateInput(request)
+	if (!input) return Response.json({ error: 'A space title is required' }, { status: 400 })
 
-	const createdBoard = await createBoard(createDatabase(env), authentication.session.user.id, title)
+	const createdBoard = await createBoard(
+		createDatabase(env),
+		authentication.session.user.id,
+		input.title,
+		input.noteMode
+	)
 	return Response.json({ board: createdBoard }, { status: 201 })
 }
 
@@ -105,4 +111,18 @@ async function readTitle(request: Request) {
 	if (!parsed.success) return null
 	const normalized = parsed.data.title.trim().replace(/\s+/g, ' ')
 	return normalized ? normalized.slice(0, MAX_TITLE_LENGTH) : null
+}
+
+/** Reads a normalized title and defaults older clients to the infinite canvas mode. */
+export async function readBoardCreateInput(request: Request) {
+	const body = await request.json().catch(() => null)
+	const parsed = z.object({
+		noteMode: boardNoteModeSchema.default('canvas'),
+		title: z.string(),
+	}).safeParse(body)
+	if (!parsed.success) return null
+	const title = parsed.data.title.trim().replace(/\s+/g, ' ')
+	return title
+		? { noteMode: parsed.data.noteMode, title: title.slice(0, MAX_TITLE_LENGTH) }
+		: null
 }

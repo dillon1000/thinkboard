@@ -268,8 +268,13 @@ export type {
 	TeachBackShapeProps,
 	LectureShapeProps,
 } from './studyShapes'
-export { boardSchema, publicConfigSchema, studyConversationSchema } from './types'
-export type { Board, PublicConfig, StudyConversation } from './types'
+export {
+	boardNoteModeSchema,
+	boardSchema,
+	publicConfigSchema,
+	studyConversationSchema,
+} from './types'
+export type { Board, BoardNoteMode, PublicConfig, StudyConversation } from './types'
 export {
 	boardCourseUpdateSchema,
 	boardRoleSchema,

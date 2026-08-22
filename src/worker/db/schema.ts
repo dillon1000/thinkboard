@@ -91,6 +91,7 @@ export const board = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
+		noteMode: text('noteMode', { enum: ['canvas', 'pages'] }).notNull().default('canvas'),
 		courseID: text('courseID').references(() => course.id, { onDelete: 'set null' }),
 		ownerID: text('ownerID')
 			.notNull()
