@@ -10,6 +10,7 @@ import {
 	hasCompletePDFPageShapeSet,
 	locatePDFDocument,
 	placePDFPages,
+	placePDFPagesAsNotePages,
 	readPDFTextItems,
 	yieldToBrowser,
 } from './pdfImport'
@@ -138,6 +139,52 @@ describe('placePDFPages', () => {
 		const createdPages = z.array(z.object({ id: z.string() })).parse(createShapes.mock.calls[0]?.[0])
 		expect(setSelectedShapes).toHaveBeenCalledWith([createdPages[0]?.id])
 		expect(zoomToSelection).toHaveBeenCalledWith({ animation: { duration: 300 } })
+	})
+})
+
+describe('placePDFPagesAsNotePages', () => {
+	it('turns source pages into locked note page backgrounds', () => {
+		const initialPage = { id: 'page:initial', name: 'Page 1' }
+		const createPage = vi.fn()
+		const createShapes = vi.fn()
+		const setCurrentPage = vi.fn()
+		const updatePage = vi.fn()
+		const zoomToBounds = vi.fn()
+		const editor = editorFixture({
+			createPage,
+			createShapes,
+			deleteShapes: vi.fn(),
+			getPage: (pageID: string) => pageID === initialPage.id ? initialPage : undefined,
+			getPageShapeIds: () => new Set(),
+			getPages: () => [initialPage],
+			getShape: vi.fn(),
+			markHistoryStoppingPoint: vi.fn(),
+			run: (callback: () => void) => callback(),
+			setCurrentPage,
+			updatePage,
+			zoomToBounds,
+		})
+
+		placePDFPagesAsNotePages(
+			editor,
+			{ id: 'document-1', title: 'Lecture slides.pptx' },
+			[
+				{ height: 540, pageNumber: 1, width: 960 },
+				{ height: 540, pageNumber: 2, width: 960 },
+			]
+		)
+
+		expect(updatePage).toHaveBeenCalledWith({ id: initialPage.id, name: 'Lecture slides · 1' })
+		expect(createPage).toHaveBeenCalledWith(expect.objectContaining({ name: 'Lecture slides · 2' }))
+		const shapes = z.array(z.object({
+			isLocked: z.literal(true),
+			parentId: z.string(),
+			props: z.object({ h: z.number(), w: z.number() }),
+		})).parse(createShapes.mock.calls[0]?.[0])
+		expect(shapes[0]?.parentId).toBe(initialPage.id)
+		expect(shapes[0]?.props.w).toBe(816)
+		expect(setCurrentPage).toHaveBeenCalledWith(initialPage.id)
+		expect(zoomToBounds).toHaveBeenCalledOnce()
 	})
 })
 

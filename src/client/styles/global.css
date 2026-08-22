@@ -336,10 +336,16 @@ img { max-width: 100%; }
 .NewBoard-texturePreview[data-texture='dots'] { background-image: radial-gradient(circle, var(--paper-mark) .7px, transparent .8px); background-size: 4px 4px; }
 
 .PageCanvas-background { position: absolute; inset: 0; background: var(--surface); }
-.NotePage-surface { --page-rule: color-mix(in srgb, var(--muted) 19%, transparent); pointer-events: none; background-color: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
+.NotePage-surface { --page-rule: color-mix(in srgb, var(--muted) 19%, transparent); position: relative; pointer-events: none; background-color: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
 .NotePage-surface[data-texture='lined'] { background-image: linear-gradient(to right, transparent 0 68px, color-mix(in srgb, var(--danger) 32%, transparent) 68px 69px, transparent 69px), repeating-linear-gradient(to bottom, transparent 0 31px, var(--page-rule) 31px 32px); background-position: 0, 0 56px; }
 .NotePage-surface[data-texture='grid'] { background-image: repeating-linear-gradient(to right, transparent 0 23px, var(--page-rule) 23px 24px), repeating-linear-gradient(to bottom, transparent 0 23px, var(--page-rule) 23px 24px); }
 .NotePage-surface[data-texture='dots'] { background-image: radial-gradient(circle, var(--page-rule) 1.25px, transparent 1.4px); background-position: 12px 12px; background-size: 24px 24px; }
+.NotePage-useFile { position: absolute; top: 50%; left: 50%; display: grid; min-width: 230px; translate: -50% -50%; justify-items: center; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 16px 20px 15px; color: var(--muted); cursor: pointer; pointer-events: auto; box-shadow: 0 0 0 1px var(--line), 0 8px 28px rgb(0 0 0 / 7%); backdrop-filter: blur(8px); transition: color 150ms var(--ease-swift), box-shadow 150ms var(--ease-swift), translate 150ms var(--ease-swift); }
+.NotePage-useFile > span { display: grid; width: 36px; height: 36px; margin-bottom: 8px; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent-text); }
+.NotePage-useFile strong { color: var(--ink); font-size: 12.5px; font-weight: 620; }
+.NotePage-useFile small { margin-top: 3px; color: var(--faint); font-size: 10.5px; }
+.NotePage-useFile:hover { color: var(--ink); translate: -50% calc(-50% - 2px); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 34px rgb(0 0 0 / 10%); }
+.NotePage-useFile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .BoardList { display: grid; margin: 2px -8px 0; }
 .BoardRow { position: relative; display: flex; min-width: 0; min-height: 38px; align-items: center; border-radius: 6px; animation: rise-in 300ms var(--ease-out) backwards; animation-delay: calc(var(--row-index, 0) * 24ms); transition: background-color 140ms var(--ease-swift); }
@@ -1538,6 +1544,20 @@ img { max-width: 100%; }
 .PDFImportNotices { position: fixed; z-index: 50; right: calc(14px + var(--chrome-side-inset, 0px)); bottom: 14px; display: flex; width: min(340px, calc(100vw - 28px)); flex-direction: column; align-items: flex-end; gap: 7px; transition: right var(--panel-motion); }
 .PDFImportNotice { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 9px 10px; color: var(--muted); box-shadow: 0 6px 20px rgb(0 0 0 / 12%); font-size: 11.5px; line-height: 1.35; }
 .PDFImportNotice button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-weight: 600; }
+.PageImport-backdrop { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--canvas) 70%, transparent); padding: 20px; backdrop-filter: blur(12px) saturate(120%); animation: fade-in 180ms var(--ease-swift) backwards; }
+.PageImport { display: grid; width: min(390px, 100%); justify-items: center; border-radius: 18px; background: var(--panel); padding: 36px 34px 28px; color: var(--ink); text-align: center; box-shadow: var(--shadow-pop); animation: rise-in 300ms var(--ease-out) backwards; }
+.PageImport-paperStack { position: relative; width: 94px; height: 116px; margin-bottom: 24px; }
+.PageImport-paperStack > i, .PageImport-paperStack > div { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 7px; background: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 7px 20px rgb(0 0 0 / 10%); }
+.PageImport-paperStack > i:first-child { rotate: -7deg; translate: -9px 3px; opacity: .55; }
+.PageImport-paperStack > i:nth-child(2) { rotate: 5deg; translate: 8px 1px; opacity: .72; }
+.PageImport-paperStack > div { background-image: repeating-linear-gradient(to bottom, transparent 0 17px, color-mix(in srgb, var(--muted) 14%, transparent) 17px 18px); overflow: hidden; }
+.PageImport .Eyebrow { margin: 0 0 7px; color: var(--accent-text); font-size: 10px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+.PageImport h2 { margin: 0; font-size: 20px; letter-spacing: -.015em; }
+.PageImport-file { max-width: 100%; overflow: hidden; margin: 8px 0 0; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.PageImport-detail { min-height: 18px; margin: 14px 0 0; color: var(--faint); font-size: 11.5px; line-height: 1.45; }
+.PageImport-progress { width: 100%; height: 4px; overflow: hidden; margin-top: 18px; border-radius: 999px; background: var(--surface); }
+.PageImport-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 280ms var(--ease-out); }
+.PageImport > small { margin-top: 12px; color: var(--faint); font-size: 10px; }
 .PDFErrorModalBackdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; background: rgb(15 15 15 / 28%); padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); pointer-events: auto; backdrop-filter: blur(10px); animation: pop-in 160ms var(--ease-swift) backwards; }
 .PDFErrorModal { display: grid; width: min(560px, 100%); max-height: calc(100dvh - max(40px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 80px rgb(15 15 15 / 24%), var(--shadow-border); pointer-events: auto; }
 .PDFErrorModal > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 18px 14px; }

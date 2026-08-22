@@ -16,6 +16,7 @@ import {
 	importDocumentToBoard,
 	listBoardDocuments,
 	retryDocumentProcessing,
+	type DocumentPlacement,
 	type PDFImportProgress,
 } from '../lib/pdfImport'
 import {
@@ -27,14 +28,21 @@ import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
 import { openCraftDocuments } from '../../craft/craftPreviewEvent'
 import { PDFDocumentLibrary } from './PDFDocumentLibrary'
 import { requestZenChatPrompt } from '../lib/zenChatPrompt'
+import { OPEN_DOCUMENT_IMPORT_EVENT } from '../lib/documentImportEvent'
 
 interface PDFImportControlProps {
 	boardID: string
 	editor: Editor | null
+	placement?: DocumentPlacement
 }
 
-export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
+export function PDFImportControl({
+	boardID,
+	editor,
+	placement = 'canvas',
+}: PDFImportControlProps) {
 	const [progress, setProgress] = useState<PDFImportProgress | null>(null)
+	const [activeFileName, setActiveFileName] = useState<string | null>(null)
 	const [error, setError] = useState<PDFImportFailure | null>(null)
 	const [failedDocuments, setFailedDocuments] = useState<DocumentSummary[]>([])
 	const [processingDocumentCount, setProcessingDocumentCount] = useState(0)
@@ -48,6 +56,12 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 		zen.registerImportPDF(() => inputRef.current?.click())
 		return () => zen.registerImportPDF(null)
 	}, [zen])
+
+	useEffect(() => {
+		const openFilePicker = () => inputRef.current?.click()
+		window.addEventListener(OPEN_DOCUMENT_IMPORT_EVENT, openFilePicker)
+		return () => window.removeEventListener(OPEN_DOCUMENT_IMPORT_EVENT, openFilePicker)
+	}, [])
 
 	const refreshDocuments = useCallback(async () => {
 		const response = await listBoardDocuments(boardID)
@@ -87,12 +101,29 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 	async function importFile(file: File) {
 		if (!editor || progress) return
 		setError(null)
+		setActiveFileName(file.name)
 		try {
-			await importDocumentToBoard(boardID, file, editor, setProgress)
+			const imported = await importDocumentToBoard(
+				boardID,
+				file,
+				editor,
+				setProgress,
+				{ placement }
+			)
+			setProgress({
+				completed: imported.pageCount,
+				documentID: imported.id,
+				stage: 'ready',
+				total: imported.pageCount,
+			})
 			await refreshDocuments()
-			window.setTimeout(() => setProgress(null), 2_500)
+			window.setTimeout(() => {
+				setProgress(null)
+				setActiveFileName(null)
+			}, 2_500)
 		} catch (caught) {
 			setProgress(null)
+			setActiveFileName(null)
 			setError(describePDFImportFailure(caught, {
 				browser: navigator.userAgent,
 				fileName: file.name,
@@ -195,6 +226,50 @@ export function PDFImportControl({ boardID, editor }: PDFImportControlProps) {
 					))}
 				</div>
 			) : null}
+			{placement === 'pages' && progress && activeFileName ? (
+				<PageImportInterstitial fileName={activeFileName} progress={progress} />
+			) : null}
+		</div>
+	)
+}
+
+function PageImportInterstitial({
+	fileName,
+	progress,
+}: {
+	fileName: string
+	progress: PDFImportProgress
+}) {
+	const percentage = getProgressPercentage(progress)
+	return (
+		<div className="PageImport-backdrop">
+			<section
+				aria-labelledby="page-import-title"
+				aria-live="polite"
+				className="PageImport"
+				role="status"
+			>
+				<div aria-hidden="true" className="PageImport-paperStack">
+					<i />
+					<i />
+					<div><ThinkingOrb size={64} state={getProgressOrbState(progress)} /></div>
+				</div>
+				<p className="Eyebrow">Building your notebook</p>
+				<h2 id="page-import-title">{formatProgress(progress)}</h2>
+				<p className="PageImport-file" title={fileName}>{fileName}</p>
+				<p className="PageImport-detail">{formatProgressDetail(progress)}</p>
+				<div
+					aria-label={`${percentage}% complete`}
+					aria-valuemax={100}
+					aria-valuemin={0}
+					aria-valuenow={percentage}
+					className="PageImport-progress"
+					role="progressbar"
+				>
+					<span style={{ width: `${percentage}%` }} />
+				</div>
+				<small>Keep this tab open while the pages settle in.</small>
+			</section>
 		</div>
 	)
 }
@@ -279,7 +354,27 @@ function formatProgress(progress: PDFImportProgress) {
 	if (progress.stage === 'original') return 'Saving original…'
 	if (progress.stage === 'pages') return `Importing ${progress.completed}/${progress.total}`
 	if (progress.stage === 'processing') return 'Pages added · indexing…'
-	return 'PDF ready'
+	return 'Pages ready'
+}
+
+function formatProgressDetail(progress: PDFImportProgress) {
+	if (progress.stage === 'uploading') return 'Uploading the original file securely.'
+	if (progress.stage === 'converting') return 'Turning the Office document into faithful pages.'
+	if (progress.stage === 'opening') return 'Reading the document structure.'
+	if (progress.stage === 'original') return 'Saving the original for download and citations.'
+	if (progress.stage === 'pages') return `Preparing page ${progress.completed} of ${progress.total}.`
+	if (progress.stage === 'processing') return 'Adding search, citations, and study context.'
+	return 'Your document is ready to annotate.'
+}
+
+function getProgressPercentage(progress: PDFImportProgress) {
+	if (progress.stage === 'ready') return 100
+	if (progress.stage === 'processing') return 94
+	if (progress.stage === 'pages') {
+		return Math.round(20 + (progress.completed / Math.max(1, progress.total)) * 70)
+	}
+	if (progress.stage === 'opening' || progress.stage === 'original') return 15
+	return 8
 }
 
 function getProgressOrbState(progress: PDFImportProgress): OrbState {

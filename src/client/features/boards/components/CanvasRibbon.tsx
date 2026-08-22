@@ -1,6 +1,7 @@
 import {
 	TEACH_BACK_SHAPE_TYPE,
 	appRoutes,
+	type BoardNoteMode,
 } from '@agentboard/shared'
 import {
 	IconAdjustmentsHorizontal,
@@ -172,7 +173,13 @@ const NAMED_TOOL_IDS = new Set(TOOL_GROUPS.flatMap((group) => group.tools).map((
  * else is one click deep. The bar is only as wide as its contents, so the player floats beside
  * it and the canvas keeps the rest of the width; the dock handle tucks the lot away.
  */
-export function CanvasRibbon({ boardID }: { boardID: string }) {
+export function CanvasRibbon({
+	boardID,
+	noteMode,
+}: {
+	boardID: string
+	noteMode: BoardNoteMode
+}) {
 	const chrome = useBoardChrome()
 	const editor = useEditor()
 	const { session } = useLockIn()
@@ -215,7 +222,7 @@ export function CanvasRibbon({ boardID }: { boardID: string }) {
 					<span aria-hidden="true" className="Ribbon-divider" />
 					{RIBBON_MENU_IDS.map((id) => (
 						<RibbonMenu key={id} {...menuProps(id)}>
-							{id === 'board' ? <BoardMenu boardID={boardID} /> : null}
+							{id === 'board' ? <BoardMenu boardID={boardID} noteMode={noteMode} /> : null}
 							{id === 'edit' ? <EditMenu /> : null}
 							{id === 'view' ? <ViewMenu closeMenu={() => setOpenMenu(null)} /> : null}
 						</RibbonMenu>
@@ -361,7 +368,7 @@ function RibbonMenu({
 	)
 }
 
-function BoardMenu({ boardID }: { boardID: string }) {
+function BoardMenu({ boardID, noteMode }: { boardID: string; noteMode: BoardNoteMode }) {
 	const editor = useEditor()
 	const chrome = useBoardChrome()
 	const { openSetup, session } = useLockIn()
@@ -381,7 +388,11 @@ function BoardMenu({ boardID }: { boardID: string }) {
 					label={chrome.didCopyBoardLink ? 'Link copied' : 'Copy space link'}
 					onSelect={chrome.copyBoardLink}
 				/>
-				<PDFImportControl boardID={boardID} editor={editor} />
+				<PDFImportControl
+					boardID={boardID}
+					editor={editor}
+					placement={noteMode === 'pages' ? 'pages' : 'canvas'}
+				/>
 				<LectureImportControl boardID={boardID} editor={editor} />
 			</RibbonSection>
 			<RibbonSection label="Export">
