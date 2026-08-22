@@ -1,4 +1,10 @@
-import { boardRoleSchema, type Board, type BoardRole } from '@agentboard/shared'
+import {
+	boardNoteModeSchema,
+	boardRoleSchema,
+	type Board,
+	type BoardNoteMode,
+	type BoardRole,
+} from '@agentboard/shared'
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import type { Database } from './client'
 import { board, boardMember } from './schema'
@@ -13,6 +19,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 		.select({
 			courseID: board.courseID,
 			id: board.id,
+			noteMode: board.noteMode,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -25,6 +32,7 @@ export async function listBoards(database: Database, userID: string): Promise<Bo
 
 	return rows.map((row) => ({
 		...row,
+		noteMode: boardNoteModeSchema.parse(row.noteMode),
 		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
@@ -37,6 +45,7 @@ export async function listArchivedBoards(database: Database, userID: string): Pr
 		.select({
 			courseID: board.courseID,
 			id: board.id,
+			noteMode: board.noteMode,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -53,18 +62,31 @@ export async function listArchivedBoards(database: Database, userID: string): Pr
 
 	return rows.map((row) => ({
 		...row,
+		noteMode: boardNoteModeSchema.parse(row.noteMode),
 		role: boardRoleSchema.parse(row.role),
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	}))
 }
 
-export async function createBoard(database: Database, userID: string, title: string): Promise<Board> {
+export async function createBoard(
+	database: Database,
+	userID: string,
+	title: string,
+	noteMode: BoardNoteMode
+): Promise<Board> {
 	const id = crypto.randomUUID()
 	const now = new Date()
 
 	await database.batch([
-		database.insert(board).values({ id, title, ownerID: userID, createdAt: now, updatedAt: now }),
+		database.insert(board).values({
+			id,
+			noteMode,
+			title,
+			ownerID: userID,
+			createdAt: now,
+			updatedAt: now,
+		}),
 		database
 			.insert(boardMember)
 			.values({ boardID: id, userID, role: 'owner', createdAt: now }),
@@ -73,6 +95,7 @@ export async function createBoard(database: Database, userID: string, title: str
 	return {
 		courseID: null,
 		id,
+		noteMode,
 		title,
 		role: 'owner',
 		createdAt: now.toISOString(),
@@ -104,6 +127,7 @@ export async function getBoard(database: Database, boardID: string, userID: stri
 		.select({
 			courseID: board.courseID,
 			id: board.id,
+			noteMode: board.noteMode,
 			title: board.title,
 			role: boardMember.role,
 			createdAt: board.createdAt,
@@ -117,6 +141,7 @@ export async function getBoard(database: Database, boardID: string, userID: stri
 	return row
 		? {
 				...row,
+				noteMode: boardNoteModeSchema.parse(row.noteMode),
 				role: boardRoleSchema.parse(row.role),
 				createdAt: row.createdAt.toISOString(),
 				updatedAt: row.updatedAt.toISOString(),

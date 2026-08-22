@@ -1,9 +1,12 @@
 import { z } from 'zod'
 import { boardRoleSchema } from './workspace'
 
+export const boardNoteModeSchema = z.enum(['canvas', 'pages'])
+
 export const boardSchema = z.object({
 	courseID: z.string().nullable(),
 	id: z.string(),
+	noteMode: boardNoteModeSchema,
 	title: z.string(),
 	role: boardRoleSchema,
 	createdAt: z.string(),
@@ -30,5 +33,6 @@ export const studyConversationSchema = z.object({
 })
 
 export type Board = z.infer<typeof boardSchema>
+export type BoardNoteMode = z.infer<typeof boardNoteModeSchema>
 export type PublicConfig = z.infer<typeof publicConfigSchema>
 export type StudyConversation = z.infer<typeof studyConversationSchema>
