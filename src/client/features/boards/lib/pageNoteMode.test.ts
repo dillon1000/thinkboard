@@ -14,5 +14,6 @@ describe('getCanvasOptions', () => {
 			bounds: { h: NOTE_PAGE_SIZE.h, w: NOTE_PAGE_SIZE.w, x: 0, y: 0 },
 			initialZoom: 'fit-min-100',
 		})
+		expect(options.maxPages).toBe(200)
 	})
 })

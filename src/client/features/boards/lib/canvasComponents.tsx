@@ -33,7 +33,7 @@ export function createCanvasComponents(
 			</>
 		),
 		/* The top-left slot is stretched to the full width in CSS; the ribbon owns that whole row. */
-		MenuPanel: () => <CanvasRibbon boardID={boardID} />,
+		MenuPanel: () => <CanvasRibbon boardID={boardID} noteMode={noteMode} />,
 		NavigationPanel: null,
 		StylePanel: null,
 		Toolbar: null,
