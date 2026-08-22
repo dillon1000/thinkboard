@@ -307,11 +307,26 @@ img { max-width: 100%; }
 .SectionHeading-menuContent button > svg { flex: 0 0 auto; color: var(--faint); }
 .SectionHeading-new { display: inline-flex; min-height: 26px; align-items: center; gap: 4px; margin-left: auto; border: 0; border-radius: 5px; background: transparent; padding: 0 7px; color: var(--muted); font-size: 12.5px; font-weight: 500; transition: background-color 140ms var(--ease-swift), color 140ms var(--ease-swift); }
 
-.NewBoard { display: flex; gap: 6px; overflow: hidden; margin: 4px 0 8px; border-radius: 6px; background: var(--panel); padding: 4px; box-shadow: var(--shadow-border); animation: pop-in 200ms var(--ease-swift) backwards; }
+.NewBoard { display: flex; align-items: end; gap: 6px; overflow: hidden; margin: 4px 0 8px; border-radius: 8px; background: var(--panel); padding: 6px; box-shadow: var(--shadow-border); animation: pop-in 200ms var(--ease-swift) backwards; }
+.NewBoard-fields { display: grid; min-width: 0; flex: 1; gap: 5px; }
 .NewBoard input { width: 100%; min-width: 0; min-height: 30px; border: 0; border-radius: 4px; background: transparent; padding: 0 8px; color: var(--ink); font-size: 13.5px; }
 .NewBoard input::placeholder, .StudyComposer textarea::placeholder { color: var(--faint); }
 .NewBoard input:focus-visible { outline: 0; }
 .NewBoard:focus-within { box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft); }
+.NewBoard-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 0; border: 0; padding: 0; }
+.NewBoard-mode legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.NewBoard-mode label { display: grid; min-width: 0; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 6px; border-radius: 6px; padding: 6px; color: var(--muted); cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); transition: background-color 140ms var(--ease-swift), box-shadow 140ms var(--ease-swift), color 140ms var(--ease-swift); }
+.NewBoard-mode label[data-selected='true'] { background: var(--accent-soft); color: var(--ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.NewBoard-mode input { position: absolute; width: 1px; min-height: 1px; opacity: 0; pointer-events: none; }
+.NewBoard-mode label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.NewBoard-modeIcon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 5px; background: var(--surface); color: var(--muted); }
+.NewBoard-mode label[data-selected='true'] .NewBoard-modeIcon { background: var(--panel); color: var(--accent-text); }
+.NewBoard-mode label > span:last-child { display: grid; min-width: 0; gap: 1px; }
+.NewBoard-mode strong { font-size: 11.5px; font-weight: 600; }
+.NewBoard-mode small { overflow: hidden; color: var(--faint); font-size: 10px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+
+.PageCanvas-background { position: absolute; inset: 0; background: var(--surface); }
+.NotePage-surface { pointer-events: none; background: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
 
 .BoardList { display: grid; margin: 2px -8px 0; }
 .BoardRow { position: relative; display: flex; min-width: 0; min-height: 38px; align-items: center; border-radius: 6px; animation: rise-in 300ms var(--ease-out) backwards; animation-delay: calc(var(--row-index, 0) * 24ms); transition: background-color 140ms var(--ease-swift); }
@@ -1868,6 +1883,8 @@ img { max-width: 100%; }
 	.Dashboard-greeting { font-size: 21px; }
 	.DueReviews { margin-bottom: 22px; }
 	.NewBoard { align-items: stretch; }
+	.NewBoard-mode { grid-template-columns: 1fr; }
+	.NewBoard-mode small { white-space: normal; }
 	.NewBoard .Button { padding-inline: 12px; }
 	.Ribbon-menuTrigger { padding-inline: 7px; }
 	.Ribbon-studyToggle { padding-inline: 7px; }

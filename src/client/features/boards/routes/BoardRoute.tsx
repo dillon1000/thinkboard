@@ -7,6 +7,7 @@ import {
 	examPracticeSetSchema,
 	publicConfigSchema,
 	type BoardRole,
+	type BoardNoteMode,
 	type ExamPracticeSet,
 	type PublicConfig,
 } from '@agentboard/shared'
@@ -33,11 +34,13 @@ import { CraftDocumentsController } from '../../craft/components/CraftDocumentsC
 import { ExamPracticeImport } from '../components/ExamPracticeImport'
 import { useCanvasArtifactIndex } from '../../study/lib/useCanvasArtifactIndex'
 import { focusLectureCitation } from '../../study/lib/lectureCitation'
+import { getCanvasOptions } from '../lib/pageNoteMode'
 
 interface BoardLoaderData {
 	configError: string | null
 	examPractice: ExamPracticeSet | null
 	examPracticeError: string | null
+	noteMode: BoardNoteMode
 	publicConfig: PublicConfig | null
 	role: BoardRole
 	title: string
@@ -70,6 +73,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			configError: null,
 			examPractice: examResult.practice,
 			examPracticeError: examResult.error,
+			noteMode: boardResponse?.board.noteMode ?? 'canvas',
 			publicConfig,
 			role: boardResponse?.board.role ?? 'viewer',
 			title: boardResponse?.board.title ?? 'Study space',
@@ -79,6 +83,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			configError: error instanceof Error ? error.message : 'Unable to load canvas configuration',
 			examPractice: null,
 			examPracticeError: null,
+			noteMode: 'canvas',
 			publicConfig: null,
 			role: 'viewer',
 			title: 'Study space',
@@ -93,7 +98,7 @@ export function Component() {
 	const session = authClient.useSession()
 	const { theme } = useTheme()
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const { configError, publicConfig, role, title } = initial
+	const { configError, noteMode, publicConfig, role, title } = initial
 	const [searchParameters, setSearchParameters] = useSearchParams()
 	const examID = searchParameters.get('examPlan')
 	const focusShapeID = searchParameters.get('focusShape')
@@ -102,7 +107,11 @@ export function Component() {
 	const focusLectureID = searchParameters.get('focusLecture')
 	const focusTime = Number(searchParameters.get('focusTime'))
 	const assets = useMemo(() => createMultiplayerAssetStore(resolvedBoardID), [resolvedBoardID])
-	const components = useMemo(() => createCanvasComponents(resolvedBoardID), [resolvedBoardID])
+	const components = useMemo(
+		() => createCanvasComponents(resolvedBoardID, noteMode),
+		[noteMode, resolvedBoardID]
+	)
+	const canvasOptions = useMemo(() => getCanvasOptions(noteMode), [noteMode])
 	useCanvasArtifactIndex(editor, resolvedBoardID, role !== 'viewer')
 
 	const store = useSync({
@@ -222,7 +231,7 @@ export function Component() {
 						shapeUtils={canvasShapeUtils}
 						tools={canvasTools}
 						overrides={canvasOverrides}
-						options={{ deepLinks: true }}
+						options={canvasOptions}
 						onMount={(editor) => {
 							setEditor(editor)
 							editor.user.updateUserPreferences({ colorScheme: theme })

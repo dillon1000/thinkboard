@@ -1,4 +1,4 @@
-import type { Board, Course, DueFlashcard } from '@agentboard/shared'
+import type { Board, BoardNoteMode, Course, DueFlashcard } from '@agentboard/shared'
 import { apiRoutes, appRoutes, boardSchema, courseSchema, dueFlashcardSchema } from '@agentboard/shared'
 import { usePostHog } from '@posthog/react'
 import {
@@ -9,6 +9,8 @@ import {
 	IconChevronDown,
 	IconDots,
 	IconEyeOff,
+	IconFileText,
+	IconInfinity,
 	IconLayoutBoard,
 	IconLayoutSidebarLeftCollapse,
 	IconLayoutSidebarLeftExpand,
@@ -19,7 +21,7 @@ import {
 	IconSettings,
 	IconSun,
 } from '@tabler/icons-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLoaderData, useNavigate } from 'react-router'
 import { Streamdown } from 'streamdown'
 import { z } from 'zod'
@@ -92,6 +94,7 @@ export function Component() {
 	const [archivedBoards, setArchivedBoards] = useState(initial.archivedBoards)
 	const [dueReviews, setDueReviews] = useState(initial.dueReviews)
 	const [title, setTitle] = useState('')
+	const [noteMode, setNoteMode] = useState<BoardNoteMode>('canvas')
 	const [error, setError] = useState(initial.error)
 	const [isCreating, setIsCreating] = useState(false)
 	const [isComposerOpen, setIsComposerOpen] = useState(false)
@@ -140,9 +143,9 @@ export function Component() {
 		try {
 			const response = await apiRequest(apiRoutes.boards, {
 				method: 'POST',
-				body: JSON.stringify({ title }),
+				body: JSON.stringify({ noteMode, title }),
 			}, z.object({ board: boardSchema }))
-			posthog?.capture('board_created')
+			posthog?.capture('board_created', { note_mode: noteMode })
 			navigate(appRoutes.board(response.board.id))
 		} catch (createError) {
 			setError(createError instanceof Error ? createError.message : 'Unable to create space')
@@ -331,23 +334,44 @@ export function Component() {
 
 						{isComposerOpen ? (
 							<form className="NewBoard" onSubmit={(event) => void handleCreate(event)}>
-								<input
-									aria-label="Space title"
-									autoFocus
-									autoComplete="off"
-									maxLength={120}
-									name="board-title"
-									onChange={(event) => setTitle(event.target.value)}
-									onKeyDown={(event) => {
-										if (event.key === 'Escape') {
-											setIsComposerOpen(false)
-											setTitle('')
-										}
-									}}
-									placeholder="Cell biology — midterm…"
-									required
-									value={title}
-								/>
+								<div className="NewBoard-fields">
+									<input
+										aria-label="Space title"
+										autoFocus
+										autoComplete="off"
+										maxLength={120}
+										name="board-title"
+										onChange={(event) => setTitle(event.target.value)}
+										onKeyDown={(event) => {
+											if (event.key === 'Escape') {
+												setIsComposerOpen(false)
+												setTitle('')
+											}
+										}}
+										placeholder="Cell biology — midterm…"
+										required
+										value={title}
+									/>
+									<fieldset className="NewBoard-mode">
+										<legend>Note-taking style</legend>
+										<NoteModeOption
+											description="An open surface for diagrams and spatial notes"
+											icon={<IconInfinity aria-hidden="true" size={17} stroke={1.7} />}
+											label="Canvas"
+											mode="canvas"
+											onChange={setNoteMode}
+											selectedMode={noteMode}
+										/>
+										<NoteModeOption
+											description="Portrait sheets for linear, page-by-page notes"
+											icon={<IconFileText aria-hidden="true" size={17} stroke={1.7} />}
+											label="Pages"
+											mode="pages"
+											onChange={setNoteMode}
+											selectedMode={noteMode}
+										/>
+									</fieldset>
+								</div>
 								<button className="Button Button--primary" disabled={isCreating || !title.trim()} type="submit">
 									{isCreating ? 'Creating…' : 'Create'}
 								</button>
@@ -363,7 +387,9 @@ export function Component() {
 									{boards.map((board, index) => (
 										<article className="BoardRow" key={board.id} style={cssVariables({ '--row-index': Math.min(index, 12) })}>
 											<Link className="BoardRow-main" to={appRoutes.board(board.id)}>
-												<span className="BoardRow-icon"><IconLayoutBoard aria-hidden="true" size={17} stroke={1.6} /></span>
+												<span className="BoardRow-icon">{board.noteMode === 'pages'
+													? <IconFileText aria-hidden="true" size={17} stroke={1.6} />
+													: <IconLayoutBoard aria-hidden="true" size={17} stroke={1.6} />}</span>
 												<span className="BoardRow-copy"><strong>{board.title}</strong><BoardMeta board={board} courses={courses} /></span>
 											</Link>
 											<div className="BoardRow-actions">
@@ -423,6 +449,38 @@ export function Component() {
 				/>
 			) : null}
 		</main>
+	)
+}
+
+interface NoteModeOptionProps {
+	description: string
+	icon: ReactNode
+	label: string
+	mode: BoardNoteMode
+	onChange: (mode: BoardNoteMode) => void
+	selectedMode: BoardNoteMode
+}
+
+function NoteModeOption({
+	description,
+	icon,
+	label,
+	mode,
+	onChange,
+	selectedMode,
+}: NoteModeOptionProps) {
+	return (
+		<label data-selected={selectedMode === mode}>
+			<input
+				checked={selectedMode === mode}
+				name="note-mode"
+				onChange={() => onChange(mode)}
+				type="radio"
+				value={mode}
+			/>
+			<span className="NewBoard-modeIcon">{icon}</span>
+			<span><strong>{label}</strong><small>{description}</small></span>
+		</label>
 	)
 }
 

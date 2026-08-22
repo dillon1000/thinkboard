@@ -1,9 +1,11 @@
+import type { BoardNoteMode } from '@agentboard/shared'
 import type { TLComponents } from 'tldraw'
 import { CanvasRibbon } from '../components/CanvasRibbon'
 import { InlinePrompt } from '../components/InlinePrompt'
 import { ZenRadialMenu } from '../components/ZenRadialMenu'
 import { LockInCanvasOverlay } from '../../lock-in/LockInCanvasOverlay'
 import { ProjectorModeLayer } from '../components/ProjectorModeLayer'
+import { NotePageSurface, PageCanvasBackground } from './pageNoteMode'
 
 /**
  * The canvas carries one piece of chrome: a ribbon along the top that absorbs everything that
@@ -15,8 +17,8 @@ import { ProjectorModeLayer } from '../components/ProjectorModeLayer'
  * Built per board because the ribbon and the cursor-side agent both need to know which board
  * they are acting on.
  */
-export function createCanvasComponents(boardID: string): TLComponents {
-	return {
+export function createCanvasComponents(boardID: string, noteMode: BoardNoteMode): TLComponents {
+	const components: TLComponents = {
 		HelpMenu: null,
 		InFrontOfTheCanvas: () => (
 			<>
@@ -33,4 +35,9 @@ export function createCanvasComponents(boardID: string): TLComponents {
 		Toolbar: null,
 		TopPanel: null,
 	}
+	if (noteMode === 'pages') {
+		components.Background = PageCanvasBackground
+		components.OnTheCanvas = NotePageSurface
+	}
+	return components
 }
