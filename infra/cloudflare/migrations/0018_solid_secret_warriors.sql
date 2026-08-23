@@ -1,0 +1,1 @@
+ALTER TABLE `board` ADD `pageOrientation` text DEFAULT 'portrait' NOT NULL;

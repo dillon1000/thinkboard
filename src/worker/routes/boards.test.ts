@@ -6,6 +6,7 @@ describe('readBoardCreateInput', () => {
 		const request = new Request('https://example.com/api/boards', {
 			body: JSON.stringify({
 				noteMode: 'pages',
+				pageOrientation: 'landscape',
 				pageTexture: 'grid',
 				title: '  Biology   notes  ',
 			}),
@@ -14,6 +15,7 @@ describe('readBoardCreateInput', () => {
 
 		await expect(readBoardCreateInput(request)).resolves.toEqual({
 			noteMode: 'pages',
+			pageOrientation: 'landscape',
 			pageTexture: 'grid',
 			title: 'Biology notes',
 		})
@@ -27,6 +29,7 @@ describe('readBoardCreateInput', () => {
 
 		await expect(readBoardCreateInput(request)).resolves.toEqual({
 			noteMode: 'canvas',
+			pageOrientation: 'portrait',
 			pageTexture: 'blank',
 			title: 'Physics',
 		})

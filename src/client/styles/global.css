@@ -336,7 +336,7 @@ img { max-width: 100%; }
 .NewBoard-texturePreview[data-texture='dots'] { background-image: radial-gradient(circle, var(--paper-mark) .7px, transparent .8px); background-size: 4px 4px; }
 
 .PageCanvas-background { position: absolute; inset: 0; background: var(--surface); }
-.NotePage-surface { --page-rule: color-mix(in srgb, var(--muted) 19%, transparent); position: relative; pointer-events: none; background-color: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
+.NotePage-surface { --page-rule: color-mix(in srgb, var(--muted) 19%, transparent); position: relative; width: 100%; height: 100%; overflow: hidden; pointer-events: none; background-color: var(--panel); box-shadow: 0 0 0 1px var(--line-strong), 0 12px 40px rgba(15, 15, 15, .14); }
 .NotePage-surface[data-texture='lined'] { background-image: linear-gradient(to right, transparent 0 68px, color-mix(in srgb, var(--danger) 32%, transparent) 68px 69px, transparent 69px), repeating-linear-gradient(to bottom, transparent 0 31px, var(--page-rule) 31px 32px); background-position: 0, 0 56px; }
 .NotePage-surface[data-texture='grid'] { background-image: repeating-linear-gradient(to right, transparent 0 23px, var(--page-rule) 23px 24px), repeating-linear-gradient(to bottom, transparent 0 23px, var(--page-rule) 23px 24px); }
 .NotePage-surface[data-texture='dots'] { background-image: radial-gradient(circle, var(--page-rule) 1.25px, transparent 1.4px); background-position: 12px 12px; background-size: 24px 24px; }

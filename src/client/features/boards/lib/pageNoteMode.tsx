@@ -1,56 +1,94 @@
-import type { BoardNoteMode, PageTexture } from '@agentboard/shared'
-import { MAX_PDF_PAGES } from '@agentboard/shared'
+import {
+	NOTE_PAGE_SHAPE_TYPE,
+	PDF_PAGE_SHAPE_TYPE,
+	notePageShapeProps,
+	type BoardNoteMode,
+	type NotePageShapeProps,
+	type PageOrientation,
+	type PageTexture,
+} from '@agentboard/shared'
 import { IconFileUpload } from '@tabler/icons-react'
-import { useEditor, useValue, type TldrawOptions } from 'tldraw'
+import {
+	BaseBoxShapeUtil,
+	HTMLContainer,
+	Rectangle2d,
+	createShapeId,
+	type Editor,
+	type TLShape,
+	type TldrawOptions,
+	useEditor,
+	useValue,
+} from 'tldraw'
 import { requestDocumentImport } from '../../study/lib/documentImportEvent'
 
-/** US Letter at 96 CSS pixels per inch; changing it changes every blank note sheet and camera. */
-export const NOTE_PAGE_SIZE = { h: 1_056, w: 816 } as const
+declare module '@tldraw/tlschema' {
+	interface TLGlobalShapePropsMap {
+		[NOTE_PAGE_SHAPE_TYPE]: NotePageShapeProps
+	}
+}
 
-const pageCamera = {
-	constraints: {
-		baseZoom: 'fit-min-100',
-		behavior: 'contain',
-		bounds: { h: NOTE_PAGE_SIZE.h, w: NOTE_PAGE_SIZE.w, x: 0, y: 0 },
-		initialZoom: 'fit-min-100',
-		origin: { x: 0.5, y: 0.5 },
-		padding: { x: 64, y: 64 },
-	},
-	wheelBehavior: 'pan',
-} satisfies Partial<TldrawOptions['camera']>
+export type NotePageShape = TLShape<typeof NOTE_PAGE_SHAPE_TYPE>
 
-/** Selects the camera model once when the editor mounts. Page spaces stay within one sheet. */
+/** US Letter at 96 CSS pixels per inch. */
+export const NOTE_PAGE_SIZES = {
+	landscape: { h: 816, w: 1_056 },
+	portrait: { h: 1_056, w: 816 },
+} as const
+export const NOTE_PAGE_SIZE = NOTE_PAGE_SIZES.portrait
+export const NOTE_PAGE_GAP = 96
+const NOTEBOOK_WIDTH = NOTE_PAGE_SIZES.landscape.w
+
+/** Page spaces use one tldraw canvas; notebook sheets are synchronized background shapes. */
 export function getCanvasOptions(noteMode: BoardNoteMode): Partial<TldrawOptions> {
 	return noteMode === 'pages'
-		? { camera: pageCamera, deepLinks: true, maxPages: MAX_PDF_PAGES }
+		? { deepLinks: true, maxPages: 1 }
 		: { deepLinks: true }
 }
 
-/** Replaces the infinite canvas background with a desk around the constrained page. */
 export function PageCanvasBackground() {
 	return <div className="PageCanvas-background" />
 }
 
-/** Renders beneath tldraw shapes in page coordinates, so zooming and panning move the paper. */
-export function NotePageSurface({ texture }: { texture: PageTexture }) {
+export class NotePageShapeUtil extends BaseBoxShapeUtil<NotePageShape> {
+	static override type = NOTE_PAGE_SHAPE_TYPE
+	static override props = notePageShapeProps
+
+	override canEdit() { return false }
+	override canResize() { return false }
+	override getDefaultProps(): NotePageShape['props'] {
+		return { ...NOTE_PAGE_SIZE, orientation: 'portrait', pageNumber: 1, texture: 'blank' }
+	}
+	override getGeometry(shape: NotePageShape) {
+		return new Rectangle2d({ height: shape.props.h, isFilled: false, width: shape.props.w })
+	}
+	override component(shape: NotePageShape) { return <NotePageSurface shape={shape} /> }
+	override getIndicatorPath(shape: NotePageShape) {
+		const path = new Path2D()
+		path.rect(0, 0, shape.props.w, shape.props.h)
+		return path
+	}
+}
+
+function NotePageSurface({ shape }: { shape: NotePageShape }) {
 	const editor = useEditor()
-	const isEmpty = useValue(
-		'current note page is empty',
-		() => editor.getCurrentPageShapeIds().size === 0,
+	const isNotebookEmpty = useValue(
+		'notebook has no student content',
+		() => editor.getCurrentPageShapes().every(({ type }) =>
+			type === NOTE_PAGE_SHAPE_TYPE || type === PDF_PAGE_SHAPE_TYPE
+		),
 		[editor]
 	)
 	return (
-		<div
-			aria-hidden="true"
+		<HTMLContainer
 			className="NotePage-surface"
-			data-texture={texture}
-			style={{ height: NOTE_PAGE_SIZE.h, width: NOTE_PAGE_SIZE.w }}
+			data-orientation={shape.props.orientation}
+			data-texture={shape.props.texture}
 		>
-			{isEmpty ? (
+			{shape.props.pageNumber === 1 && isNotebookEmpty ? (
 				<button
 					className="NotePage-useFile"
 					onClick={requestDocumentImport}
-					onPointerDown={editor.markEventAsHandled}
+					onPointerDown={(event) => event.stopPropagation()}
 					type="button"
 				>
 					<span><IconFileUpload aria-hidden="true" size={20} stroke={1.6} /></span>
@@ -58,6 +96,49 @@ export function NotePageSurface({ texture }: { texture: PageTexture }) {
 					<small>PDF, Word, or PowerPoint</small>
 				</button>
 			) : null}
-		</div>
+		</HTMLContainer>
+	)
+}
+
+export function ensureInitialNotePage(
+	editor: Editor,
+	texture: PageTexture,
+	orientation: PageOrientation
+) {
+	if (getNotebookPageShapes(editor).length) return
+	createNotePage(editor, texture, orientation, createShapeId('notebook-page-1'))
+}
+
+/** Adds a paper sheet below the current notebook without creating a tldraw page. */
+export function createNotePage(
+	editor: Editor,
+	texture: PageTexture,
+	orientation: PageOrientation,
+	id = createShapeId()
+) {
+	const pages = getNotebookPageShapes(editor)
+	const size = NOTE_PAGE_SIZES[orientation]
+	const y = pages.reduce((bottom, page) => {
+		const bounds = editor.getShapePageBounds(page)
+		return bounds ? Math.max(bottom, bounds.maxY + NOTE_PAGE_GAP) : bottom
+	}, 0)
+	const x = (NOTEBOOK_WIDTH - size.w) / 2
+	editor.markHistoryStoppingPoint('add notebook page')
+	editor.createShape({
+		id,
+		isLocked: true,
+		props: { ...size, orientation, pageNumber: pages.length + 1, texture },
+		type: NOTE_PAGE_SHAPE_TYPE,
+		x,
+		y,
+	})
+	editor.sendToBack([id])
+	editor.zoomToBounds({ ...size, x, y }, { animation: { duration: 220 }, inset: 56 })
+	return id
+}
+
+export function getNotebookPageShapes(editor: Editor) {
+	return editor.getCurrentPageShapes().filter(({ type }) =>
+		type === NOTE_PAGE_SHAPE_TYPE || type === PDF_PAGE_SHAPE_TYPE
 	)
 }

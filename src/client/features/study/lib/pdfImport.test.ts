@@ -145,23 +145,22 @@ describe('placePDFPages', () => {
 describe('placePDFPagesAsNotePages', () => {
 	it('turns source pages into locked note page backgrounds', () => {
 		const initialPage = { id: 'page:initial', name: 'Page 1' }
-		const createPage = vi.fn()
 		const createShapes = vi.fn()
-		const setCurrentPage = vi.fn()
-		const updatePage = vi.fn()
+		const deleteShapes = vi.fn()
+		const sendToBack = vi.fn()
 		const zoomToBounds = vi.fn()
 		const editor = editorFixture({
-			createPage,
 			createShapes,
-			deleteShapes: vi.fn(),
-			getPage: (pageID: string) => pageID === initialPage.id ? initialPage : undefined,
+			deleteShapes,
+			getCurrentPageId: () => initialPage.id,
+			getCurrentPageShapes: () => [{ id: 'shape:blank-page', type: 'agentboard-note-page' }],
 			getPageShapeIds: () => new Set(),
 			getPages: () => [initialPage],
 			getShape: vi.fn(),
+			getShapePageBounds: vi.fn(),
 			markHistoryStoppingPoint: vi.fn(),
 			run: (callback: () => void) => callback(),
-			setCurrentPage,
-			updatePage,
+			sendToBack,
 			zoomToBounds,
 		})
 
@@ -174,16 +173,15 @@ describe('placePDFPagesAsNotePages', () => {
 			]
 		)
 
-		expect(updatePage).toHaveBeenCalledWith({ id: initialPage.id, name: 'Lecture slides · 1' })
-		expect(createPage).toHaveBeenCalledWith(expect.objectContaining({ name: 'Lecture slides · 2' }))
+		expect(deleteShapes).toHaveBeenCalledWith(['shape:blank-page'])
 		const shapes = z.array(z.object({
 			isLocked: z.literal(true),
 			parentId: z.string(),
 			props: z.object({ h: z.number(), w: z.number() }),
 		})).parse(createShapes.mock.calls[0]?.[0])
 		expect(shapes[0]?.parentId).toBe(initialPage.id)
-		expect(shapes[0]?.props.w).toBe(816)
-		expect(setCurrentPage).toHaveBeenCalledWith(initialPage.id)
+		expect(shapes[0]?.props.w).toBe(1_056)
+		expect(sendToBack).toHaveBeenCalledOnce()
 		expect(zoomToBounds).toHaveBeenCalledOnce()
 	})
 })

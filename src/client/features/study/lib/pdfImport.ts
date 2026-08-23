@@ -3,6 +3,7 @@ import {
 	MAX_PDF_BYTES,
 	MAX_PDF_PAGE_IMAGE_BYTES,
 	MAX_PDF_PAGES,
+	NOTE_PAGE_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	apiRoutes,
 	documentStatusResponseSchema,
@@ -12,9 +13,13 @@ import {
 } from '@agentboard/shared'
 import type { PDFPageProxy } from 'pdfjs-dist'
 import { z } from 'zod'
-import { PageRecordType, createShapeId, isShapeId, type Editor } from 'tldraw'
+import { createShapeId, isShapeId, type Editor } from 'tldraw'
 import { loadPDFJS } from './pdfRuntime'
-import { NOTE_PAGE_SIZE } from '../../boards/lib/pageNoteMode'
+import {
+	NOTE_PAGE_GAP,
+	NOTE_PAGE_SIZES,
+	getNotebookPageShapes,
+} from '../../boards/lib/pageNoteMode'
 
 const MAX_RENDER_DIMENSION = 4_096
 const MAX_RENDER_PIXELS = 9_000_000
@@ -552,10 +557,7 @@ export function placePDFPages(
 	editor.zoomToSelection({ animation: { duration: 300 } })
 }
 
-/**
- * Uses tldraw pages as document pages. Each source page becomes a locked background shape, so
- * students can annotate above it while the page menu remains the document navigator.
- */
+/** Places document pages in the notebook stack on the current shared canvas. */
 export function placePDFPagesAsNotePages(
 	editor: Editor,
 	document: Pick<DocumentSummary, 'id' | 'title'>,
@@ -584,35 +586,40 @@ export function placePDFPagesAsNotePages(
 		return
 	}
 
-	const existingShapeIDs = new Set(existingShapes.map(({ id }) => id))
-	const reusablePages = editor.getPages().filter((page) => {
-		const shapeIDs = [...editor.getPageShapeIds(page)]
-		return shapeIDs.every((id) => existingShapeIDs.has(id))
-	})
-	const pageIDs = pages.map((_, index) =>
-		reusablePages[index]?.id ?? PageRecordType.createId()
+	const currentPageID = editor.getCurrentPageId()
+	const currentShapes = editor.getCurrentPageShapes()
+	const hasStudentContent = currentShapes.some(({ type }) =>
+		type !== NOTE_PAGE_SHAPE_TYPE && type !== PDF_PAGE_SHAPE_TYPE
 	)
-	const title = document.title.replace(/\.(pdf|docx|pptx)$/i, '')
+	const blankPageIDs = hasStudentContent
+		? []
+		: currentShapes.filter(({ type }) => type === NOTE_PAGE_SHAPE_TYPE).map(({ id }) => id)
+	const deletedIDs = new Set([...existingShapes.map(({ id }) => id), ...blankPageIDs])
+	const remainingPages = getNotebookPageShapes(editor).filter(({ id }) => !deletedIDs.has(id))
+	let y = remainingPages.reduce((bottom, page) => {
+		const bounds = editor.getShapePageBounds(page)
+		return bounds ? Math.max(bottom, bounds.maxY + NOTE_PAGE_GAP) : bottom
+	}, 0)
+	const shapeIDs = pages.map(() => createShapeId())
+	const notebookWidth = NOTE_PAGE_SIZES.landscape.w
 
 	editor.markHistoryStoppingPoint('use file as pages')
 	editor.run(() => {
-		if (existingShapes.length) editor.deleteShapes(existingShapes.map(({ id }) => id))
-		for (const [index, pageID] of pageIDs.entries()) {
-			const name = `${title} · ${index + 1}`
-			if (editor.getPage(pageID)) editor.updatePage({ id: pageID, name })
-			else editor.createPage({ id: pageID, name })
-		}
+		if (deletedIDs.size) editor.deleteShapes([...deletedIDs])
 		editor.createShapes(pages.map((page, index) => {
+			const target = page.width > page.height
+				? NOTE_PAGE_SIZES.landscape
+				: NOTE_PAGE_SIZES.portrait
 			const scale = Math.min(
-				NOTE_PAGE_SIZE.w / page.width,
-				NOTE_PAGE_SIZE.h / page.height
+				target.w / page.width,
+				target.h / page.height
 			)
 			const w = page.width * scale
 			const h = page.height * scale
-			return {
-				id: createShapeId(),
+			const shape = {
+				id: shapeIDs[index],
 				isLocked: true,
-				parentId: pageIDs[index],
+				parentId: currentPageID,
 				props: {
 					documentId: document.id,
 					h,
@@ -621,25 +628,27 @@ export function placePDFPagesAsNotePages(
 					w,
 				},
 				type: PDF_PAGE_SHAPE_TYPE,
-				x: (NOTE_PAGE_SIZE.w - w) / 2,
-				y: (NOTE_PAGE_SIZE.h - h) / 2,
+				x: (notebookWidth - w) / 2,
+				y,
 			}
+			y += h + NOTE_PAGE_GAP
+			return shape
 		}))
+		editor.sendToBack(shapeIDs)
 	}, { ignoreShapeLock: true })
-	editor.setCurrentPage(pageIDs[0])
+	const firstShape = editor.getShape(shapeIDs[0])
+	const firstBounds = firstShape ? editor.getShapePageBounds(firstShape) : null
 	editor.zoomToBounds(
-		{ h: NOTE_PAGE_SIZE.h, w: NOTE_PAGE_SIZE.w, x: 0, y: 0 },
+		firstBounds ?? { ...NOTE_PAGE_SIZES.portrait, x: 0, y: 0 },
 		{ animation: { duration: 300 }, inset: 64 }
 	)
 }
 
 function assertNotePageCapacity(editor: Editor, sourcePageCount: number) {
-	const occupiedPageCount = editor.getPages().filter((page) =>
-		editor.getPageShapeIds(page).size > 0
-	).length
-	if (sourcePageCount + occupiedPageCount <= editor.options.maxPages) return
+	const occupiedPageCount = getNotebookPageShapes(editor).length
+	if (sourcePageCount + occupiedPageCount <= MAX_PDF_PAGES) return
 	throw new Error(
-		`This file needs ${sourcePageCount} pages, but this space has room for ${editor.options.maxPages - occupiedPageCount}.`
+		`This file needs ${sourcePageCount} pages, but this space has room for ${MAX_PDF_PAGES - occupiedPageCount}.`
 	)
 }
 

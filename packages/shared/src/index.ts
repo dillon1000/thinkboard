@@ -212,6 +212,7 @@ export {
 	REVIEW_SHAPE_TYPE,
 	WALKTHROUGH_SHAPE_TYPE,
 	MATH_SHAPE_TYPE,
+	NOTE_PAGE_SHAPE_TYPE,
 	PDF_PAGE_SHAPE_TYPE,
 	TEACH_BACK_SHAPE_TYPE,
 	LECTURE_SHAPE_TYPE,
@@ -229,6 +230,8 @@ export {
 	equationProposalSchema,
 	mathShapeProps,
 	mathShapeValidator,
+	notePageShapeProps,
+	notePageShapeValidator,
 	normalizeEquationLatex,
 	practiceSetProposalSchema,
 	pdfSourceReferenceSchema,
@@ -255,6 +258,7 @@ export type {
 	FlashcardProposal,
 	FlashcardShapeProps,
 	MathShapeProps,
+	NotePageShapeProps,
 	PracticeSetProposal,
 	PDFSourceReference,
 	QuizProposal,
@@ -271,11 +275,12 @@ export type {
 export {
 	boardNoteModeSchema,
 	boardSchema,
+	pageOrientationSchema,
 	pageTextureSchema,
 	publicConfigSchema,
 	studyConversationSchema,
 } from './types'
-export type { Board, BoardNoteMode, PageTexture, PublicConfig, StudyConversation } from './types'
+export type { Board, BoardNoteMode, PageOrientation, PageTexture, PublicConfig, StudyConversation } from './types'
 export {
 	boardCourseUpdateSchema,
 	boardRoleSchema,

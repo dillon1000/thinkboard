@@ -127,6 +127,13 @@
       "when": 1787432494672,
       "tag": "0017_stale_firedrake",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1787469403936,
+      "tag": "0018_solid_secret_warriors",
+      "breakpoints": true
     }
   ]
 }

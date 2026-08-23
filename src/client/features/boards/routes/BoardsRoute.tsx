@@ -3,6 +3,7 @@ import type {
 	BoardNoteMode,
 	Course,
 	DueFlashcard,
+	PageOrientation,
 	PageTexture,
 } from '@agentboard/shared'
 import { apiRoutes, appRoutes, boardSchema, courseSchema, dueFlashcardSchema } from '@agentboard/shared'
@@ -24,6 +25,7 @@ import {
 	IconPencil,
 	IconPlus,
 	IconRestore,
+	IconRectangleVertical,
 	IconSettings,
 	IconSun,
 } from '@tabler/icons-react'
@@ -101,6 +103,7 @@ export function Component() {
 	const [dueReviews, setDueReviews] = useState(initial.dueReviews)
 	const [title, setTitle] = useState('')
 	const [noteMode, setNoteMode] = useState<BoardNoteMode>('canvas')
+	const [pageOrientation, setPageOrientation] = useState<PageOrientation>('portrait')
 	const [pageTexture, setPageTexture] = useState<PageTexture>('blank')
 	const [error, setError] = useState(initial.error)
 	const [isCreating, setIsCreating] = useState(false)
@@ -150,10 +153,11 @@ export function Component() {
 		try {
 			const response = await apiRequest(apiRoutes.boards, {
 				method: 'POST',
-				body: JSON.stringify({ noteMode, pageTexture, title }),
+				body: JSON.stringify({ noteMode, pageOrientation, pageTexture, title }),
 			}, z.object({ board: boardSchema }))
 			posthog?.capture('board_created', {
 				note_mode: noteMode,
+				page_orientation: noteMode === 'pages' ? pageOrientation : null,
 				page_texture: noteMode === 'pages' ? pageTexture : null,
 			})
 			navigate(appRoutes.board(response.board.id))
@@ -381,9 +385,31 @@ export function Component() {
 											selectedMode={noteMode}
 										/>
 									</fieldset>
-									{noteMode === 'pages' ? (
-										<fieldset className="NewBoard-texture">
-											<legend>Paper</legend>
+								{noteMode === 'pages' ? (
+									<>
+									<fieldset className="NewBoard-texture">
+										<legend>Orientation</legend>
+										{(['portrait', 'landscape'] as const).map((orientation) => (
+											<label data-selected={pageOrientation === orientation} key={orientation}>
+												<input
+													checked={pageOrientation === orientation}
+													name="page-orientation"
+													onChange={() => setPageOrientation(orientation)}
+													type="radio"
+													value={orientation}
+												/>
+												<IconRectangleVertical
+													aria-hidden="true"
+													size={15}
+													stroke={1.6}
+													style={{ rotate: orientation === 'landscape' ? '90deg' : undefined }}
+												/>
+												<span>{orientation === 'portrait' ? 'Portrait' : 'Landscape'}</span>
+											</label>
+										))}
+									</fieldset>
+									<fieldset className="NewBoard-texture">
+										<legend>Paper</legend>
 											{PAGE_TEXTURE_OPTIONS.map((option) => (
 												<label data-selected={pageTexture === option.value} key={option.value}>
 													<input
@@ -396,9 +422,10 @@ export function Component() {
 													<span aria-hidden="true" className="NewBoard-texturePreview" data-texture={option.value} />
 													<span>{option.label}</span>
 												</label>
-											))}
-										</fieldset>
-									) : null}
+										))}
+									</fieldset>
+									</>
+								) : null}
 								</div>
 								<button className="Button Button--primary" disabled={isCreating || !title.trim()} type="submit">
 									{isCreating ? 'Creating…' : 'Create'}

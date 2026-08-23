@@ -8,6 +8,7 @@ import {
 	publicConfigSchema,
 	type BoardRole,
 	type BoardNoteMode,
+	type PageOrientation,
 	type PageTexture,
 	type ExamPracticeSet,
 	type PublicConfig,
@@ -20,6 +21,7 @@ import { authClient } from '../../../lib/authClient'
 import { apiRequest } from '../../../lib/api'
 import { BoardShell } from '../components/BoardShell'
 import { StudyPanel } from '../../study/components/StudyPanel'
+import { PDFImportControl } from '../../study/components/PDFImportControl'
 import { canvasShapeUtils, synchronizedShapeUtils } from '../lib/canvasShapes'
 import { createCanvasComponents } from '../lib/canvasComponents'
 import { canvasOverrides, canvasTools } from '../lib/canvasOverrides'
@@ -35,13 +37,14 @@ import { CraftDocumentsController } from '../../craft/components/CraftDocumentsC
 import { ExamPracticeImport } from '../components/ExamPracticeImport'
 import { useCanvasArtifactIndex } from '../../study/lib/useCanvasArtifactIndex'
 import { focusLectureCitation } from '../../study/lib/lectureCitation'
-import { getCanvasOptions } from '../lib/pageNoteMode'
+import { ensureInitialNotePage, getCanvasOptions } from '../lib/pageNoteMode'
 
 interface BoardLoaderData {
 	configError: string | null
 	examPractice: ExamPracticeSet | null
 	examPracticeError: string | null
 	noteMode: BoardNoteMode
+	pageOrientation: PageOrientation
 	pageTexture: PageTexture
 	publicConfig: PublicConfig | null
 	role: BoardRole
@@ -76,6 +79,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			examPractice: examResult.practice,
 			examPracticeError: examResult.error,
 			noteMode: boardResponse?.board.noteMode ?? 'canvas',
+			pageOrientation: boardResponse?.board.pageOrientation ?? 'portrait',
 			pageTexture: boardResponse?.board.pageTexture ?? 'blank',
 			publicConfig,
 			role: boardResponse?.board.role ?? 'viewer',
@@ -87,6 +91,7 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<B
 			examPractice: null,
 			examPracticeError: null,
 			noteMode: 'canvas',
+			pageOrientation: 'portrait',
 			pageTexture: 'blank',
 			publicConfig: null,
 			role: 'viewer',
@@ -102,7 +107,7 @@ export function Component() {
 	const session = authClient.useSession()
 	const { theme } = useTheme()
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const { configError, noteMode, pageTexture, publicConfig, role, title } = initial
+	const { configError, noteMode, pageOrientation, pageTexture, publicConfig, role, title } = initial
 	const [searchParameters, setSearchParameters] = useSearchParams()
 	const examID = searchParameters.get('examPlan')
 	const focusShapeID = searchParameters.get('focusShape')
@@ -129,6 +134,11 @@ export function Component() {
 		if (!editor) return
 		editor.user.updateUserPreferences({ colorScheme: theme })
 	}, [editor, theme])
+
+	useEffect(() => {
+		if (!editor || noteMode !== 'pages' || role === 'viewer') return
+		ensureInitialNotePage(editor, pageTexture, pageOrientation)
+	}, [editor, noteMode, pageOrientation, pageTexture, role])
 
 	useEffect(() => {
 		if (
@@ -243,6 +253,12 @@ export function Component() {
 							editor.updateInstanceState({ isReadonly: role === 'viewer' })
 							editor.registerExternalAssetHandler('url', getBookmarkPreview)
 						}}
+					/>
+					<PDFImportControl
+						boardID={boardID}
+						editor={editor}
+						placement={noteMode === 'pages' ? 'pages' : 'canvas'}
+						showMenuItems={false}
 					/>
 					{editor && examID && role !== 'viewer' ? (
 						<ExamPracticeImport

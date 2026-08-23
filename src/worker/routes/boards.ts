@@ -12,7 +12,7 @@ import { createDatabase } from '../db/client'
 import { requireSession } from '../auth/session'
 import type { IRequest } from 'itty-router'
 import { z } from 'zod'
-import { boardNoteModeSchema, pageTextureSchema } from '@agentboard/shared'
+import { boardNoteModeSchema, pageOrientationSchema, pageTextureSchema } from '@agentboard/shared'
 
 const MAX_TITLE_LENGTH = 120
 
@@ -44,6 +44,7 @@ export async function handleBoardCreate(request: IRequest, env: Env) {
 		authentication.session.user.id,
 		input.title,
 		input.noteMode,
+		input.pageOrientation,
 		input.pageTexture
 	)
 	return Response.json({ board: createdBoard }, { status: 201 })
@@ -119,6 +120,7 @@ export async function readBoardCreateInput(request: Request) {
 	const body = await request.json().catch(() => null)
 	const parsed = z.object({
 		noteMode: boardNoteModeSchema.default('canvas'),
+		pageOrientation: pageOrientationSchema.default('portrait'),
 		pageTexture: pageTextureSchema.default('blank'),
 		title: z.string(),
 	}).safeParse(body)
@@ -127,6 +129,7 @@ export async function readBoardCreateInput(request: Request) {
 	return title
 		? {
 				noteMode: parsed.data.noteMode,
+				pageOrientation: parsed.data.pageOrientation,
 				pageTexture: parsed.data.pageTexture,
 				title: title.slice(0, MAX_TITLE_LENGTH),
 			}

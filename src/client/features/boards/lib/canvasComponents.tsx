@@ -5,7 +5,7 @@ import { InlinePrompt } from '../components/InlinePrompt'
 import { ZenRadialMenu } from '../components/ZenRadialMenu'
 import { LockInCanvasOverlay } from '../../lock-in/LockInCanvasOverlay'
 import { ProjectorModeLayer } from '../components/ProjectorModeLayer'
-import { NotePageSurface, PageCanvasBackground } from './pageNoteMode'
+import { PageCanvasBackground } from './pageNoteMode'
 
 /**
  * The canvas carries one piece of chrome: a ribbon along the top that absorbs everything that
@@ -33,7 +33,13 @@ export function createCanvasComponents(
 			</>
 		),
 		/* The top-left slot is stretched to the full width in CSS; the ribbon owns that whole row. */
-		MenuPanel: () => <CanvasRibbon boardID={boardID} noteMode={noteMode} />,
+		MenuPanel: () => (
+			<CanvasRibbon
+				boardID={boardID}
+				noteMode={noteMode}
+				pageTexture={pageTexture}
+			/>
+		),
 		NavigationPanel: null,
 		StylePanel: null,
 		Toolbar: null,
@@ -41,7 +47,6 @@ export function createCanvasComponents(
 	}
 	if (noteMode === 'pages') {
 		components.Background = PageCanvasBackground
-		components.OnTheCanvas = () => <NotePageSurface texture={pageTexture} />
 	}
 	return components
 }

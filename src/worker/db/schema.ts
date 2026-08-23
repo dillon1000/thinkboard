@@ -92,6 +92,9 @@ export const board = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
 		noteMode: text('noteMode', { enum: ['canvas', 'pages'] }).notNull().default('canvas'),
+		pageOrientation: text('pageOrientation', { enum: ['portrait', 'landscape'] })
+			.notNull()
+			.default('portrait'),
 		pageTexture: text('pageTexture', { enum: ['blank', 'lined', 'grid', 'dots'] })
 			.notNull()
 			.default('blank'),

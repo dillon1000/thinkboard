@@ -11,6 +11,7 @@ export const QUIZ_SHAPE_TYPE = 'agentboard-quiz' as const
 export const REVIEW_SHAPE_TYPE = 'agentboard-review' as const
 export const WALKTHROUGH_SHAPE_TYPE = 'agentboard-walkthrough' as const
 export const MATH_SHAPE_TYPE = 'agentboard-math' as const
+export const NOTE_PAGE_SHAPE_TYPE = 'agentboard-note-page' as const
 export const PDF_PAGE_SHAPE_TYPE = 'pdf-page' as const
 export const TEACH_BACK_SHAPE_TYPE = 'agentboard-teach-back' as const
 export const LECTURE_SHAPE_TYPE = 'agentboard-lecture' as const
@@ -78,6 +79,14 @@ export interface MathShapeProps {
 	latex: string
 	fontSize: number
 	schemaVersion: number
+}
+
+export interface NotePageShapeProps {
+	w: number
+	h: number
+	orientation: 'portrait' | 'landscape'
+	pageNumber: number
+	texture: 'blank' | 'lined' | 'grid' | 'dots'
 }
 
 export interface PDFPageShapeProps {
@@ -167,6 +176,14 @@ export const mathShapeProps = {
 	schemaVersion: T.positiveInteger,
 }
 
+export const notePageShapeProps = {
+	w: T.number,
+	h: T.number,
+	orientation: T.literalEnum('portrait', 'landscape'),
+	pageNumber: T.positiveInteger,
+	texture: T.literalEnum('blank', 'lined', 'grid', 'dots'),
+}
+
 export const pdfPageShapeProps = {
 	documentId: T.string,
 	pageNumber: T.positiveInteger,
@@ -240,6 +257,7 @@ export const reviewShapeValidator = T.object(reviewShapeProps)
 export const walkthroughShapeValidator = T.object(walkthroughShapeProps)
 export const conceptMapShapeValidator = T.object(conceptMapShapeProps)
 export const mathShapeValidator = T.object(mathShapeProps)
+export const notePageShapeValidator = T.object(notePageShapeProps)
 export const pdfPageShapeValidator = T.object(pdfPageShapeProps)
 export const teachBackShapeValidator = T.object(teachBackShapeProps)
 export const lectureShapeValidator = T.object(lectureShapeProps)
@@ -251,6 +269,7 @@ export const studyShapeSchemas = {
 	[REVIEW_SHAPE_TYPE]: { props: reviewShapeProps },
 	[WALKTHROUGH_SHAPE_TYPE]: { props: walkthroughShapeProps },
 	[MATH_SHAPE_TYPE]: { props: mathShapeProps },
+	[NOTE_PAGE_SHAPE_TYPE]: { props: notePageShapeProps },
 	[PDF_PAGE_SHAPE_TYPE]: { migrations: pdfPageShapeMigrations, props: pdfPageShapeProps },
 	[TEACH_BACK_SHAPE_TYPE]: { props: teachBackShapeProps },
 	[LECTURE_SHAPE_TYPE]: { props: lectureShapeProps },

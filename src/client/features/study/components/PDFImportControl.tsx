@@ -28,18 +28,23 @@ import { useBoardChrome } from '../../boards/lib/BoardChromeProvider'
 import { openCraftDocuments } from '../../craft/craftPreviewEvent'
 import { PDFDocumentLibrary } from './PDFDocumentLibrary'
 import { requestZenChatPrompt } from '../lib/zenChatPrompt'
-import { OPEN_DOCUMENT_IMPORT_EVENT } from '../lib/documentImportEvent'
+import {
+	OPEN_DOCUMENT_IMPORT_EVENT,
+	OPEN_DOCUMENT_LIBRARY_EVENT,
+} from '../lib/documentImportEvent'
 
 interface PDFImportControlProps {
 	boardID: string
 	editor: Editor | null
 	placement?: DocumentPlacement
+	showMenuItems?: boolean
 }
 
 export function PDFImportControl({
 	boardID,
 	editor,
 	placement = 'canvas',
+	showMenuItems = true,
 }: PDFImportControlProps) {
 	const [progress, setProgress] = useState<PDFImportProgress | null>(null)
 	const [activeFileName, setActiveFileName] = useState<string | null>(null)
@@ -61,6 +66,12 @@ export function PDFImportControl({
 		const openFilePicker = () => inputRef.current?.click()
 		window.addEventListener(OPEN_DOCUMENT_IMPORT_EVENT, openFilePicker)
 		return () => window.removeEventListener(OPEN_DOCUMENT_IMPORT_EVENT, openFilePicker)
+	}, [])
+
+	useEffect(() => {
+		const openLibrary = () => setIsLibraryOpen(true)
+		window.addEventListener(OPEN_DOCUMENT_LIBRARY_EVENT, openLibrary)
+		return () => window.removeEventListener(OPEN_DOCUMENT_LIBRARY_EVENT, openLibrary)
 	}, [])
 
 	const refreshDocuments = useCallback(async () => {
@@ -161,44 +172,48 @@ export function PDFImportControl({
 				ref={inputRef}
 				type="file"
 			/>
-			<button
-				className="RibbonMenu-item PDFImportButton"
-				disabled={!editor || Boolean(progress)}
-				onClick={() => inputRef.current?.click()}
-				title="Import PDF, Word, or PowerPoint pages into this space"
-				type="button"
-			>
-				<span aria-hidden="true" className="RibbonMenu-itemIcon">
-					{progress && progress.stage !== 'ready' ? (
-						<ThinkingOrb size={20} state={getProgressOrbState(progress)} />
-					) : (
-						<IconFileTypePdf size={17} stroke={1.7} />
-					)}
-				</span>
-				<span aria-live="polite">{progressLabel ?? 'Import file'}</span>
-			</button>
-				<button
-					className="RibbonMenu-item CraftDocuments-trigger"
-					onClick={() => setIsLibraryOpen(true)}
-					title="Manage imported documents in this space"
-					type="button"
-				>
-					<span aria-hidden="true" className="RibbonMenu-itemIcon">
-						<IconLibrary size={17} stroke={1.7} />
-					</span>
-					<span>Document library</span>
-				</button>
-				<button
-					className="RibbonMenu-item CraftDocuments-trigger"
-					onClick={openCraftDocuments}
-				title="Link Craft documents to this space"
-				type="button"
-			>
-				<span aria-hidden="true" className="RibbonMenu-itemIcon">
-					<IconBrandCraft size={17} stroke={1.7} />
-				</span>
-				<span>Craft documents</span>
-			</button>
+			{showMenuItems ? (
+				<>
+					<button
+						className="RibbonMenu-item PDFImportButton"
+						disabled={!editor || Boolean(progress)}
+						onClick={() => inputRef.current?.click()}
+						title="Import PDF, Word, or PowerPoint pages into this space"
+						type="button"
+					>
+						<span aria-hidden="true" className="RibbonMenu-itemIcon">
+							{progress && progress.stage !== 'ready' ? (
+								<ThinkingOrb size={20} state={getProgressOrbState(progress)} />
+							) : (
+								<IconFileTypePdf size={17} stroke={1.7} />
+							)}
+						</span>
+						<span aria-live="polite">{progressLabel ?? 'Import file'}</span>
+					</button>
+					<button
+						className="RibbonMenu-item CraftDocuments-trigger"
+						onClick={() => setIsLibraryOpen(true)}
+						title="Manage imported documents in this space"
+						type="button"
+					>
+						<span aria-hidden="true" className="RibbonMenu-itemIcon">
+							<IconLibrary size={17} stroke={1.7} />
+						</span>
+						<span>Document library</span>
+					</button>
+					<button
+						className="RibbonMenu-item CraftDocuments-trigger"
+						onClick={openCraftDocuments}
+						title="Link Craft documents to this space"
+						type="button"
+					>
+						<span aria-hidden="true" className="RibbonMenu-itemIcon">
+							<IconBrandCraft size={17} stroke={1.7} />
+						</span>
+						<span>Craft documents</span>
+					</button>
+				</>
+			) : null}
 				{error ? <PDFImportErrorModal error={error} onClose={() => setError(null)} /> : null}
 				{isLibraryOpen ? (
 					<PDFDocumentLibrary

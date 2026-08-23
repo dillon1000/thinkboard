@@ -2,12 +2,14 @@ import {
 	TEACH_BACK_SHAPE_TYPE,
 	appRoutes,
 	type BoardNoteMode,
+	type PageTexture,
 } from '@agentboard/shared'
 import {
 	IconAdjustmentsHorizontal,
 	IconArrowBackUp,
 	IconArrowForwardUp,
 	IconArrowNarrowRight,
+	IconBrandCraft,
 	IconCheck,
 	IconChevronRight,
 	IconCircle,
@@ -34,6 +36,7 @@ import {
 	IconPlayerPlay,
 	IconPlus,
 	IconPointer,
+	IconRectangleVertical,
 	IconShape,
 	IconSquare,
 	IconSun,
@@ -75,7 +78,6 @@ import {
 	getLockInRemainingMS,
 } from '../../lock-in/lib/lockInSession'
 import { SpotifyPlayer } from '../../spotify/components/SpotifyPlayer'
-import { PDFImportControl } from '../../study/components/PDFImportControl'
 import { useBoardChrome } from '../lib/BoardChromeProvider'
 import { useZenMode } from '../lib/ZenModeProvider'
 import { useProjectorMode } from '../lib/ProjectorModeProvider'
@@ -92,6 +94,12 @@ import { HandwritingCheckDialog } from '../../study/components/HandwritingCheckD
 import { capturePDFTextSelection } from '../../study/lib/pdfTextSelection'
 import { cssVariables } from '../../../lib/styleTypes'
 import { LectureImportControl } from '../../study/components/LectureImportControl'
+import { openCraftDocuments } from '../../craft/craftPreviewEvent'
+import {
+	requestDocumentImport,
+	requestDocumentLibrary,
+} from '../../study/lib/documentImportEvent'
+import { createNotePage } from '../lib/pageNoteMode'
 import {
 	collectSpaceFlashcards,
 	downloadFlashcardAnkiText,
@@ -176,9 +184,11 @@ const NAMED_TOOL_IDS = new Set(TOOL_GROUPS.flatMap((group) => group.tools).map((
 export function CanvasRibbon({
 	boardID,
 	noteMode,
+	pageTexture,
 }: {
 	boardID: string
 	noteMode: BoardNoteMode
+	pageTexture: PageTexture
 }) {
 	const chrome = useBoardChrome()
 	const editor = useEditor()
@@ -217,12 +227,18 @@ export function CanvasRibbon({
 					{/* tldraw's board and page menus are already dropdowns; they join the bar as they are. */}
 					<div className="Ribbon-slot">
 						<DefaultMainMenu />
-						<DefaultPageMenu />
+						{noteMode === 'canvas' ? <DefaultPageMenu /> : null}
 					</div>
 					<span aria-hidden="true" className="Ribbon-divider" />
 					{RIBBON_MENU_IDS.map((id) => (
 						<RibbonMenu key={id} {...menuProps(id)}>
-							{id === 'board' ? <BoardMenu boardID={boardID} noteMode={noteMode} /> : null}
+							{id === 'board' ? (
+								<BoardMenu
+									boardID={boardID}
+									noteMode={noteMode}
+									pageTexture={pageTexture}
+								/>
+							) : null}
 							{id === 'edit' ? <EditMenu /> : null}
 							{id === 'view' ? <ViewMenu closeMenu={() => setOpenMenu(null)} /> : null}
 						</RibbonMenu>
@@ -368,7 +384,15 @@ function RibbonMenu({
 	)
 }
 
-function BoardMenu({ boardID, noteMode }: { boardID: string; noteMode: BoardNoteMode }) {
+function BoardMenu({
+	boardID,
+	noteMode,
+	pageTexture,
+}: {
+	boardID: string
+	noteMode: BoardNoteMode
+	pageTexture: PageTexture
+}) {
 	const editor = useEditor()
 	const chrome = useBoardChrome()
 	const { openSetup, session } = useLockIn()
@@ -388,13 +412,37 @@ function BoardMenu({ boardID, noteMode }: { boardID: string; noteMode: BoardNote
 					label={chrome.didCopyBoardLink ? 'Link copied' : 'Copy space link'}
 					onSelect={chrome.copyBoardLink}
 				/>
-				<PDFImportControl
-					boardID={boardID}
-					editor={editor}
-					placement={noteMode === 'pages' ? 'pages' : 'canvas'}
+				<RibbonItem
+					icon={<IconFileTypePdf size={17} stroke={1.7} />}
+					label="Import file"
+					onSelect={requestDocumentImport}
+				/>
+				<RibbonItem
+					icon={<IconMap size={17} stroke={1.7} />}
+					label="Document library"
+					onSelect={requestDocumentLibrary}
+				/>
+				<RibbonItem
+					icon={<IconBrandCraft size={17} stroke={1.7} />}
+					label="Craft documents"
+					onSelect={openCraftDocuments}
 				/>
 				<LectureImportControl boardID={boardID} editor={editor} />
 			</RibbonSection>
+			{noteMode === 'pages' ? (
+				<RibbonSection label="Notebook pages">
+					<RibbonItem
+						icon={<IconRectangleVertical size={17} stroke={1.7} />}
+						label="Add portrait page"
+						onSelect={() => createNotePage(editor, pageTexture, 'portrait')}
+					/>
+					<RibbonItem
+						icon={<IconRectangleVertical size={17} stroke={1.7} style={{ rotate: '90deg' }} />}
+						label="Add landscape page"
+						onSelect={() => createNotePage(editor, pageTexture, 'landscape')}
+					/>
+				</RibbonSection>
+			) : null}
 			<RibbonSection label="Export">
 				<SpaceExportControls editor={editor} title={chrome.title} />
 			</RibbonSection>

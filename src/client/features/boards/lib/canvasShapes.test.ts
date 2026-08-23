@@ -18,6 +18,7 @@ import {
 } from '../../study/shapes/studyShapeUtils'
 import { CraftDocumentShapeUtil } from '../../craft/shapes/CraftDocumentShapeUtil'
 import { MathShapeUtil } from '../shapes/MathShapeUtil'
+import { NotePageShapeUtil } from './pageNoteMode'
 import { synchronizedShapeUtils } from './canvasShapes'
 
 describe('synchronizedShapeUtils', () => {
@@ -33,6 +34,7 @@ describe('synchronizedShapeUtils', () => {
 				ReviewShapeUtil,
 				WalkthroughShapeUtil,
 				MathShapeUtil,
+				NotePageShapeUtil,
 			])
 		)
 	})
