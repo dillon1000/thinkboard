@@ -68,6 +68,8 @@ export function createAuth(request: Request, env: Env) {
 							clientId: oAuth.clientID,
 							clientSecret: oAuth.clientSecret,
 							discoveryUrl: oAuth.discoveryURL,
+							// Passport registers Thinkspace for HTTP Basic token authentication.
+							authentication: 'basic',
 							requireIssuerValidation: true,
 							pkce: true,
 							scopes: oAuth.scopes,
