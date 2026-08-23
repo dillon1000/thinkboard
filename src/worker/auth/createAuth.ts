@@ -2,10 +2,17 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { SPOTIFY_SCOPES } from '@agentboard/shared'
 import { betterAuth } from 'better-auth'
 import { genericOAuth } from 'better-auth/plugins'
+import { z } from 'zod'
 import { createDatabase } from '../db/client'
 import * as schema from '../db/schema'
 
 const LOCAL_DEVELOPMENT_SECRET = 'agentboard-local-development-secret-change-me'
+const oAuthProfileNameSchema = z.object({
+	email: z.string().trim().min(1).optional(),
+	name: z.string().trim().min(1).optional(),
+	preferred_username: z.string().trim().min(1).optional(),
+})
+type OAuthProfileNameClaims = z.infer<typeof oAuthProfileNameSchema>
 
 export interface OAuthConfiguration {
 	clientID: string
@@ -54,10 +61,8 @@ export function getSpotifyConfiguration(env: AuthConfigurationEnvironment): Spot
 }
 
 /** Returns the first usable display name from standard OIDC profile claims. */
-export function getOAuthProfileName(profile: Record<string, unknown>) {
-	for (const value of [profile.name, profile.preferred_username, profile.email]) {
-		if (typeof value === 'string' && value.trim()) return value.trim()
-	}
+export function getOAuthProfileName(profile: OAuthProfileNameClaims) {
+	return profile.name ?? profile.preferred_username ?? profile.email
 }
 
 export function createAuth(request: Request, env: Env) {
@@ -80,7 +85,10 @@ export function createAuth(request: Request, env: Env) {
 							requireIssuerValidation: true,
 							pkce: true,
 							scopes: oAuth.scopes,
-							mapProfileToUser: (profile) => ({ name: getOAuthProfileName(profile) }),
+							mapProfileToUser: (profile) => {
+								const parsed = oAuthProfileNameSchema.safeParse(profile)
+								return { name: parsed.success ? getOAuthProfileName(parsed.data) : undefined }
+							},
 						},
 					],
 				}),
