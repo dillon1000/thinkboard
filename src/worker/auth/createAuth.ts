@@ -53,6 +53,13 @@ export function getSpotifyConfiguration(env: AuthConfigurationEnvironment): Spot
 	}
 }
 
+/** Returns the first usable display name from standard OIDC profile claims. */
+export function getOAuthProfileName(profile: Record<string, unknown>) {
+	for (const value of [profile.name, profile.preferred_username, profile.email]) {
+		if (typeof value === 'string' && value.trim()) return value.trim()
+	}
+}
+
 export function createAuth(request: Request, env: Env) {
 	const requestURL = new URL(request.url)
 	const baseURL = env.BETTER_AUTH_URL ?? requestURL.origin
@@ -73,6 +80,7 @@ export function createAuth(request: Request, env: Env) {
 							requireIssuerValidation: true,
 							pkce: true,
 							scopes: oAuth.scopes,
+							mapProfileToUser: (profile) => ({ name: getOAuthProfileName(profile) }),
 						},
 					],
 				}),

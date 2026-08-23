@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getOAuthConfiguration, getSpotifyConfiguration } from './createAuth'
+import { getOAuthConfiguration, getOAuthProfileName, getSpotifyConfiguration } from './createAuth'
 
 describe('generic OAuth configuration', () => {
 	it('stays disabled until all required provider values are present', () => {
@@ -35,6 +35,10 @@ describe('generic OAuth configuration', () => {
 			providerName: 'University login',
 			scopes: ['openid', 'email', 'profile'],
 		})
+	})
+
+	it('uses the email when Passport omits a display name', () => {
+		expect(getOAuthProfileName({ email: 'student@example.edu' })).toBe('student@example.edu')
 	})
 })
 
