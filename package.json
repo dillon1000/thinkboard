@@ -36,7 +36,7 @@
 		"@tldraw/sync-core": "^5.2.5",
 		"@tldraw/tlschema": "^5.2.5",
 		"ai": "^6.0.237",
-		"better-auth": "^1.6.25",
+		"better-auth": "^1.7.7",
 		"canvas-confetti": "^1.9.4",
 		"cloudflare-workers-unfurl": "^0.0.8",
 		"drizzle-orm": "^0.45.2",
