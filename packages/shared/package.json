@@ -8,6 +8,6 @@
 	"dependencies": {
 		"@tldraw/tlschema": "^5.2.5",
 		"@tldraw/validate": "^5.2.5",
-		"zod": "^4.4.3"
+		"zod": "^4.6.6"
 	}
 }
